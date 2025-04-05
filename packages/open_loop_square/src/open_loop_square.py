@@ -39,21 +39,21 @@ class Drive_Square:
     # Robot drives in a square and then stops
     def move_robot(self):
         for i in range(4): # 4 sides of the square
-            
+
             self.cmd_msg.header.stamp = rospy.Time.now()
-            self.cmd_msg.v = 0.5 # striaght line velocity
+            self.cmd_msg.v = 0.5 # straight line velocity
             self.cmd_msg.omega = 0.0
             self.pub.publish(self.cmd_msg)
-            rospy.loginfo("Forward!")
+            rospy.loginfo("Forward! 0.5*2")
             rospy.sleep(2) # 2s * 0.5m/s = 1m
 
             # turn 90 degrees clockwise
             self.cmd_msg.header.stamp = rospy.Time.now()
             self.cmd_msg.v = 0.0
-            self.cmd_msg.omega = -1.57 # 90 degrees in radians
+            self.cmd_msg.omega = -0.5
             self.pub.publish(self.cmd_msg)
-            rospy.loginfo("Turn!")
-            rospy.sleep(1)
+            rospy.loginfo("Turn! -0.5*0.5")
+            rospy.sleep(0.5) # this calculation makes no sense but was the best I could get working. should be -1.57*1
             # stop turning
 
         self.stop_robot()
