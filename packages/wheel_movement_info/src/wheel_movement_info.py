@@ -7,7 +7,7 @@ import math
 from std_msgs.msg import Float64MultiArray, MultiArrayLayout, MultiArrayDimension
 from duckietown_msgs.msg import WheelEncoderStamped
 
-FREQUENCY = 10 # Hz
+FREQUENCY = 50 # Hz
 WHEEL_DIAMETER = 0.065 # meters
 WHEEL_CIRCUMFERENCE = math.pi * WHEEL_DIAMETER # meters
 
