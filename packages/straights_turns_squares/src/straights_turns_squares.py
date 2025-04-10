@@ -5,11 +5,9 @@ import math
 from std_msgs.msg import Float64MultiArray, Float64
 from duckietown_msgs.msg import WheelsCmdStamped
 
-TIMER_FREQUENCY = 100  # Hz
-# TIMER_PERIOD = 1.0 / TIMER_FREQUENCY  # seconds
-AXEL_LENGTH = 0.1  # meters
+TIMER_FREQUENCY = 50  # Hz
+AXLE_LENGTH = 0.1  # meters
 WHEEL_VELOCITY = 0.5  # m/s
-# WHEEL_VELOCITY_CORRECTION = 0.8 # scalar to correct wheel velocity
 
 class StraightsTurnsSquares:
     def __init__(self):
@@ -62,15 +60,15 @@ class StraightsTurnsSquares:
         self._last_velocity_right = msg.data[5]
         self._new_wheel_movement_info = True
 
-    def rotation_to_distance(self, rotation, axel_length):
-        distance = rotation * axel_length / 2.0
+    def rotation_to_distance(self, rotation, axle_length):
+        distance = rotation * axle_length / 2.0
         return distance
 
     def goal_angle_callback(self, msg):
         rospy.loginfo("Received goal angle: %s", msg.data)
         if msg.data == 0.0:
             return
-        distance = self.rotation_to_distance(msg.data, AXEL_LENGTH)
+        distance = self.rotation_to_distance(msg.data, AXLE_LENGTH)
         clockwise = True if msg.data < 0.0 else False
         if clockwise:
             left_distance = distance
