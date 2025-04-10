@@ -8,6 +8,9 @@ from duckietown_msgs.msg import WheelsCmdStamped
 TIMER_FREQUENCY = 50  # Hz
 AXLE_LENGTH = 0.1  # meters
 WHEEL_VELOCITY = 0.5  # m/s
+DISTANCE_COMPLETE_THRESHOLD = 0.01  # meters
+MAX_VELOCITY = 1.0  # m/s
+MIN_VELOCITY = 0.2  # m/s
 
 class StraightsTurnsSquares:
     def __init__(self):
@@ -21,9 +24,9 @@ class StraightsTurnsSquares:
         self._new_wheel_movement_info = False
 
         self._goal_distance_left = 0.0
-        self._goal_displacement_left = 0.0
+        #self._goal_displacement_left = 0.0
         self._goal_distance_right = 0.0
-        self._goal_displacement_right = 0.0
+        #self._goal_displacement_right = 0.0
         self._dist_goal_active = False
 
         self._square_goal_active = False
@@ -45,8 +48,6 @@ class StraightsTurnsSquares:
         self._velocity_publisher = rospy.Publisher("/vader/wheels_driver_node/wheels_cmd", WheelsCmdStamped, queue_size=1)
         self._goal_angle_publisher = rospy.Publisher('/goal_angle', Float64, queue_size=1)
         self._goal_distance_publisher = rospy.Publisher('/goal_distance', Float64, queue_size=1)
-
-        # rospy.Timer(rospy.Duration(TIMER_PERIOD), self.timer_callback)
 
         # Printing to the terminal, ROS style
         rospy.loginfo("Initalized node!")
@@ -77,9 +78,9 @@ class StraightsTurnsSquares:
             left_distance = -distance
             right_distance = distance
         self._goal_distance_left = self._last_distance_left + left_distance
-        self._goal_displacement_left = left_distance
+        #self._goal_displacement_left = left_distance
         self._goal_distance_right = self._last_distance_right + right_distance
-        self._goal_displacement_right = right_distance
+        #self._goal_displacement_right = right_distance
         self.dist_goal_active = True
 
     def goal_distance_callback(self, msg):
@@ -87,9 +88,15 @@ class StraightsTurnsSquares:
         if msg.data == 0.0:
             return
         self._goal_distance_left = self._last_distance_left + msg.data
-        self._goal_displacement_left = msg.data
+        #self._goal_displacement_left = msg.data
         self._goal_distance_right = self._last_distance_right + msg.data
-        self._goal_displacement_right = msg.data
+        #self._goal_displacement_right = msg.data
+        rospy.loginfo("Last distance left: %s", self._last_distance_left)
+        rospy.loginfo("Last distance right: %s", self._last_distance_right)
+        rospy.loginfo("Goal distance left: %s", self._goal_distance_left)
+        rospy.loginfo("Goal distance right: %s", self._goal_distance_right)
+        # rospy.loginfo("Goal displacement left: %s", self._goal_displacement_left)
+        # rospy.loginfo("Goal displacement right: %s", self._goal_displacement_right)
         self.dist_goal_active = True
 
     def square_callback(self, msg):
@@ -103,58 +110,82 @@ class StraightsTurnsSquares:
         self._square_goal_active = True
 
     def calculate_distance_to_goal(self):
-        self._goal_distance_left = self._goal_distance_left - self._last_distance_left
-        self._goal_distance_right = self._goal_distance_right - self._last_distance_right
-        return self._goal_distance_left, self._goal_distance_right
+        left = self._goal_distance_left - self._last_distance_left
+        right = self._goal_distance_right - self._last_distance_right
+        return (left, right)
 
     def calculate_abs_distance_to_goal(self):
-        distance_to_goal = self.calculate_distance_to_goal()
-        abs_distance_to_goal = (abs(distance_to_goal[0]), abs(distance_to_goal[1]))
-        return abs_distance_to_goal
+        left, right = self.calculate_distance_to_goal()
+        return (abs(left), abs(right))
 
-    def distance_goal_complete(self):
-        abs_distance_to_goal = self.calculate_abs_distance_to_goal()
-        abs_left = abs_distance_to_goal[0]
-        abs_right = abs_distance_to_goal[1]
-
-        if abs_left >= abs(self._goal_displacement_left) and abs_right >= abs(self._goal_displacement_right):
+    def is_distance_goal_complete(self):
+        abs_left, abs_right = self.calculate_abs_distance_to_goal()
+        if abs_left < DISTANCE_COMPLETE_THRESHOLD and abs_right < DISTANCE_COMPLETE_THRESHOLD:
             return True
         return False
     
-    def moving_forward(self):
-        left_forward = self._goal_displacement_left > 0.0
-        right_forward = self._goal_displacement_right > 0.0
+    def is_moving_forward(self):
+        distance_to_goal = self.calculate_distance_to_goal()
+        left_forward = True if distance_to_goal[0] > 0.0 else False
+        right_forward = True if distance_to_goal[1] > 0.0 else False
         return (left_forward, right_forward)
     
-    def moving_forward_scalar(self):
-        left_forward, right_forward = self.moving_forward()
+    def calculate_direction_scalar(self):
+        left_forward, right_forward = self.is_moving_forward()
         left_scalar = 1.0 if left_forward else -1.0
         right_scalar = 1.0 if right_forward else -1.0
         return (left_scalar, right_scalar)
 
     def balance_wheel_velocity(self):
-        abs_distance_to_goal = self.calculate_abs_distance_to_goal()
-        abs_left = abs_distance_to_goal[0]
-        abs_right = abs_distance_to_goal[1]
-        left_scalar, right_scalar = self.moving_forward_scalar()
-        left_velocity = left_scalar * WHEEL_VELOCITY
-        right_velocity = right_scalar * WHEEL_VELOCITY
-
         cmd = WheelsCmdStamped()
-        if abs_left > abs_right: # left wheel is further from goal
-            cmd.vel_left = left_velocity * (abs_left / abs_right)
-            cmd.vel_right = right_velocity
-        else: # right wheel is further from goal
-            cmd.vel_left = left_velocity
-            cmd.vel_right = right_velocity * (abs_right / abs_left)
+        abs_left, abs_right = self.calculate_abs_distance_to_goal()
+
+        # edge case: both wheels are not moving
+        if abs_left < DISTANCE_COMPLETE_THRESHOLD and abs_right < DISTANCE_COMPLETE_THRESHOLD:
+            rospy.logerr("The abs_left and abs_right are both below the threshold in balance_wheel_velocity()!")
+            rospy.logerr("This should not happen!")
+            cmd.vel_left = 0.0
+            cmd.vel_right = 0.0
+            return cmd
+
+        # calculate the direction of the wheels
+        # (positive for forward, negative for backward)
+        left_direction_scalar, right_direction_scalar = self.calculate_direction_scalar()
+        
+        if abs_left < DISTANCE_COMPLETE_THRESHOLD:
+            cmd.vel_left = 0.0
+            cmd.vel_right = WHEEL_VELOCITY * right_direction_scalar
+        elif abs_right < DISTANCE_COMPLETE_THRESHOLD:
+            cmd.vel_left = WHEEL_VELOCITY * left_direction_scalar
+            cmd.vel_right = 0.0
+        else: # both wheels are moving
+            # calculate the scaling factors for the wheel velocities
+            total_distance = abs_left + abs_right
+            left_scaling_factor = abs_left / total_distance
+            right_scaling_factor = abs_right / total_distance
+
+            # calculate the wheel velocities
+            cmd.vel_left = WHEEL_VELOCITY * left_scaling_factor
+            cmd.vel_right = WHEEL_VELOCITY * right_scaling_factor
+
+            # clamp the velocities to a maximum and minimum value
+            cmd.vel_left = max(min(cmd.vel_left, MAX_VELOCITY), MIN_VELOCITY)
+            cmd.vel_right = max(min(cmd.vel_right, MAX_VELOCITY), MIN_VELOCITY)
+
+            # wheel velocities are always positive at this point
+            # multiply the velocities by the direction scalars
+            # to get the correct direction
+            cmd.vel_left *= left_direction_scalar
+            cmd.vel_right *= right_direction_scalar
         return cmd
 
     def handle_distance_goal(self):
-        cmd = WheelsCmdStamped()
-        if self.distance_goal_complete():
+        if self.is_distance_goal_complete():
+            cmd = WheelsCmdStamped()
             cmd.vel_left = 0.0
             cmd.vel_right = 0.0
             self.dist_goal_active = False
+            rospy.loginfo("Distance goal complete!")
         else:
             cmd = self.balance_wheel_velocity()
         self._velocity_publisher.publish(cmd)
