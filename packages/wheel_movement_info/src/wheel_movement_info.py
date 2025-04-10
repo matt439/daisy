@@ -66,14 +66,20 @@ class WheelMovementInfo:
         while not rospy.is_shutdown():
             self.calculate_velocity()
 
+            dim = MultiArrayDimension()
+            dim.label = "wheel_movement_info"
+            dim.size = 6  # number of elements in the array
+            dim.stride = 1 # stride is 1 since we are using a 1D array
+            
+            layout = MultiArrayLayout()
+            layout.dim = [dim]
+            layout.data_offset = 0 # no offset since we are using a 1D array
+
+            msg = Float64MultiArray()
+            msg.layout = layout
             # publish the distance, displacement, and velocity of both wheels
             # as a Float64MultiArray message
             # format: [distance_left, displacement_left, velocity_left, distance_right, displacement_right, velocity_right]
-            msg = Float64MultiArray()
-            dim = MultiArrayDimension()
-            layout = MultiArrayLayout()
-
-            
             msg.data = [
                 self._left_distance, self._left_displacement, self._left_velocity,
                 self._right_distance, self._right_displacement, self._right_velocity
