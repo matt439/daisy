@@ -1,0 +1,6 @@
+<launch>
+    <!-- vehicle name so it can work with any robot -->
+    <group ns="$(env VEHICLE_NAME)">
+        <node pkg="wheel_movement_info" name="wheel_movement_info" type="wheel_movement_info.py" output="screen"/>
+    </group>
+</launch>

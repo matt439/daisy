@@ -1,0 +1,6 @@
+<launch>
+    <!-- vehicle name so it can work with any robot -->
+    <group ns="$(env VEHICLE_NAME)">
+        <node pkg="straights_turns_squares" name="straights_turns_squares" type="straights_turns_squares.py" output="screen"/>
+    </group>
+</launch>
