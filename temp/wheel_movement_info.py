@@ -55,6 +55,11 @@ class WheelMovementInfo:
         dt = curr_time - self._prev_time
         self._prev_time = curr_time
 
+        if dt == 0.0:
+            # log a warning if dt is zero to avoid division by zero
+            rospy.logwarn("Time difference is zero, skipping velocity calculation")
+            return
+
         # calculate the velocity of both wheels
         self._left_velocity = self._left_displacement / dt
         self._right_velocity = self._right_displacement / dt
