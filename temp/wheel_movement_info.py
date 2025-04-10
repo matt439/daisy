@@ -9,7 +9,7 @@ FREQUENCY = 10  # Hz
 class WheelMovementInfo:
     def __init__(self):
         # Initialize the node
-        rospy.init_node('duckie_wheel_distance_node', anonymous=True)
+        rospy.init_node('wheel_movement_info_node', anonymous=True)
 
         self._bot_name = os.environ['vader']
         self._left_encoder_topic = f"/{self._vehicle_name}/left_wheel_encoder_node/tick"
@@ -30,7 +30,7 @@ class WheelMovementInfo:
         self.sub_right = rospy.Subscriber(self._right_encoder_topic, WheelEncoderStamped, self.callback_right)
 
         # Initialize publisher: input the topic name, message type and msg queue size
-        self.distance_publisher = rospy.Publisher('/wheel_distance', Float64MultiArray, queue_size=10)
+        self.distance_publisher = rospy.Publisher('/wheel_movement_info', Float64MultiArray, queue_size=10)
 
         # Printing to the terminal, ROS style
         rospy.loginfo("Initalized node!")
@@ -81,6 +81,9 @@ class WheelMovementInfo:
             rate.sleep()
 
 if __name__ == '__main__':
-    wheel_distance = WheelMovementInfo()
-    wheel_distance.run()
-    rospy.spin()
+    try:
+        wheel_distance = WheelMovementInfo()
+        wheel_distance.run()
+        rospy.spin()
+    except rospy.ROSInterruptException:
+        pass
