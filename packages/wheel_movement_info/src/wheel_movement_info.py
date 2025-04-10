@@ -11,10 +11,6 @@ class WheelMovementInfo:
         # Initialize the node
         rospy.init_node('wheel_movement_info_node', anonymous=True)
 
-        self._bot_name = os.environ['vader']
-        self._left_encoder_topic = f"/{self._vehicle_name}/left_wheel_encoder_node/tick"
-        self._right_encoder_topic = f"/{self._vehicle_name}/right_wheel_encoder_node/tick"
-
         self._left_distance = 0.0
         self._left_displacement = 0.0
         self._left_velocity = 0.0
@@ -26,11 +22,10 @@ class WheelMovementInfo:
         self._prev_time = time.time()
 
         # subscribers to the left and right wheel encoder topics
-        self.sub_left = rospy.Subscriber(self._left_encoder_topic, WheelEncoderStamped, self.callback_left)
-        self.sub_right = rospy.Subscriber(self._right_encoder_topic, WheelEncoderStamped, self.callback_right)
+        self.sub_left = rospy.Subscriber("vader/left_wheel_encoder_node/tick", WheelEncoderStamped, self.callback_left)
+        self.sub_right = rospy.Subscriber("vader/right_wheel_encoder_node/tick", WheelEncoderStamped, self.callback_right)
 
-        # Initialize publisher: input the topic name, message type and msg queue size
-        self.distance_publisher = rospy.Publisher('/wheel_movement_info', Float64MultiArray, queue_size=10)
+        self.movement_info_publisher = rospy.Publisher('/wheel_movement_info', Float64MultiArray, queue_size=10)
 
         # Printing to the terminal, ROS style
         rospy.loginfo("Initalized node!")
@@ -65,7 +60,7 @@ class WheelMovementInfo:
         self._right_velocity = self._right_displacement / dt
 
     def run(self):
-        rate = rospy.Rate(FREQUENCY)  # 10 Hz
+        rate = rospy.Rate(FREQUENCY)
         while not rospy.is_shutdown():
             self.calculate_velocity()
 
@@ -77,7 +72,7 @@ class WheelMovementInfo:
                 self._left_distance, self._left_displacement, self._left_velocity,
                 self._right_distance, self._right_displacement, self._right_velocity
             ]
-            self.distance_publisher.publish(msg)
+            self.movement_info_publisher.publish(msg)
             rate.sleep()
 
 if __name__ == '__main__':
