@@ -3,7 +3,7 @@
 import rospy
 import os
 import time
-from std_msgs.msg import Float64MultiArray
+from std_msgs.msg import Float64MultiArray, MultiArrayLayout, MultiArrayDimension
 from duckietown_msgs.msg import WheelEncoderStamped
 
 FREQUENCY = 10  # Hz
@@ -70,6 +70,10 @@ class WheelMovementInfo:
             # as a Float64MultiArray message
             # format: [distance_left, displacement_left, velocity_left, distance_right, displacement_right, velocity_right]
             msg = Float64MultiArray()
+            dim = MultiArrayDimension()
+            layout = MultiArrayLayout()
+
+            
             msg.data = [
                 self._left_distance, self._left_displacement, self._left_velocity,
                 self._right_distance, self._right_displacement, self._right_velocity
