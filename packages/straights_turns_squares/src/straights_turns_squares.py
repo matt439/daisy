@@ -6,14 +6,14 @@ from std_msgs.msg import Float64MultiArray, Float64
 from duckietown_msgs.msg import WheelsCmdStamped
 
 AXLE_LENGTH = 0.1  # meters
-WHEEL_VELOCITY = 0.7  # m/s
+WHEEL_VELOCITY = 0.5  # m/s
 DISTANCE_COMPLETE_THRESHOLD = 0.01  # meters
-DISTANCE_SLOWDOWN_THRESHOLD_FINAL = 0.1  # meters
+DISTANCE_SLOWDOWN_THRESHOLD_FINAL = 0.05  # meters
 SLOWDOWN_FACTOR_FINAL = 0.2
-DISTANCE_SLOWDOWN_THRESHOLD_APPROACH = 0.3  # meters
-SLOWDOWN_FACTOR_APPROACH = 0.3
-MAX_VELOCITY = 1.0  # m/s
-MIN_VELOCITY = 0.4  # m/s
+DISTANCE_SLOWDOWN_THRESHOLD_APPROACH = 0.2  # meters
+SLOWDOWN_FACTOR_APPROACH = 0.5
+MAX_VELOCITY = 0.7  # m/s
+MIN_VELOCITY = 0.3  # m/s
 
 class StraightsTurnsSquares:
     def __init__(self):
@@ -147,10 +147,10 @@ class StraightsTurnsSquares:
         # (positive for forward, negative for backward)
         left_direction_scalar, right_direction_scalar = self.calculate_direction_scalar()
         
-        if abs_left < DISTANCE_COMPLETE_THRESHOLD:
+        if abs_left < DISTANCE_COMPLETE_THRESHOLD: # left wheel is not moving
             cmd.vel_left = 0.0
             cmd.vel_right = WHEEL_VELOCITY * right_direction_scalar
-        elif abs_right < DISTANCE_COMPLETE_THRESHOLD:
+        elif abs_right < DISTANCE_COMPLETE_THRESHOLD: # right wheel is not moving
             cmd.vel_left = WHEEL_VELOCITY * left_direction_scalar
             cmd.vel_right = 0.0
         else: # both wheels are moving
@@ -172,17 +172,18 @@ class StraightsTurnsSquares:
             cmd.vel_left *= left_direction_scalar
             cmd.vel_right *= right_direction_scalar
 
-            # slow down the wheels if they are too close to the goal
-            # to avoid overshooting
-            if abs_left < DISTANCE_SLOWDOWN_THRESHOLD_FINAL:
-                cmd.vel_left *= SLOWDOWN_FACTOR_FINAL
-            elif abs_left < DISTANCE_SLOWDOWN_THRESHOLD_APPROACH:
-                cmd.vel_left *= SLOWDOWN_FACTOR_APPROACH
-                
-            if abs_right < DISTANCE_SLOWDOWN_THRESHOLD_FINAL:
-                cmd.vel_right *= SLOWDOWN_FACTOR_FINAL
-            elif abs_right < DISTANCE_SLOWDOWN_THRESHOLD_APPROACH:
-                cmd.vel_right *= SLOWDOWN_FACTOR_APPROACH
+        # slow down the wheels if they are too close to the goal
+        # to avoid overshooting
+        if abs_left < DISTANCE_SLOWDOWN_THRESHOLD_FINAL:
+            cmd.vel_left *= SLOWDOWN_FACTOR_FINAL
+        elif abs_left < DISTANCE_SLOWDOWN_THRESHOLD_APPROACH:
+            cmd.vel_left *= SLOWDOWN_FACTOR_APPROACH
+
+        if abs_right < DISTANCE_SLOWDOWN_THRESHOLD_FINAL:
+            cmd.vel_right *= SLOWDOWN_FACTOR_FINAL
+        elif abs_right < DISTANCE_SLOWDOWN_THRESHOLD_APPROACH:
+            cmd.vel_right *= SLOWDOWN_FACTOR_APPROACH
+
         return cmd
 
     def handle_distance_goal(self):
