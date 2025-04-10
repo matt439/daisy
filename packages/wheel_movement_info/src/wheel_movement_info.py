@@ -16,10 +16,12 @@ class WheelMovementInfo:
         self._left_distance = 0.0
         self._left_displacement = 0.0
         self._left_velocity = 0.0
+        self._prev_left_distance = 0.0
 
         self._right_distance = 0.0
         self._right_displacement = 0.0
         self._right_velocity = 0.0
+        self._prev_right_distance = 0.0
 
         self._prev_time = time.time()
 
@@ -33,18 +35,12 @@ class WheelMovementInfo:
         rospy.loginfo("Initalized node!")
 
     def callback_left(self, msg):
-        prev_left = self._left_distance
         # calculate distance travelled by left wheel
-        self._left_distance += msg.data / msg.resolution
-        # calculate displacement of left wheel
-        self._left_displacement = self._left_distance - prev_left
+        self._left_distance = msg.data / msg.resolution
 
     def callback_right(self, msg):
-        prev_right = self._right_distance
         # calculate distance travelled by right wheel
-        self._right_distance += msg.data / msg.resolution
-        # calculate displacement of right wheel
-        self._right_displacement = self._right_distance - prev_right
+        self._right_distance = msg.data / msg.resolution
 
     def calculate_velocity(self):
         # calculate the time elapsed since the last update
@@ -61,9 +57,19 @@ class WheelMovementInfo:
         self._left_velocity = self._left_displacement / dt
         self._right_velocity = self._right_displacement / dt
 
+    def calculate_displacement(self):
+        # calculate the displacement of both wheels
+        self._left_displacement = self._left_distance - self._prev_left_distance
+        self._right_displacement = self._right_distance - self._prev_right_distance
+
+        # update the previous distance values
+        self._prev_left_distance = self._left_distance
+        self._prev_right_distance = self._right_distance
+
     def run(self):
         rate = rospy.Rate(FREQUENCY)
         while not rospy.is_shutdown():
+            self.calculate_displacement()
             self.calculate_velocity()
 
             dim = MultiArrayDimension()
