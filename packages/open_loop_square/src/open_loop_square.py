@@ -41,20 +41,19 @@ class Drive_Square:
         for i in range(4): # 4 sides of the square
 
             self.cmd_msg.header.stamp = rospy.Time.now()
-            self.cmd_msg.v = 0.5 # straight line velocity
+            self.cmd_msg.v = 0.4 # straight line velocity
             self.cmd_msg.omega = 0.0
             self.pub.publish(self.cmd_msg)
-            rospy.loginfo("Forward! 0.5*2")
-            rospy.sleep(2) # 2s * 0.5m/s = 1m
+            rospy.loginfo("Forward! 0.4*3")
+            rospy.sleep(3) # 3s * 0.4m/s = 1.2m 
 
             # turn 90 degrees clockwise
             self.cmd_msg.header.stamp = rospy.Time.now()
             self.cmd_msg.v = 0.0
-            self.cmd_msg.omega = -0.5
+            self.cmd_msg.omega = -2.3
             self.pub.publish(self.cmd_msg)
-            rospy.loginfo("Turn! -0.5*0.5")
-            rospy.sleep(0.5) # this calculation makes no sense but was the best I could get working. should be -1.57*1
-            # stop turning
+            rospy.loginfo("Turn! -2.3*1")
+            rospy.sleep(1) # this calculation makes no sense but was the best I could get working. should be -1.57*1
 
         self.stop_robot()
 
