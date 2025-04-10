@@ -6,7 +6,7 @@ import time
 from std_msgs.msg import Float64MultiArray, MultiArrayLayout, MultiArrayDimension
 from duckietown_msgs.msg import WheelEncoderStamped
 
-FREQUENCY = 10  # Hz
+FREQUENCY = 1 # Hz
 
 class WheelMovementInfo:
     def __init__(self):
@@ -33,11 +33,15 @@ class WheelMovementInfo:
         rospy.loginfo("Initalized node!")
 
     def callback_left(self, msg):
+        rospy.loginfo("Left wheel encoder data: %s", msg.data)
+        rospy.loginfo("Left wheel encoder resolution: %s", msg.resolution)
         prev_left = self._left_distance
         # calculate distance travelled by left wheel
         self._left_distance += msg.data / msg.resolution
+        rospy.loginfo("Left wheel distance: %s", self._left_distance)
         # calculate displacement of left wheel
         self._left_displacement = self._left_distance - prev_left
+        rospy.loginfo("Left wheel displacement: %s", self._left_displacement)
 
     def callback_right(self, msg):
         prev_right = self._right_distance
@@ -59,6 +63,7 @@ class WheelMovementInfo:
 
         # calculate the velocity of both wheels
         self._left_velocity = self._left_displacement / dt
+        rospy.loginfo("Left wheel velocity: %s", self._left_velocity)
         self._right_velocity = self._right_displacement / dt
 
     def run(self):
@@ -84,6 +89,7 @@ class WheelMovementInfo:
                 self._left_distance, self._left_displacement, self._left_velocity,
                 self._right_distance, self._right_displacement, self._right_velocity
             ]
+            rospy.loginfo("Publishing wheel movement info: %s", msg.data)
             self.movement_info_publisher.publish(msg)
             rate.sleep()
 
