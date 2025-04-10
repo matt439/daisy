@@ -39,13 +39,13 @@ class WheelMovementInfo:
 
     def callback_left(self, msg):
         # calculate distance travelled by left wheel
-        self._left_distance = msg.data / msg.resolution / WHEEL_CIRCUMFERENCE
+        self._left_distance = (msg.data / msg.resolution) * WHEEL_CIRCUMFERENCE
         # the distance is calculated by dividing the number of ticks by the
-        # resolution and the wheel circumference to get the distance in meters
+        # resolution of the encoder and multiplying by the wheel circumference
 
     def callback_right(self, msg):
         # calculate distance travelled by right wheel
-        self._right_distance = msg.data / msg.resolution / WHEEL_CIRCUMFERENCE
+        self._right_distance = (msg.data / msg.resolution) * WHEEL_CIRCUMFERENCE
 
     def calculate_velocity(self):
         # calculate the time elapsed since the last update
