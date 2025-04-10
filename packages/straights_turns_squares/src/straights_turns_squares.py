@@ -5,7 +5,7 @@ import math
 from std_msgs.msg import Float64MultiArray, Float64
 from duckietown_msgs.msg import WheelsCmdStamped
 
-TIMER_FREQUENCY = 50  # Hz
+#TIMER_FREQUENCY = 50  # Hz
 AXLE_LENGTH = 0.1  # meters
 WHEEL_VELOCITY = 0.5  # m/s
 DISTANCE_COMPLETE_THRESHOLD = 0.01  # meters
@@ -21,7 +21,7 @@ class StraightsTurnsSquares:
         self._last_distance_right = 0.0
         self._last_displacement_right = 0.0
         self._last_velocity_right = 0.0
-        self._new_wheel_movement_info = False
+        #self._new_wheel_movement_info = False
 
         self._goal_distance_left = 0.0
         #self._goal_displacement_left = 0.0
@@ -59,7 +59,8 @@ class StraightsTurnsSquares:
         self._last_distance_right = msg.data[3]
         self._last_displacement_right = msg.data[4]
         self._last_velocity_right = msg.data[5]
-        self._new_wheel_movement_info = True
+        #self._new_wheel_movement_info = True
+        self.handle_goals()
 
     def rotation_to_distance(self, rotation, axle_length):
         distance = rotation * axle_length / 2.0
@@ -219,22 +220,28 @@ class StraightsTurnsSquares:
                 self._square_straight_complete = False
                 self._square_turn_started = False
                 self._square_turn_complete = False
+    
+    def handle_goals(self):
+        if self._dist_goal_active:
+            self.handle_distance_goal()
+        if self._square_goal_active:
+            self.handle_square_goal()
 
-    def run(self):
-        rate = rospy.Rate(TIMER_FREQUENCY)
-        while not rospy.is_shutdown():
-            if self._new_wheel_movement_info:
-                self._new_wheel_movement_info = False
-                if self._dist_goal_active:
-                    self.handle_distance_goal()
-                if self._square_goal_active:
-                    self.handle_square_goal()
-            rate.sleep()
+    # def run(self):
+    #     rate = rospy.Rate(TIMER_FREQUENCY)
+    #     while not rospy.is_shutdown():
+    #         if self._new_wheel_movement_info:
+    #             self._new_wheel_movement_info = False
+    #             if self._dist_goal_active:
+    #                 self.handle_distance_goal()
+    #             if self._square_goal_active:
+    #                 self.handle_square_goal()
+    #         rate.sleep()
 
 if __name__ == '__main__':
     try:
         straight_turns_squares_class_instance = StraightsTurnsSquares()
-        straight_turns_squares_class_instance.run()
+        #straight_turns_squares_class_instance.run()
         rospy.spin()
     except rospy.ROSInterruptException:
         pass
