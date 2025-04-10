@@ -3,10 +3,13 @@
 import rospy
 import os
 import time
+import math
 from std_msgs.msg import Float64MultiArray, MultiArrayLayout, MultiArrayDimension
 from duckietown_msgs.msg import WheelEncoderStamped
 
-FREQUENCY = 1 # Hz
+FREQUENCY = 2 # Hz
+WHEEL_DIAMETER = 0.065 # meters
+WHEEL_CIRCUMFERENCE = math.pi * WHEEL_DIAMETER # meters
 
 class WheelMovementInfo:
     def __init__(self):
@@ -36,11 +39,13 @@ class WheelMovementInfo:
 
     def callback_left(self, msg):
         # calculate distance travelled by left wheel
-        self._left_distance = msg.data / msg.resolution
+        self._left_distance = msg.data / msg.resolution / WHEEL_CIRCUMFERENCE
+        # the distance is calculated by dividing the number of ticks by the
+        # resolution and the wheel circumference to get the distance in meters
 
     def callback_right(self, msg):
         # calculate distance travelled by right wheel
-        self._right_distance = msg.data / msg.resolution
+        self._right_distance = msg.data / msg.resolution / WHEEL_CIRCUMFERENCE
 
     def calculate_velocity(self):
         # calculate the time elapsed since the last update
