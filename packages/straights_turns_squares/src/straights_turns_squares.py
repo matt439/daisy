@@ -81,7 +81,7 @@ class StraightsTurnsSquares:
         #self._goal_displacement_left = left_distance
         self._goal_distance_right = self._last_distance_right + right_distance
         #self._goal_displacement_right = right_distance
-        self.dist_goal_active = True
+        self._dist_goal_active = True
 
     def goal_distance_callback(self, msg):
         rospy.loginfo("Received goal distance: %s", msg.data)
@@ -97,11 +97,11 @@ class StraightsTurnsSquares:
         rospy.loginfo("Goal distance right: %s", self._goal_distance_right)
         # rospy.loginfo("Goal displacement left: %s", self._goal_displacement_left)
         # rospy.loginfo("Goal displacement right: %s", self._goal_displacement_right)
-        self.dist_goal_active = True
+        self._dist_goal_active = True
 
     def square_callback(self, msg):
         rospy.loginfo("Received square edge length: %s", msg.data)
-        self._edges_completed = 0
+        self._square_edges_completed = 0
         self._square_straight_started = False
         self._square_straight_complete = False
         self._square_turn_started = False
@@ -184,7 +184,7 @@ class StraightsTurnsSquares:
             cmd = WheelsCmdStamped()
             cmd.vel_left = 0.0
             cmd.vel_right = 0.0
-            self.dist_goal_active = False
+            self._dist_goal_active = False
             rospy.loginfo("Distance goal complete!")
         else:
             cmd = self.balance_wheel_velocity()
@@ -213,7 +213,7 @@ class StraightsTurnsSquares:
             self._goal_angle_publisher.publish(math.pi / 2.0) # right turn
 
         elif self._square_turn_started and not self._square_turn_complete:
-            if not self.dist_goal_active:
+            if not self._dist_goal_active:
                 self._square_edges_completed += 1
                 self._square_straight_started = False
                 self._square_straight_complete = False
