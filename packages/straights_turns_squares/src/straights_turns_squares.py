@@ -5,14 +5,15 @@ import math
 from std_msgs.msg import Float64MultiArray, Float64
 from duckietown_msgs.msg import WheelsCmdStamped
 
-#TIMER_FREQUENCY = 50  # Hz
 AXLE_LENGTH = 0.1  # meters
 WHEEL_VELOCITY = 0.7  # m/s
 DISTANCE_COMPLETE_THRESHOLD = 0.01  # meters
-DISTANCE_SLOWDOWN_THRESHOLD = 0.05  # meters
-SLOWDOWN_FACTOR = 0.5
-MAX_VELOCITY = 0.9  # m/s
-MIN_VELOCITY = 0.5  # m/s
+DISTANCE_SLOWDOWN_THRESHOLD_FINAL = 0.1  # meters
+SLOWDOWN_FACTOR_FINAL = 0.2
+DISTANCE_SLOWDOWN_THRESHOLD_APPROACH = 0.3  # meters
+SLOWDOWN_FACTOR_APPROACH = 0.3
+MAX_VELOCITY = 1.0  # m/s
+MIN_VELOCITY = 0.4  # m/s
 
 class StraightsTurnsSquares:
     def __init__(self):
@@ -23,12 +24,9 @@ class StraightsTurnsSquares:
         self._last_distance_right = 0.0
         self._last_displacement_right = 0.0
         self._last_velocity_right = 0.0
-        #self._new_wheel_movement_info = False
 
         self._goal_distance_left = 0.0
-        #self._goal_displacement_left = 0.0
         self._goal_distance_right = 0.0
-        #self._goal_displacement_right = 0.0
         self._dist_goal_active = False
 
         self._square_goal_active = False
@@ -81,9 +79,7 @@ class StraightsTurnsSquares:
             left_distance = -distance
             right_distance = distance
         self._goal_distance_left = self._last_distance_left + left_distance
-        #self._goal_displacement_left = left_distance
         self._goal_distance_right = self._last_distance_right + right_distance
-        #self._goal_displacement_right = right_distance
         self._dist_goal_active = True
 
     def goal_distance_callback(self, msg):
@@ -91,15 +87,11 @@ class StraightsTurnsSquares:
         if msg.data == 0.0:
             return
         self._goal_distance_left = self._last_distance_left + msg.data
-        #self._goal_displacement_left = msg.data
         self._goal_distance_right = self._last_distance_right + msg.data
-        #self._goal_displacement_right = msg.data
         rospy.loginfo("Last distance left: %s", self._last_distance_left)
         rospy.loginfo("Last distance right: %s", self._last_distance_right)
         rospy.loginfo("Goal distance left: %s", self._goal_distance_left)
         rospy.loginfo("Goal distance right: %s", self._goal_distance_right)
-        # rospy.loginfo("Goal displacement left: %s", self._goal_displacement_left)
-        # rospy.loginfo("Goal displacement right: %s", self._goal_displacement_right)
         self._dist_goal_active = True
 
     def square_callback(self, msg):
@@ -180,11 +172,17 @@ class StraightsTurnsSquares:
             cmd.vel_left *= left_direction_scalar
             cmd.vel_right *= right_direction_scalar
 
-        # slow down the wheels if they are too close to the goal
-            if abs_left < DISTANCE_SLOWDOWN_THRESHOLD:
-                cmd.vel_left *= SLOWDOWN_FACTOR
-            if abs_right < DISTANCE_SLOWDOWN_THRESHOLD:
-                cmd.vel_right *= SLOWDOWN_FACTOR
+            # slow down the wheels if they are too close to the goal
+            # to avoid overshooting
+            if abs_left < DISTANCE_SLOWDOWN_THRESHOLD_FINAL:
+                cmd.vel_left *= SLOWDOWN_FACTOR_FINAL
+            elif abs_left < DISTANCE_SLOWDOWN_THRESHOLD_APPROACH:
+                cmd.vel_left *= SLOWDOWN_FACTOR_APPROACH
+                
+            if abs_right < DISTANCE_SLOWDOWN_THRESHOLD_FINAL:
+                cmd.vel_right *= SLOWDOWN_FACTOR_FINAL
+            elif abs_right < DISTANCE_SLOWDOWN_THRESHOLD_APPROACH:
+                cmd.vel_right *= SLOWDOWN_FACTOR_APPROACH
         return cmd
 
     def handle_distance_goal(self):
@@ -218,7 +216,7 @@ class StraightsTurnsSquares:
         
         elif not self._square_turn_started:
             self._square_turn_started = True
-            self._goal_angle_publisher.publish(math.pi / 2.0) # right turn
+            self._goal_angle_publisher.publish(math.pi / 2.0) # right angle turn
 
         elif self._square_turn_started and not self._square_turn_complete:
             if not self._dist_goal_active:
