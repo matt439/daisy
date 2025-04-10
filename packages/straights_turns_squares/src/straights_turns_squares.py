@@ -7,10 +7,12 @@ from duckietown_msgs.msg import WheelsCmdStamped
 
 #TIMER_FREQUENCY = 50  # Hz
 AXLE_LENGTH = 0.1  # meters
-WHEEL_VELOCITY = 0.5  # m/s
+WHEEL_VELOCITY = 0.7  # m/s
 DISTANCE_COMPLETE_THRESHOLD = 0.01  # meters
-MAX_VELOCITY = 1.0  # m/s
-MIN_VELOCITY = 0.2  # m/s
+DISTANCE_SLOWDOWN_THRESHOLD = 0.05  # meters
+SLOWDOWN_FACTOR = 0.5
+MAX_VELOCITY = 0.9  # m/s
+MIN_VELOCITY = 0.5  # m/s
 
 class StraightsTurnsSquares:
     def __init__(self):
@@ -161,9 +163,8 @@ class StraightsTurnsSquares:
             cmd.vel_right = 0.0
         else: # both wheels are moving
             # calculate the scaling factors for the wheel velocities
-            total_distance = abs_left + abs_right
-            left_scaling_factor = abs_left / total_distance
-            right_scaling_factor = abs_right / total_distance
+            left_scaling_factor = abs_left / abs_right
+            right_scaling_factor = abs_right / abs_left
 
             # calculate the wheel velocities
             cmd.vel_left = WHEEL_VELOCITY * left_scaling_factor
@@ -178,6 +179,12 @@ class StraightsTurnsSquares:
             # to get the correct direction
             cmd.vel_left *= left_direction_scalar
             cmd.vel_right *= right_direction_scalar
+
+        # slow down the wheels if they are too close to the goal
+            if abs_left < DISTANCE_SLOWDOWN_THRESHOLD:
+                cmd.vel_left *= SLOWDOWN_FACTOR
+            if abs_right < DISTANCE_SLOWDOWN_THRESHOLD:
+                cmd.vel_right *= SLOWDOWN_FACTOR
         return cmd
 
     def handle_distance_goal(self):
