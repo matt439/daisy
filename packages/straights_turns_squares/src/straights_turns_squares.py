@@ -13,6 +13,7 @@ class VelocityAdjustmentType(Enum):
 
 AXLE_LENGTH = 0.1  # meters
 WHEEL_VELOCITY = 0.6  # m/s
+WHEEL_TURN_VELOCITY = 0.5  # m/s
 MAX_VELOCITY = 1.2  # m/s
 MIN_VELOCITY = 0.1  # m/s
 DISTANCE_COMPLETE_THRESHOLD = 0.01  # meters
@@ -46,7 +47,7 @@ class StraightsTurnsSquares:
         self._zero_velocity_readings_count_left = 0
         self._zero_velocity_readings_count_right = 0
 
-        self._angle_goal_active = False
+        # self._angle_goal_active = False
 
         self._square_goal_active = False
         self._square_edges_completed = 0
@@ -247,8 +248,8 @@ class StraightsTurnsSquares:
         # calculate direction scalars
         left_direction_scalar, right_direction_scalar = self.calculate_direction_scalar()
         cmd = WheelsCmdStamped()
-        cmd.vel_left = WHEEL_VELOCITY * left_direction_scalar
-        cmd.vel_right = WHEEL_VELOCITY * right_direction_scalar
+        cmd.vel_left = WHEEL_TURN_VELOCITY * left_direction_scalar
+        cmd.vel_right = WHEEL_TURN_VELOCITY * right_direction_scalar
         return cmd
     
     def calculate_straight_adjusted_wheel_velocity(self):
