@@ -19,6 +19,7 @@ DISTANCE_SLOWDOWN_THRESHOLD_APPROACH = 0.1  # meters
 SLOWDOWN_FACTOR_APPROACH = 0.5
 MAX_VELOCITY = 0.7  # m/s
 MIN_VELOCITY = 0.3  # m/s
+WHEEL_VELOCITY_STOPPED_THRESHOLD = 0.01  # m/s
 
 class StraightsTurnsSquares:
     def __init__(self):
@@ -65,7 +66,6 @@ class StraightsTurnsSquares:
         self._last_distance_right = msg.data[3]
         self._last_displacement_right = msg.data[4]
         self._last_velocity_right = msg.data[5]
-        #self._new_wheel_movement_info = True
         self.handle_goals()
 
     def rotation_to_distance(self, rotation, axle_length):
@@ -123,7 +123,7 @@ class StraightsTurnsSquares:
 
     def is_distance_goal_complete(self):
         abs_left, abs_right = self.calculate_abs_distance_to_goal()
-        if abs_left < DISTANCE_COMPLETE_THRESHOLD and abs_right < DISTANCE_COMPLETE_THRESHOLD:
+        if abs_left < DISTANCE_COMPLETE_THRESHOLD or abs_right < DISTANCE_COMPLETE_THRESHOLD:
             return True
         return False
     
@@ -139,85 +139,159 @@ class StraightsTurnsSquares:
         right_scalar = 1.0 if right_forward else -1.0
         return (left_scalar, right_scalar)
 
-    def balance_wheel_velocity(self, velocity_adjustment_type=VelocityAdjustmentType.BALANCE_VELOCITY):
-        cmd = WheelsCmdStamped()
-        abs_left, abs_right = self.calculate_abs_distance_to_goal()
+    # def balance_wheel_velocity(self, velocity_adjustment_type=VelocityAdjustmentType.BALANCE_VELOCITY):
+    #     cmd = WheelsCmdStamped()
+    #     abs_left, abs_right = self.calculate_abs_distance_to_goal()
 
-        # edge case: both wheels are not moving
-        if abs_left < DISTANCE_COMPLETE_THRESHOLD and abs_right < DISTANCE_COMPLETE_THRESHOLD:
-            rospy.logerr("The abs_left and abs_right are both below the threshold in balance_wheel_velocity()!")
-            rospy.logerr("This should not happen!")
-            cmd.vel_left = 0.0
-            cmd.vel_right = 0.0
-            return cmd
+    #     # edge case: both wheels are not moving
+    #     if abs_left < DISTANCE_COMPLETE_THRESHOLD and abs_right < DISTANCE_COMPLETE_THRESHOLD:
+    #         rospy.logerr("The abs_left and abs_right are both below the threshold in balance_wheel_velocity()!")
+    #         rospy.logerr("This should not happen!")
+    #         cmd.vel_left = 0.0
+    #         cmd.vel_right = 0.0
+    #         return cmd
 
+    #     # calculate the direction of the wheels
+    #     # (positive for forward, negative for backward)
+    #     left_direction_scalar, right_direction_scalar = self.calculate_direction_scalar()
+        
+    #     if abs_left < DISTANCE_COMPLETE_THRESHOLD: # left wheel is not moving
+    #         cmd.vel_left = 0.0
+    #         cmd.vel_right = WHEEL_VELOCITY * right_direction_scalar
+    #     elif abs_right < DISTANCE_COMPLETE_THRESHOLD: # right wheel is not moving
+    #         cmd.vel_left = WHEEL_VELOCITY * left_direction_scalar
+    #         cmd.vel_right = 0.0
+    #     else: # both wheels are moving
+    #         # calculate the scaling factors for the wheel velocities
+    #         if (velocity_adjustment_type == VelocityAdjustmentType.BALANCE_VELOCITY):
+    #             left_scaling_factor = abs_left / abs_right
+    #             right_scaling_factor = abs_right / abs_left
+    #         elif (velocity_adjustment_type == VelocityAdjustmentType.SLOW_FASTER_VELOCITY):
+    #             # slow down the faster wheel
+    #             if abs_left < abs_right: # left wheel is faster
+    #                 # slow down the left wheel
+    #                 left_scaling_factor = abs_right / abs_left
+    #                 right_scaling_factor = 1.0
+    #             else: # right wheel is faster
+    #                 # slow down the right wheel
+    #                 left_scaling_factor = 1.0
+    #                 right_scaling_factor = abs_left / abs_right
+    #         else:
+    #             rospy.logerr("Invalid velocity adjustment type!")
+    #             left_scaling_factor = 1.0
+    #             right_scaling_factor = 1.0
+
+    #         # calculate the wheel velocities
+    #         cmd.vel_left = WHEEL_VELOCITY * left_scaling_factor
+    #         cmd.vel_right = WHEEL_VELOCITY * right_scaling_factor
+
+    #         # clamp the velocities to a maximum and minimum value
+    #         cmd.vel_left = max(min(cmd.vel_left, MAX_VELOCITY), MIN_VELOCITY)
+    #         cmd.vel_right = max(min(cmd.vel_right, MAX_VELOCITY), MIN_VELOCITY)
+
+    #         # wheel velocities are always positive at this point
+    #         # multiply the velocities by the direction scalars
+    #         # to get the correct direction
+    #         cmd.vel_left *= left_direction_scalar
+    #         cmd.vel_right *= right_direction_scalar
+
+    #     # slow down the wheels if they are too close to the goal
+    #     # to avoid overshooting
+    #     if abs_left < DISTANCE_SLOWDOWN_THRESHOLD_FINAL:
+    #         cmd.vel_left *= SLOWDOWN_FACTOR_FINAL
+    #     elif abs_left < DISTANCE_SLOWDOWN_THRESHOLD_APPROACH:
+    #         cmd.vel_left *= SLOWDOWN_FACTOR_APPROACH
+
+    #     if abs_right < DISTANCE_SLOWDOWN_THRESHOLD_FINAL:
+    #         cmd.vel_right *= SLOWDOWN_FACTOR_FINAL
+    #     elif abs_right < DISTANCE_SLOWDOWN_THRESHOLD_APPROACH:
+    #         cmd.vel_right *= SLOWDOWN_FACTOR_APPROACH
+
+    #     return cmd
+    
+    def number_wheels_moving(self):
+        number_wheels_moving = 0
+        abs_vel_left, abs_vel_right = self.calculate_abs_velocity()
+        if abs_vel_left > WHEEL_VELOCITY_STOPPED_THRESHOLD:
+            number_wheels_moving += 1
+        if abs_vel_right > WHEEL_VELOCITY_STOPPED_THRESHOLD:
+            number_wheels_moving += 1
+        return number_wheels_moving
+    
+    def calculate_abs_velocity(self):
+        abs_left = abs(self._last_velocity_left)
+        abs_right = abs(self._last_velocity_right)
+        return (abs_left, abs_right)
+    
+    def calculate_maintain_straight_velocity_scalar(self):
+        abs_left, abs_right = self.calculate_abs_velocity()
+        if abs_left > abs_right: # left wheel is faster
+            left_velocity_scalar = abs_right / abs_left
+            right_velocity_scalar = 1.0
+        elif abs_right > abs_left: # right wheel is faster
+            left_velocity_scalar = 1.0
+            right_velocity_scalar = abs_left / abs_right
+        else: # both wheels are moving at the same speed
+            left_velocity_scalar = 1.0
+            right_velocity_scalar = 1.0
+        return (left_velocity_scalar, right_velocity_scalar)
+    
+    def clamp_and_correct_vel_direction(self, left_vel, right_vel):
+        # get absolute values of the velocities
+        abs_left = abs(left_vel)
+        abs_right = abs(right_vel)
+        # clamp the velocities to a maximum and minimum value
+        left_vel = max(min(abs_left, MAX_VELOCITY), MIN_VELOCITY)
+        right_vel = max(min(abs_right, MAX_VELOCITY), MIN_VELOCITY)
         # calculate the direction of the wheels
         # (positive for forward, negative for backward)
         left_direction_scalar, right_direction_scalar = self.calculate_direction_scalar()
+        # multiply the velocities by the direction scalars
+        # to get the correct direction
+        left_vel *= left_direction_scalar
+        right_vel *= right_direction_scalar
+        return (left_vel, right_vel)
+
+    def maintain_straight_line(self):
+        if self.number_wheels_moving() < 2: # one or both wheels are not moving
+            rospy.logerr("One or both wheels are not moving in maintain_straight_line!")
+
+        abs_vel_left, abs_vel_right = self.calculate_abs_velocity()
+
+        # calculate the scaling factors for the wheel velocities
+        left_maintain_velocity_scalar, right_maintain_velocity_scalar = self.calculate_maintain_straight_velocity_scalar()
         
-        if abs_left < DISTANCE_COMPLETE_THRESHOLD: # left wheel is not moving
-            cmd.vel_left = 0.0
-            cmd.vel_right = WHEEL_VELOCITY * right_direction_scalar
-        elif abs_right < DISTANCE_COMPLETE_THRESHOLD: # right wheel is not moving
-            cmd.vel_left = WHEEL_VELOCITY * left_direction_scalar
-            cmd.vel_right = 0.0
-        else: # both wheels are moving
-            # calculate the scaling factors for the wheel velocities
-            if (velocity_adjustment_type == VelocityAdjustmentType.BALANCE_VELOCITY):
-                left_scaling_factor = abs_left / abs_right
-                right_scaling_factor = abs_right / abs_left
-            elif (velocity_adjustment_type == VelocityAdjustmentType.SLOW_FASTER_VELOCITY):
-                # slow down the faster wheel
-                if abs_left < abs_right: # left wheel is faster
-                    # slow down the left wheel
-                    left_scaling_factor = abs_right / abs_left
-                    right_scaling_factor = 1.0
-                else: # right wheel is faster
-                    # slow down the right wheel
-                    left_scaling_factor = 1.0
-                    right_scaling_factor = abs_left / abs_right
-            else:
-                rospy.logerr("Invalid velocity adjustment type!")
-                left_scaling_factor = 1.0
-                right_scaling_factor = 1.0
+        cmd = WheelsCmdStamped()
+        if abs_vel_left > abs_vel_right: # left wheel is faster
+            # slow down the left wheel
+            cmd.vel_left = WHEEL_VELOCITY * left_maintain_velocity_scalar
+            cmd.vel_right = WHEEL_VELOCITY
+        elif abs_vel_right > abs_vel_left: # right wheel is faster
+            # slow down the right wheel
+            cmd.vel_left = WHEEL_VELOCITY
+            cmd.vel_right = WHEEL_VELOCITY * right_maintain_velocity_scalar
+        else: # both wheels are moving at the same speed
+            # maintain the same speed
+            cmd.vel_left = WHEEL_VELOCITY
+            cmd.vel_right = WHEEL_VELOCITY
 
-            # calculate the wheel velocities
-            cmd.vel_left = WHEEL_VELOCITY * left_scaling_factor
-            cmd.vel_right = WHEEL_VELOCITY * right_scaling_factor
-
-            # clamp the velocities to a maximum and minimum value
-            cmd.vel_left = max(min(cmd.vel_left, MAX_VELOCITY), MIN_VELOCITY)
-            cmd.vel_right = max(min(cmd.vel_right, MAX_VELOCITY), MIN_VELOCITY)
-
-            # wheel velocities are always positive at this point
-            # multiply the velocities by the direction scalars
-            # to get the correct direction
-            cmd.vel_left *= left_direction_scalar
-            cmd.vel_right *= right_direction_scalar
-
-        # slow down the wheels if they are too close to the goal
-        # to avoid overshooting
-        if abs_left < DISTANCE_SLOWDOWN_THRESHOLD_FINAL:
-            cmd.vel_left *= SLOWDOWN_FACTOR_FINAL
-        elif abs_left < DISTANCE_SLOWDOWN_THRESHOLD_APPROACH:
-            cmd.vel_left *= SLOWDOWN_FACTOR_APPROACH
-
-        if abs_right < DISTANCE_SLOWDOWN_THRESHOLD_FINAL:
-            cmd.vel_right *= SLOWDOWN_FACTOR_FINAL
-        elif abs_right < DISTANCE_SLOWDOWN_THRESHOLD_APPROACH:
-            cmd.vel_right *= SLOWDOWN_FACTOR_APPROACH
-
+        # clamp the velocities to a maximum and minimum value
+        # and correct the direction
+        cmd.vel_left, cmd.vel_right = self.clamp_and_correct_vel_direction(cmd.vel_left, cmd.vel_right)
         return cmd
 
     def handle_distance_goal(self):
+        cmd = WheelsCmdStamped()
+        cmd.vel_left = 0.0
+        cmd.vel_right = 0.0
         if self.is_distance_goal_complete():
-            cmd = WheelsCmdStamped()
-            cmd.vel_left = 0.0
-            cmd.vel_right = 0.0
             self._dist_goal_active = False
             rospy.loginfo("Distance goal complete!")
-        else:
-            cmd = self.balance_wheel_velocity(self._velocity_adjustment_type)
+        elif self.number_wheels_moving() < 2: # one or both wheels are not moving
+            self._dist_goal_active = False
+            rospy.logerr("One or both wheels are not moving in handle_distance_goal()!")
+        else: # both wheels are moving
+            cmd = self.maintain_straight_line()
         self._velocity_publisher.publish(cmd)
 
     def handle_square_goal(self):
