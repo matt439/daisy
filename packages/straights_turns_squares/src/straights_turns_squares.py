@@ -23,6 +23,8 @@ SLOWDOWN_FACTOR_APPROACH = 0.7
 WHEEL_VELOCITY_STOPPED_THRESHOLD = 0.01  # m/s
 GOAL_START_TIME_PERIOD = 0.5  # seconds
 ZERO_VELOCITY_READINGS_COUNT_THRESHOLD = 10  # number of readings
+LEFT_ERROR_CORRECTION_SCALAR = 0.9
+RIGHT_ERROR_CORRECTION_SCALAR = 1.0 / LEFT_ERROR_CORRECTION_SCALAR
 
 class StraightsTurnsSquares:
     def __init__(self):
@@ -315,6 +317,10 @@ class StraightsTurnsSquares:
         left_slowdown_scalar, right_slowdown_scalar = self.calculate_near_goal_slowdown_scalar()
         cmd.vel_left *= left_slowdown_scalar
         cmd.vel_right *= right_slowdown_scalar
+
+        # apply error correction scalars
+        cmd.vel_left *= LEFT_ERROR_CORRECTION_SCALAR
+        cmd.vel_right *= RIGHT_ERROR_CORRECTION_SCALAR
 
         # clamp the velocities to a maximum and minimum value
         # and correct the direction
