@@ -350,6 +350,12 @@ class StraightsTurnsSquares:
             # the goal start time period is complete
             self._dist_goal_active = False
             rospy.logerr("One or both wheels are not moving in handle_distance_goal()!")
+            rospy.logerr("This should not happen!")
+            rospy.logerr("Left wheel distance: %s", self._last_distance_left)
+            rospy.logerr("Right wheel distance: %s", self._last_distance_right)
+            # print zero velocity readings count
+            rospy.logerr("Left wheel zero velocity readings count: %s", self._zero_velocity_readings_count_left)
+            rospy.logerr("Right wheel zero velocity readings count: %s", self._zero_velocity_readings_count_right)
         else: # both wheels are moving
             cmd = self.maintain_straight_line()
         self._velocity_publisher.publish(cmd)
