@@ -8,7 +8,7 @@ from std_msgs.msg import Float64MultiArray, MultiArrayLayout, MultiArrayDimensio
 from duckietown_msgs.msg import WheelEncoderStamped
 
 FREQUENCY = 10 # Hz
-WHEEL_DIAMETER = 0.0318 * 2 # meters
+WHEEL_DIAMETER = 0.0318 * 2 # meters. value from calibration report
 WHEEL_CIRCUMFERENCE = math.pi * WHEEL_DIAMETER # meters
 
 class WheelMovementInfo:
