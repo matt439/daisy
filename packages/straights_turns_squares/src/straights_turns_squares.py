@@ -4,13 +4,18 @@ import rospy
 import math
 from std_msgs.msg import Float64MultiArray, Float64
 from duckietown_msgs.msg import WheelsCmdStamped
+from enum import Enum
+
+class VelocityAdjustmentType(Enum):
+    BALANCE_VELOCITY = 0
+    SLOW_FASTER_VELOCITY = 1
 
 AXLE_LENGTH = 0.1  # meters
 WHEEL_VELOCITY = 0.5  # m/s
 DISTANCE_COMPLETE_THRESHOLD = 0.01  # meters
 DISTANCE_SLOWDOWN_THRESHOLD_FINAL = 0.05  # meters
 SLOWDOWN_FACTOR_FINAL = 0.2
-DISTANCE_SLOWDOWN_THRESHOLD_APPROACH = 0.2  # meters
+DISTANCE_SLOWDOWN_THRESHOLD_APPROACH = 0.1  # meters
 SLOWDOWN_FACTOR_APPROACH = 0.5
 MAX_VELOCITY = 0.7  # m/s
 MIN_VELOCITY = 0.3  # m/s
@@ -28,6 +33,7 @@ class StraightsTurnsSquares:
         self._goal_distance_left = 0.0
         self._goal_distance_right = 0.0
         self._dist_goal_active = False
+        self._velocity_adjustment_type = VelocityAdjustmentType.BALANCE_VELOCITY
 
         self._square_goal_active = False
         self._square_edges_completed = 0
@@ -80,6 +86,7 @@ class StraightsTurnsSquares:
             right_distance = distance
         self._goal_distance_left = self._last_distance_left + left_distance
         self._goal_distance_right = self._last_distance_right + right_distance
+        self._velocity_adjustment_type = VelocityAdjustmentType.BALANCE_VELOCITY
         self._dist_goal_active = True
 
     def goal_distance_callback(self, msg):
@@ -92,6 +99,7 @@ class StraightsTurnsSquares:
         rospy.loginfo("Last distance right: %s", self._last_distance_right)
         rospy.loginfo("Goal distance left: %s", self._goal_distance_left)
         rospy.loginfo("Goal distance right: %s", self._goal_distance_right)
+        self._velocity_adjustment_type = VelocityAdjustmentType.SLOW_FASTER_VELOCITY
         self._dist_goal_active = True
 
     def square_callback(self, msg):
@@ -131,7 +139,7 @@ class StraightsTurnsSquares:
         right_scalar = 1.0 if right_forward else -1.0
         return (left_scalar, right_scalar)
 
-    def balance_wheel_velocity(self):
+    def balance_wheel_velocity(self, velocity_adjustment_type=VelocityAdjustmentType.BALANCE_VELOCITY):
         cmd = WheelsCmdStamped()
         abs_left, abs_right = self.calculate_abs_distance_to_goal()
 
@@ -155,8 +163,23 @@ class StraightsTurnsSquares:
             cmd.vel_right = 0.0
         else: # both wheels are moving
             # calculate the scaling factors for the wheel velocities
-            left_scaling_factor = abs_left / abs_right
-            right_scaling_factor = abs_right / abs_left
+            if (velocity_adjustment_type == VelocityAdjustmentType.BALANCE_VELOCITY):
+                left_scaling_factor = abs_left / abs_right
+                right_scaling_factor = abs_right / abs_left
+            elif (velocity_adjustment_type == VelocityAdjustmentType.SLOW_FASTER_VELOCITY):
+                # slow down the faster wheel
+                if abs_left < abs_right: # left wheel is faster
+                    # slow down the left wheel
+                    left_scaling_factor = abs_right / abs_left
+                    right_scaling_factor = 1.0
+                else: # right wheel is faster
+                    # slow down the right wheel
+                    left_scaling_factor = 1.0
+                    right_scaling_factor = abs_left / abs_right
+            else:
+                rospy.logerr("Invalid velocity adjustment type!")
+                left_scaling_factor = 1.0
+                right_scaling_factor = 1.0
 
             # calculate the wheel velocities
             cmd.vel_left = WHEEL_VELOCITY * left_scaling_factor
@@ -194,7 +217,7 @@ class StraightsTurnsSquares:
             self._dist_goal_active = False
             rospy.loginfo("Distance goal complete!")
         else:
-            cmd = self.balance_wheel_velocity()
+            cmd = self.balance_wheel_velocity(self._velocity_adjustment_type)
         self._velocity_publisher.publish(cmd)
 
     def handle_square_goal(self):
