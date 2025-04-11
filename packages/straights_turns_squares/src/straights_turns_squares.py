@@ -241,25 +241,25 @@ class StraightsTurnsSquares:
     
     def calculate_maintain_straight_velocity_scalar(self):
         abs_left, abs_right = self.calculate_abs_velocity()
-        if abs_left > abs_right: # left wheel is faster
-            if abs_left == 0.0:
-                rospy.logerr("The abs_left is zero in calculate_maintain_straight_velocity_scalar()!")
-                rospy.logerr("This should not happen!")
-                left_velocity_scalar = 0.0
-            else:
-                left_velocity_scalar = abs_right / abs_left
-            right_velocity_scalar = 1.0
-        elif abs_right > abs_left: # right wheel is faster
-            left_velocity_scalar = 1.0
-            if abs_right == 0.0:
-                rospy.logerr("The abs_right is zero in calculate_maintain_straight_velocity_scalar()!")
-                rospy.logerr("This should not happen!")
-                right_velocity_scalar = 0.0
-            else:
-                right_velocity_scalar = abs_left / abs_right
-        else: # both wheels are moving at the same speed
+
+        if abs_left == 0.0 and abs_right == 0.0:
+            rospy.logerr("The abs_left and abs_right are both zero in calculate_maintain_straight_velocity_scalar()!")
+            rospy.logerr("This should not happen!")
             left_velocity_scalar = 1.0
             right_velocity_scalar = 1.0
+        elif abs_left == 0.0: # left wheel is not moving
+            rospy.logerr("The abs_left is zero in calculate_maintain_straight_velocity_scalar()!")
+            rospy.logerr("This should not happen!")
+            left_velocity_scalar = 1.0
+            right_velocity_scalar = 1.0
+        elif abs_right == 0.0: # right wheel is not moving
+            rospy.logerr("The abs_right is zero in calculate_maintain_straight_velocity_scalar()!")
+            rospy.logerr("This should not happen!")
+            left_velocity_scalar = 1.0
+            right_velocity_scalar = 1.0
+        else: # adjust the wheel velocities
+            left_velocity_scalar = abs_right / abs_left
+            right_velocity_scalar = abs_left / abs_right
         return (left_velocity_scalar, right_velocity_scalar)
     
     def clamp_and_correct_vel_direction(self, left_vel, right_vel):
@@ -311,10 +311,10 @@ class StraightsTurnsSquares:
         if abs_vel_left > abs_vel_right: # left wheel is faster
             # slow down the left wheel
             cmd.vel_left = WHEEL_VELOCITY * left_maintain_velocity_scalar
-            cmd.vel_right = WHEEL_VELOCITY
+            cmd.vel_right = WHEEL_VELOCITY * right_maintain_velocity_scalar
         elif abs_vel_right > abs_vel_left: # right wheel is faster
             # slow down the right wheel
-            cmd.vel_left = WHEEL_VELOCITY
+            cmd.vel_left = WHEEL_VELOCITY * left_maintain_velocity_scalar
             cmd.vel_right = WHEEL_VELOCITY * right_maintain_velocity_scalar
         else: # both wheels are moving at the same speed
             # maintain the same speed
