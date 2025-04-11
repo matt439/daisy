@@ -5,11 +5,11 @@ import math
 import time
 from std_msgs.msg import Float64MultiArray, Float64
 from duckietown_msgs.msg import WheelsCmdStamped
-# from enum import Enum
+from enum import Enum
 
-# class VelocityAdjustmentType(Enum):
-#     BALANCE_VELOCITY = 0
-#     SLOW_FASTER_VELOCITY = 1
+class VelocityAdjustmentType(Enum):
+    STRAIGHT = 0
+    TURN = 1
 
 AXLE_LENGTH = 0.1  # meters
 WHEEL_VELOCITY = 0.6  # m/s
@@ -40,10 +40,13 @@ class StraightsTurnsSquares:
         self._goal_distance_left = 0.0
         self._goal_distance_right = 0.0
         self._dist_goal_active = False
-        # self._velocity_adjustment_type = VelocityAdjustmentType.BALANCE_VELOCITY
+        self._velocity_adjustment_type = VelocityAdjustmentType.STRAIGHT
+
         self._goal_start_time = time.time()
         self._zero_velocity_readings_count_left = 0
         self._zero_velocity_readings_count_right = 0
+
+        self._angle_goal_active = False
 
         self._square_goal_active = False
         self._square_edges_completed = 0
@@ -95,7 +98,7 @@ class StraightsTurnsSquares:
             right_distance = distance
         self._goal_distance_left = self._last_distance_left + left_distance
         self._goal_distance_right = self._last_distance_right + right_distance
-        # self._velocity_adjustment_type = VelocityAdjustmentType.BALANCE_VELOCITY
+        self._velocity_adjustment_type = VelocityAdjustmentType.TURN
         self._goal_start_time = time.time()
         self._zero_velocity_readings_count_left = 0
         self._zero_velocity_readings_count_right = 0
@@ -111,7 +114,7 @@ class StraightsTurnsSquares:
         rospy.loginfo("Last distance right: %s", self._last_distance_right)
         rospy.loginfo("Goal distance left: %s", self._goal_distance_left)
         rospy.loginfo("Goal distance right: %s", self._goal_distance_right)
-        # self._velocity_adjustment_type = VelocityAdjustmentType.SLOW_FASTER_VELOCITY
+        self._velocity_adjustment_type = VelocityAdjustmentType.STRAIGHT
         self._goal_start_time = time.time()
         self._zero_velocity_readings_count_left = 0
         self._zero_velocity_readings_count_right = 0
@@ -231,7 +234,24 @@ class StraightsTurnsSquares:
             return True
         return False
 
-    def calculate_adjusted_wheel_velocity(self):
+    def calculate_adjusted_wheel_velocity(self, velocity_adjustment_type = VelocityAdjustmentType.STRAIGHT):
+        if velocity_adjustment_type == VelocityAdjustmentType.STRAIGHT:
+            return self.calculate_straight_adjusted_wheel_velocity()
+        elif velocity_adjustment_type == VelocityAdjustmentType.TURN:
+            return self.calculate_turn_adjusted_wheel_velocity()
+        else:
+            rospy.logerr("Invalid velocity adjustment type!")
+            return WheelsCmdStamped()
+        
+    def calculate_turn_adjusted_wheel_velocity(self):
+        # calculate direction scalars
+        left_direction_scalar, right_direction_scalar = self.calculate_direction_scalar()
+        cmd = WheelsCmdStamped()
+        cmd.vel_left = WHEEL_VELOCITY * left_direction_scalar
+        cmd.vel_right = WHEEL_VELOCITY * right_direction_scalar
+        return cmd
+    
+    def calculate_straight_adjusted_wheel_velocity(self):
         abs_vel_left, abs_vel_right = self.calculate_abs_velocity()
 
         # calculate the scaling factors for the wheel velocities
@@ -295,7 +315,7 @@ class StraightsTurnsSquares:
             rospy.logerr("Left wheel zero velocity readings count: %s", self._zero_velocity_readings_count_left)
             rospy.logerr("Right wheel zero velocity readings count: %s", self._zero_velocity_readings_count_right)
         else: # both wheels are moving
-            cmd = self.calculate_adjusted_wheel_velocity()
+            cmd = self.calculate_adjusted_wheel_velocity(self._velocity_adjustment_type)
         self._velocity_publisher.publish(cmd)
 
     def handle_square_goal(self):
