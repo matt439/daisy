@@ -12,9 +12,9 @@ class VelocityAdjustmentType(Enum):
     SLOW_FASTER_VELOCITY = 1
 
 AXLE_LENGTH = 0.1  # meters
-WHEEL_VELOCITY = 0.3  # m/s
-MAX_VELOCITY = 0.5  # m/s
-MIN_VELOCITY = 0.1  # m/s
+WHEEL_VELOCITY = 0.6  # m/s
+MAX_VELOCITY = 0.8  # m/s
+MIN_VELOCITY = 0.4  # m/s
 DISTANCE_COMPLETE_THRESHOLD = 0.01  # meters
 DISTANCE_SLOWDOWN_THRESHOLD_FINAL = 0.05  # meters
 SLOWDOWN_FACTOR_FINAL = 0.3
@@ -245,21 +245,10 @@ class StraightsTurnsSquares:
         if abs_left == 0.0 and abs_right == 0.0:
             rospy.logerr("The abs_left and abs_right are both zero in calculate_maintain_straight_velocity_scalar()!")
             rospy.logerr("This should not happen!")
-            left_velocity_scalar = 1.0
-            right_velocity_scalar = 1.0
-        elif abs_left == 0.0: # left wheel is not moving
-            rospy.logerr("The abs_left is zero in calculate_maintain_straight_velocity_scalar()!")
-            rospy.logerr("This should not happen!")
-            left_velocity_scalar = 1.0
-            right_velocity_scalar = 1.0
-        elif abs_right == 0.0: # right wheel is not moving
-            rospy.logerr("The abs_right is zero in calculate_maintain_straight_velocity_scalar()!")
-            rospy.logerr("This should not happen!")
-            left_velocity_scalar = 1.0
-            right_velocity_scalar = 1.0
+            return (1.0, 1.0)
         else: # adjust the wheel velocities
-            left_velocity_scalar = abs_right / abs_left
-            right_velocity_scalar = abs_left / abs_right
+            left_velocity_scalar = abs_right / (abs_left + abs_right)
+            right_velocity_scalar = abs_left / (abs_left + abs_right)
         return (left_velocity_scalar, right_velocity_scalar)
     
     def clamp_and_correct_vel_direction(self, left_vel, right_vel):
