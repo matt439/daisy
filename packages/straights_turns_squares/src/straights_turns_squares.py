@@ -22,6 +22,7 @@ MAX_VELOCITY = 0.7  # m/s
 MIN_VELOCITY = 0.3  # m/s
 WHEEL_VELOCITY_STOPPED_THRESHOLD = 0.01  # m/s
 GOAL_START_TIME_PERIOD = 0.5  # seconds
+ZERO_VELOCITY_READINGS_COUNT_THRESHOLD = 10  # number of readings
 
 class StraightsTurnsSquares:
     def __init__(self):
@@ -38,6 +39,8 @@ class StraightsTurnsSquares:
         self._dist_goal_active = False
         self._velocity_adjustment_type = VelocityAdjustmentType.BALANCE_VELOCITY
         self._goal_start_time = time.time()
+        self._zero_velocity_readings_count_left = 0
+        self._zero_velocity_readings_count_right = 0
 
         self._square_goal_active = False
         self._square_edges_completed = 0
@@ -104,6 +107,8 @@ class StraightsTurnsSquares:
         rospy.loginfo("Goal distance right: %s", self._goal_distance_right)
         self._velocity_adjustment_type = VelocityAdjustmentType.SLOW_FASTER_VELOCITY
         self._goal_start_time = time.time()
+        self._zero_velocity_readings_count_left = 0
+        self._zero_velocity_readings_count_right = 0
         self._dist_goal_active = True
 
     def square_callback(self, msg):
@@ -213,14 +218,21 @@ class StraightsTurnsSquares:
 
     #     return cmd
     
-    def number_wheels_moving(self):
-        number_wheels_moving = 0
+    def count_zero_velocity_readings(self):
+        left_moving, right_moving = self.is_wheels_moving()
+        if not left_moving:
+            self._zero_velocity_readings_count_left += 1
+        if not right_moving:
+            self._zero_velocity_readings_count_right += 1
+    
+    def is_zero_velocity_readings_count_exceeded(self):
+        if self._zero_velocity_readings_count_left > ZERO_VELOCITY_READINGS_COUNT_THRESHOLD or self._zero_velocity_readings_count_right > ZERO_VELOCITY_READINGS_COUNT_THRESHOLD:
+            return True
+        return False
+
+    def is_wheels_moving(self):
         abs_vel_left, abs_vel_right = self.calculate_abs_velocity()
-        if abs_vel_left > WHEEL_VELOCITY_STOPPED_THRESHOLD:
-            number_wheels_moving += 1
-        if abs_vel_right > WHEEL_VELOCITY_STOPPED_THRESHOLD:
-            number_wheels_moving += 1
-        return number_wheels_moving
+        return (abs_vel_left > WHEEL_VELOCITY_STOPPED_THRESHOLD, abs_vel_right > WHEEL_VELOCITY_STOPPED_THRESHOLD)
     
     def calculate_abs_velocity(self):
         abs_left = abs(self._last_velocity_left)
@@ -317,10 +329,13 @@ class StraightsTurnsSquares:
         cmd = WheelsCmdStamped()
         cmd.vel_left = 0.0
         cmd.vel_right = 0.0
+
+        self.count_zero_velocity_readings()
+
         if self.is_distance_goal_complete():
             self._dist_goal_active = False
             rospy.loginfo("Distance goal complete!")
-        elif self.number_wheels_moving() < 2 and self.is_goal_start_time_period_complete():
+        elif self.is_zero_velocity_readings_count_exceeded() and self.is_goal_start_time_period_complete():
             # one or both wheels are not moving and
             # the goal start time period is complete
             self._dist_goal_active = False
