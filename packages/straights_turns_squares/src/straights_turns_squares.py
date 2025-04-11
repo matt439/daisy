@@ -18,11 +18,11 @@ MAX_VELOCITY = 1.2  # m/s
 MIN_VELOCITY = 0.1  # m/s
 DISTANCE_COMPLETE_THRESHOLD = 0.01  # meters
 DISTANCE_SLOWDOWN_THRESHOLD_FINAL = 0.05  # meters
-SLOWDOWN_FACTOR_FINAL = 0.3
+SLOWDOWN_FACTOR_FINAL = 0.5
 DISTANCE_SLOWDOWN_THRESHOLD_APPROACH = 0.1  # meters
 SLOWDOWN_FACTOR_APPROACH = 0.7
 WHEEL_VELOCITY_STOPPED_THRESHOLD = 0.01  # m/s
-GOAL_START_TIME_PERIOD = 1.0  # seconds
+GOAL_START_TIME_PERIOD = 0.5  # seconds
 START_TIME_PERIOD_SLOWDOWN_SCALAR = 0.5
 ZERO_VELOCITY_READINGS_COUNT_THRESHOLD = 10  # number of readings
 LEFT_ERROR_CORRECTION_SCALAR = 0.85
@@ -198,11 +198,9 @@ class StraightsTurnsSquares:
         # clamp the velocities to a maximum and minimum value
         left_vel = max(min(abs_left, MAX_VELOCITY), MIN_VELOCITY)
         right_vel = max(min(abs_right, MAX_VELOCITY), MIN_VELOCITY)
-        # calculate the direction of the wheels
-        # (positive for forward, negative for backward)
+        # calculate the direction of the wheels (positive for forward, negative for backward)
         left_direction_scalar, right_direction_scalar = self.calculate_direction_scalar()
-        # multiply the velocities by the direction scalars
-        # to get the correct direction
+        # multiply the velocities by the direction scalars to get the correct direction
         left_vel *= left_direction_scalar
         right_vel *= right_direction_scalar
         return (left_vel, right_vel)
@@ -277,18 +275,17 @@ class StraightsTurnsSquares:
         cmd.vel_left *= left_start_time_period_slowdown_scalar
         cmd.vel_right *= right_start_time_period_slowdown_scalar
 
-        # slow down the wheels if they are too close to the goal
-        # to avoid overshooting
-        left_slowdown_scalar, right_slowdown_scalar = self.calculate_near_goal_slowdown_scalar()
-        cmd.vel_left *= left_slowdown_scalar
-        cmd.vel_right *= right_slowdown_scalar
+        # slow down the wheels if they are too close to the goal to avoid overshooting
+        if self.is_goal_start_time_period_complete(): # only apply this if the start time period is complete
+            left_slowdown_scalar, right_slowdown_scalar = self.calculate_near_goal_slowdown_scalar()
+            cmd.vel_left *= left_slowdown_scalar
+            cmd.vel_right *= right_slowdown_scalar
 
         # apply error correction scalars
         cmd.vel_left *= LEFT_ERROR_CORRECTION_SCALAR
         cmd.vel_right *= RIGHT_ERROR_CORRECTION_SCALAR
 
-        # clamp the velocities to a maximum and minimum value
-        # and correct the direction
+        # clamp the velocities to a maximum and minimum value and correct the direction
         cmd.vel_left, cmd.vel_right = self.clamp_and_correct_vel_direction(cmd.vel_left, cmd.vel_right)
         return cmd
 
@@ -305,8 +302,7 @@ class StraightsTurnsSquares:
             rospy.loginfo("Left wheel final displacement: %s", self._last_distance_left - self._goal_distance_left)
             rospy.loginfo("Right wheel final displacement: %s", self._last_distance_right - self._goal_distance_right)
         elif self.is_zero_velocity_readings_count_exceeded() and self.is_goal_start_time_period_complete():
-            # one or both wheels are not moving and
-            # the goal start time period is complete
+            # one or both wheels are not moving and the goal start time period is complete
             self._dist_goal_active = False
             rospy.logerr("One or both wheels are not moving in handle_distance_goal()!")
             rospy.logerr("This should not happen!")
