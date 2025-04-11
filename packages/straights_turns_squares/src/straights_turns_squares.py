@@ -2,6 +2,7 @@
 
 import rospy
 import math
+import time
 from std_msgs.msg import Float64MultiArray, Float64
 from duckietown_msgs.msg import WheelsCmdStamped
 from enum import Enum
@@ -20,6 +21,7 @@ SLOWDOWN_FACTOR_APPROACH = 0.5
 MAX_VELOCITY = 0.7  # m/s
 MIN_VELOCITY = 0.3  # m/s
 WHEEL_VELOCITY_STOPPED_THRESHOLD = 0.01  # m/s
+GOAL_START_TIME_PERIOD = 0.5  # seconds
 
 class StraightsTurnsSquares:
     def __init__(self):
@@ -35,6 +37,7 @@ class StraightsTurnsSquares:
         self._goal_distance_right = 0.0
         self._dist_goal_active = False
         self._velocity_adjustment_type = VelocityAdjustmentType.BALANCE_VELOCITY
+        self._goal_start_time = time.time()
 
         self._square_goal_active = False
         self._square_edges_completed = 0
@@ -100,6 +103,7 @@ class StraightsTurnsSquares:
         rospy.loginfo("Goal distance left: %s", self._goal_distance_left)
         rospy.loginfo("Goal distance right: %s", self._goal_distance_right)
         self._velocity_adjustment_type = VelocityAdjustmentType.SLOW_FASTER_VELOCITY
+        self._goal_start_time = time.time()
         self._dist_goal_active = True
 
     def square_callback(self, msg):
@@ -251,6 +255,29 @@ class StraightsTurnsSquares:
         left_vel *= left_direction_scalar
         right_vel *= right_direction_scalar
         return (left_vel, right_vel)
+    
+    def calculate_near_goal_slowdown_scalar(self):
+        abs_left, abs_right = self.calculate_abs_distance_to_goal()
+        if abs_left < DISTANCE_SLOWDOWN_THRESHOLD_FINAL:
+            left_slowdown_scalar = SLOWDOWN_FACTOR_FINAL
+        elif abs_left < DISTANCE_SLOWDOWN_THRESHOLD_APPROACH:
+            left_slowdown_scalar = SLOWDOWN_FACTOR_APPROACH
+        else:
+            left_slowdown_scalar = 1.0
+
+        if abs_right < DISTANCE_SLOWDOWN_THRESHOLD_FINAL:
+            right_slowdown_scalar = SLOWDOWN_FACTOR_FINAL
+        elif abs_right < DISTANCE_SLOWDOWN_THRESHOLD_APPROACH:
+            right_slowdown_scalar = SLOWDOWN_FACTOR_APPROACH
+        else:
+            right_slowdown_scalar = 1.0
+
+        return (left_slowdown_scalar, right_slowdown_scalar)    
+    
+    def is_goal_start_time_period_complete(self):
+        if time.time() - self._goal_start_time > GOAL_START_TIME_PERIOD:
+            return True
+        return False
 
     def maintain_straight_line(self):
         if self.number_wheels_moving() < 2: # one or both wheels are not moving
@@ -275,6 +302,12 @@ class StraightsTurnsSquares:
             cmd.vel_left = WHEEL_VELOCITY
             cmd.vel_right = WHEEL_VELOCITY
 
+        # slow down the wheels if they are too close to the goal
+        # to avoid overshooting
+        left_slowdown_scalar, right_slowdown_scalar = self.calculate_near_goal_slowdown_scalar()
+        cmd.vel_left *= left_slowdown_scalar
+        cmd.vel_right *= right_slowdown_scalar
+
         # clamp the velocities to a maximum and minimum value
         # and correct the direction
         cmd.vel_left, cmd.vel_right = self.clamp_and_correct_vel_direction(cmd.vel_left, cmd.vel_right)
@@ -287,7 +320,9 @@ class StraightsTurnsSquares:
         if self.is_distance_goal_complete():
             self._dist_goal_active = False
             rospy.loginfo("Distance goal complete!")
-        elif self.number_wheels_moving() < 2: # one or both wheels are not moving
+        elif self.number_wheels_moving() < 2 and self.is_goal_start_time_period_complete():
+            # one or both wheels are not moving and
+            # the goal start time period is complete
             self._dist_goal_active = False
             rospy.logerr("One or both wheels are not moving in handle_distance_goal()!")
         else: # both wheels are moving
