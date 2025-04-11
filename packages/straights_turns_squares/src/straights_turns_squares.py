@@ -18,14 +18,14 @@ MAX_VELOCITY = 1.2  # m/s
 MIN_VELOCITY = 0.1  # m/s
 DISTANCE_COMPLETE_THRESHOLD = 0.01  # meters
 DISTANCE_SLOWDOWN_THRESHOLD_FINAL = 0.05  # meters
-SLOWDOWN_FACTOR_FINAL = 0.5
+SLOWDOWN_SCALAR_FINAL = 0.5
 DISTANCE_SLOWDOWN_THRESHOLD_APPROACH = 0.1  # meters
-SLOWDOWN_FACTOR_APPROACH = 0.7
+SLOWDOWN_SCALAR_APPROACH = 0.7
 WHEEL_VELOCITY_STOPPED_THRESHOLD = 0.01  # m/s
 GOAL_START_TIME_PERIOD = 0.5  # seconds
 START_TIME_PERIOD_SLOWDOWN_SCALAR = 0.5
 ZERO_VELOCITY_READINGS_COUNT_THRESHOLD = 10  # number of readings
-LEFT_ERROR_CORRECTION_SCALAR = 0.85
+LEFT_ERROR_CORRECTION_SCALAR = 0.9
 RIGHT_ERROR_CORRECTION_SCALAR = 1.0 / LEFT_ERROR_CORRECTION_SCALAR
 
 class StraightsTurnsSquares:
@@ -213,16 +213,16 @@ class StraightsTurnsSquares:
     def calculate_near_goal_slowdown_scalar(self):
         abs_left, abs_right = self.calculate_abs_distance_to_goal()
         if abs_left < DISTANCE_SLOWDOWN_THRESHOLD_FINAL:
-            left_slowdown_scalar = SLOWDOWN_FACTOR_FINAL
+            left_slowdown_scalar = SLOWDOWN_SCALAR_FINAL
         elif abs_left < DISTANCE_SLOWDOWN_THRESHOLD_APPROACH:
-            left_slowdown_scalar = SLOWDOWN_FACTOR_APPROACH
+            left_slowdown_scalar = SLOWDOWN_SCALAR_APPROACH
         else:
             left_slowdown_scalar = 1.0
 
         if abs_right < DISTANCE_SLOWDOWN_THRESHOLD_FINAL:
-            right_slowdown_scalar = SLOWDOWN_FACTOR_FINAL
+            right_slowdown_scalar = SLOWDOWN_SCALAR_FINAL
         elif abs_right < DISTANCE_SLOWDOWN_THRESHOLD_APPROACH:
-            right_slowdown_scalar = SLOWDOWN_FACTOR_APPROACH
+            right_slowdown_scalar = SLOWDOWN_SCALAR_APPROACH
         else:
             right_slowdown_scalar = 1.0
 
