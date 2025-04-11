@@ -242,11 +242,21 @@ class StraightsTurnsSquares:
     def calculate_maintain_straight_velocity_scalar(self):
         abs_left, abs_right = self.calculate_abs_velocity()
         if abs_left > abs_right: # left wheel is faster
-            left_velocity_scalar = abs_right / abs_left
+            if abs_left == 0.0:
+                rospy.logerr("The abs_left is zero in calculate_maintain_straight_velocity_scalar()!")
+                rospy.logerr("This should not happen!")
+                left_velocity_scalar = 0.0
+            else:
+                left_velocity_scalar = abs_right / abs_left
             right_velocity_scalar = 1.0
         elif abs_right > abs_left: # right wheel is faster
             left_velocity_scalar = 1.0
-            right_velocity_scalar = abs_left / abs_right
+            if abs_right == 0.0:
+                rospy.logerr("The abs_right is zero in calculate_maintain_straight_velocity_scalar()!")
+                rospy.logerr("This should not happen!")
+                right_velocity_scalar = 0.0
+            else:
+                right_velocity_scalar = abs_left / abs_right
         else: # both wheels are moving at the same speed
             left_velocity_scalar = 1.0
             right_velocity_scalar = 1.0
@@ -292,9 +302,6 @@ class StraightsTurnsSquares:
         return False
 
     def maintain_straight_line(self):
-        if self.number_wheels_moving() < 2: # one or both wheels are not moving
-            rospy.logerr("One or both wheels are not moving in maintain_straight_line!")
-
         abs_vel_left, abs_vel_right = self.calculate_abs_velocity()
 
         # calculate the scaling factors for the wheel velocities
