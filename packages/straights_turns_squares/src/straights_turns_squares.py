@@ -342,6 +342,9 @@ class StraightsTurnsSquares:
         if self.is_distance_goal_complete():
             self._dist_goal_active = False
             rospy.loginfo("Distance goal complete!")
+            # print the left and right wheel distances
+            rospy.loginfo("Left wheel distance: %s", self._last_distance_left)
+            rospy.loginfo("Right wheel distance: %s", self._last_distance_right)
         elif self.is_zero_velocity_readings_count_exceeded() and self.is_goal_start_time_period_complete():
             # one or both wheels are not moving and
             # the goal start time period is complete
