@@ -233,7 +233,7 @@ class StraightsTurnsSquares:
             return True
         return False
 
-    def calculate_adjusted_wheel_velocity(self, velocity_adjustment_type = VelocityAdjustmentType.STRAIGHT):
+    def calculate_adjusted_wheel_velocity(self, velocity_adjustment_type):
         if velocity_adjustment_type == VelocityAdjustmentType.STRAIGHT:
             return self.calculate_straight_adjusted_wheel_velocity()
         elif velocity_adjustment_type == VelocityAdjustmentType.TURN:
