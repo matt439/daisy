@@ -34,5 +34,7 @@ class ObstacleDetector:
         self.pub_obstacle.publish(self.convert_to_int8(self.obstacle_detected))
 
     def convert_to_int8(self, value):
-        # Convert boolean to Int8 (0 for False, 1 for True)
-        return Int8(1 if value else 0)
+        if value:
+            return 1
+        else:
+            return 0
