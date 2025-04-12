@@ -38,3 +38,11 @@ class ObstacleDetector:
             return 1
         else:
             return 0
+        
+if __name__ == '__main__':
+    try:
+        obstacle_detector = ObstacleDetector()
+        rospy.spin()
+    except rospy.ROSInterruptException:
+        pass
+    
