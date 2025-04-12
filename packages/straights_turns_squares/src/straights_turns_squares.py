@@ -7,15 +7,11 @@ from std_msgs.msg import Float64MultiArray, Float64
 from duckietown_msgs.msg import WheelsCmdStamped
 from enum import Enum
 
-class VelocityAdjustmentType(Enum):
-    STRAIGHT = 0
-    TURN = 1
-
 AXLE_LENGTH = 0.1  # meters
-WHEEL_VELOCITY = 0.3  # m/s
+WHEEL_VELOCITY = 0.4  # m/s
 WHEEL_TURN_VELOCITY = 0.5  # m/s
-MAX_VELOCITY = 0.5  # m/s
-MIN_VELOCITY = 0.1  # m/s
+MAX_VELOCITY = 0.6  # m/s
+MIN_VELOCITY = 0.2  # m/s
 DISTANCE_COMPLETE_THRESHOLD = 0.01  # meters
 DISTANCE_SLOWDOWN_THRESHOLD_FINAL = 0.05  # meters
 SLOWDOWN_SCALAR_FINAL = 0.5
@@ -25,8 +21,12 @@ WHEEL_VELOCITY_STOPPED_THRESHOLD = 0.01  # m/s
 GOAL_START_TIME_PERIOD = 0.5  # seconds
 START_TIME_PERIOD_SLOWDOWN_SCALAR = 0.7
 ZERO_VELOCITY_READINGS_COUNT_THRESHOLD = 10  # number of readings
-LEFT_ERROR_CORRECTION_SCALAR = 0.9
+LEFT_ERROR_CORRECTION_SCALAR = 0.88
 RIGHT_ERROR_CORRECTION_SCALAR = 1.0 / LEFT_ERROR_CORRECTION_SCALAR
+
+class VelocityAdjustmentType(Enum):
+    STRAIGHT = 0
+    TURN = 1
 
 class StraightsTurnsSquares:
     def __init__(self):
@@ -63,7 +63,7 @@ class StraightsTurnsSquares:
         # Initialise subscribers and publishers
         rospy.Subscriber("/goal_angle", Float64, self.goal_angle_callback)
         rospy.Subscriber("/goal_distance", Float64, self.goal_distance_callback)
-        rospy.Subscriber("goal_square", Float64, self.square_callback)
+        rospy.Subscriber("/goal_square", Float64, self.square_callback)
         rospy.Subscriber('/wheel_movement_info', Float64MultiArray, self.wheel_movement_info_callback)
         self._velocity_publisher = rospy.Publisher("/vader/wheels_driver_node/wheels_cmd", WheelsCmdStamped, queue_size=1)
         self._goal_angle_publisher = rospy.Publisher('/goal_angle', Float64, queue_size=1)
@@ -89,7 +89,6 @@ class StraightsTurnsSquares:
         rospy.loginfo("Received goal angle: %s", msg.data)
         if msg.data == 0.0:
             return
-        self.reset()
         distance = self.rotation_to_distance(msg.data, AXLE_LENGTH)
         clockwise = True if msg.data < 0.0 else False
         if clockwise:
@@ -110,7 +109,6 @@ class StraightsTurnsSquares:
         rospy.loginfo("Received goal distance: %s", msg.data)
         if msg.data == 0.0:
             return
-        self.reset()
         self._goal_distance_left = self._last_distance_left + msg.data
         self._goal_distance_right = self._last_distance_right + msg.data
         rospy.loginfo("Last distance left: %s", self._last_distance_left)
@@ -372,21 +370,9 @@ class StraightsTurnsSquares:
         self._square_turn_started = False
         self._square_turn_complete = False
 
-    # def run(self):
-    #     rate = rospy.Rate(TIMER_FREQUENCY)
-    #     while not rospy.is_shutdown():
-    #         if self._new_wheel_movement_info:
-    #             self._new_wheel_movement_info = False
-    #             if self._dist_goal_active:
-    #                 self.handle_distance_goal()
-    #             if self._square_goal_active:
-    #                 self.handle_square_goal()
-    #         rate.sleep()
-
 if __name__ == '__main__':
     try:
         straight_turns_squares_class_instance = StraightsTurnsSquares()
-        #straight_turns_squares_class_instance.run()
         rospy.spin()
     except rospy.ROSInterruptException:
         pass
