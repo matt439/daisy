@@ -12,9 +12,9 @@ class VelocityAdjustmentType(Enum):
     TURN = 1
 
 AXLE_LENGTH = 0.1  # meters
-WHEEL_VELOCITY = 0.6  # m/s
-WHEEL_TURN_VELOCITY = 0.5  # m/s
-MAX_VELOCITY = 1.2  # m/s
+WHEEL_VELOCITY = 0.3  # m/s
+WHEEL_TURN_VELOCITY = 0.4  # m/s
+MAX_VELOCITY = 0.5  # m/s
 MIN_VELOCITY = 0.1  # m/s
 DISTANCE_COMPLETE_THRESHOLD = 0.01  # meters
 DISTANCE_SLOWDOWN_THRESHOLD_FINAL = 0.05  # meters
@@ -23,7 +23,7 @@ DISTANCE_SLOWDOWN_THRESHOLD_APPROACH = 0.1  # meters
 SLOWDOWN_SCALAR_APPROACH = 0.7
 WHEEL_VELOCITY_STOPPED_THRESHOLD = 0.01  # m/s
 GOAL_START_TIME_PERIOD = 0.5  # seconds
-START_TIME_PERIOD_SLOWDOWN_SCALAR = 0.5
+START_TIME_PERIOD_SLOWDOWN_SCALAR = 0.7
 ZERO_VELOCITY_READINGS_COUNT_THRESHOLD = 10  # number of readings
 LEFT_ERROR_CORRECTION_SCALAR = 0.9
 RIGHT_ERROR_CORRECTION_SCALAR = 1.0 / LEFT_ERROR_CORRECTION_SCALAR
@@ -183,12 +183,12 @@ class StraightsTurnsSquares:
         abs_left, abs_right = self.calculate_abs_velocity()
 
         if abs_left == 0.0 and abs_right == 0.0:
-            rospy.logerr("The abs_left and abs_right are both zero in calculate_maintain_straight_velocity_scalar()!")
-            rospy.logerr("This should not happen!")
+            rospy.logerr("The abs_left and abs_right are both zero in calculate_maintain_straight_velocity_scalar()! This should not happen!")
             return (1.0, 1.0)
         else: # adjust the wheel velocities
-            left_velocity_scalar = abs_right / (abs_left + abs_right)
-            right_velocity_scalar = abs_left / (abs_left + abs_right)
+            # add 0.5 to the scalar to make them closer to 1.0
+            left_velocity_scalar = (abs_right / (abs_left + abs_right)) + 0.5
+            right_velocity_scalar = (abs_left / (abs_left + abs_right)) + 0.5
         return (left_velocity_scalar, right_velocity_scalar)
     
     def clamp_and_correct_vel_direction(self, left_vel, right_vel):
@@ -245,9 +245,14 @@ class StraightsTurnsSquares:
     def calculate_turn_adjusted_wheel_velocity(self):
         # calculate direction scalars
         left_direction_scalar, right_direction_scalar = self.calculate_direction_scalar()
+
         cmd = WheelsCmdStamped()
         cmd.vel_left = WHEEL_TURN_VELOCITY * left_direction_scalar
         cmd.vel_right = WHEEL_TURN_VELOCITY * right_direction_scalar
+
+        # apply error correction scalars
+        cmd.vel_left *= LEFT_ERROR_CORRECTION_SCALAR
+        cmd.vel_right *= RIGHT_ERROR_CORRECTION_SCALAR
         return cmd
     
     def calculate_straight_adjusted_wheel_velocity(self):
