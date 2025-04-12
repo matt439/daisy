@@ -13,7 +13,7 @@ class VelocityAdjustmentType(Enum):
 
 AXLE_LENGTH = 0.1  # meters
 WHEEL_VELOCITY = 0.3  # m/s
-WHEEL_TURN_VELOCITY = 0.4  # m/s
+WHEEL_TURN_VELOCITY = 0.5  # m/s
 MAX_VELOCITY = 0.5  # m/s
 MIN_VELOCITY = 0.1  # m/s
 DISTANCE_COMPLETE_THRESHOLD = 0.01  # meters
@@ -63,7 +63,7 @@ class StraightsTurnsSquares:
         # Initialise subscribers and publishers
         rospy.Subscriber("/goal_angle", Float64, self.goal_angle_callback)
         rospy.Subscriber("/goal_distance", Float64, self.goal_distance_callback)
-        rospy.Subscriber("/square_edge_length", Float64, self.square_callback)
+        rospy.Subscriber("goal_square", Float64, self.square_callback)
         rospy.Subscriber('/wheel_movement_info', Float64MultiArray, self.wheel_movement_info_callback)
         self._velocity_publisher = rospy.Publisher("/vader/wheels_driver_node/wheels_cmd", WheelsCmdStamped, queue_size=1)
         self._goal_angle_publisher = rospy.Publisher('/goal_angle', Float64, queue_size=1)
@@ -89,6 +89,7 @@ class StraightsTurnsSquares:
         rospy.loginfo("Received goal angle: %s", msg.data)
         if msg.data == 0.0:
             return
+        self.reset()
         distance = self.rotation_to_distance(msg.data, AXLE_LENGTH)
         clockwise = True if msg.data < 0.0 else False
         if clockwise:
@@ -109,6 +110,7 @@ class StraightsTurnsSquares:
         rospy.loginfo("Received goal distance: %s", msg.data)
         if msg.data == 0.0:
             return
+        self.reset()
         self._goal_distance_left = self._last_distance_left + msg.data
         self._goal_distance_right = self._last_distance_right + msg.data
         rospy.loginfo("Last distance left: %s", self._last_distance_left)
@@ -308,7 +310,6 @@ class StraightsTurnsSquares:
             rospy.loginfo("Right wheel final displacement: %s", self._last_distance_right - self._goal_distance_right)
         elif self.is_zero_velocity_readings_count_exceeded() and self.is_goal_start_time_period_complete():
             # one or both wheels are not moving and the goal start time period is complete
-            self._dist_goal_active = False
             rospy.logerr("One or both wheels are not moving in handle_distance_goal()!")
             rospy.logerr("This should not happen!")
             rospy.logerr("Left wheel final displacement: %s", self._last_distance_left - self._goal_distance_left)
@@ -316,18 +317,14 @@ class StraightsTurnsSquares:
             # print zero velocity readings count
             rospy.logerr("Left wheel zero velocity readings count: %s", self._zero_velocity_readings_count_left)
             rospy.logerr("Right wheel zero velocity readings count: %s", self._zero_velocity_readings_count_right)
+            self.reset()
         else: # both wheels are moving
             cmd = self.calculate_adjusted_wheel_velocity(self._velocity_adjustment_type)
         self._velocity_publisher.publish(cmd)
 
     def handle_square_goal(self):
         if self._square_edges_completed > 3: # completed all edges of the square
-            self._square_edges_completed = 0
-            self._square_straight_started = False
-            self._square_straight_complete = False
-            self._square_turn_started = False
-            self._square_turn_complete = False
-            self._square_goal_active = False
+            self.reset()
             return
         
         if not self._square_straight_started:
@@ -355,6 +352,25 @@ class StraightsTurnsSquares:
             self.handle_distance_goal()
         if self._square_goal_active:
             self.handle_square_goal()
+
+    def reset(self):
+        self._goal_distance_left = 0.0
+        self._goal_distance_right = 0.0
+        self._dist_goal_active = False
+        self._velocity_adjustment_type = VelocityAdjustmentType.STRAIGHT
+
+        self._goal_start_time = time.time()
+        self._zero_velocity_readings_count_left = 0
+        self._zero_velocity_readings_count_right = 0
+
+        # Initialize square goal variables
+        self._square_goal_active = False
+        self._square_edges_completed = 0
+        self._square_edge_length = 0.0
+        self._square_straight_started = False
+        self._square_straight_complete = False
+        self._square_turn_started = False
+        self._square_turn_complete = False
 
     # def run(self):
     #     rate = rospy.Rate(TIMER_FREQUENCY)
