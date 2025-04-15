@@ -3,7 +3,7 @@
 import rospy
 import math
 import time
-from std_msgs.msg import Float64MultiArray, Float64
+from std_msgs.msg import Float64MultiArray, Float64, Int8
 from duckietown_msgs.msg import WheelsCmdStamped
 from enum import Enum
 
@@ -57,6 +57,8 @@ class StraightsTurnsSquares:
         self._square_turn_started = False
         self._square_turn_complete = False
 
+        self._is_obstacle_detected = False
+
         # Initialize the node
         rospy.init_node('straights_turns_squares_node', anonymous=True)
 
@@ -65,6 +67,7 @@ class StraightsTurnsSquares:
         rospy.Subscriber("/goal_distance", Float64, self.goal_distance_callback)
         rospy.Subscriber("/goal_square", Float64, self.square_callback)
         rospy.Subscriber('/wheel_movement_info', Float64MultiArray, self.wheel_movement_info_callback)
+        rospy.Subscriber('/obstacle_detector', Int8, self.obstacle_detector_callback)
         self._velocity_publisher = rospy.Publisher("/vader/wheels_driver_node/wheels_cmd", WheelsCmdStamped, queue_size=1)
         self._goal_angle_publisher = rospy.Publisher('/goal_angle', Float64, queue_size=1)
         self._goal_distance_publisher = rospy.Publisher('/goal_distance', Float64, queue_size=1)
@@ -84,6 +87,18 @@ class StraightsTurnsSquares:
     def rotation_to_distance(self, rotation, axle_length):
         distance = rotation * axle_length / 2.0
         return distance
+    
+    def obstacle_detector_callback(self, msg):
+        if msg.data == 1: # obstacle detected
+            self._is_obstacle_detected = True
+        elif msg.data == 0: # no obstacle detected
+            if self._is_obstacle_detected: # obstacle was detected at last check
+                self._goal_start_time = time.time()
+                self._zero_velocity_readings_count_left = 0
+                self._zero_velocity_readings_count_right = 0
+            self._is_obstacle_detected = False
+        else:
+            rospy.logerr("Invalid obstacle detection message!")
 
     def goal_angle_callback(self, msg):
         rospy.loginfo("Received goal angle: %s", msg.data)
@@ -299,8 +314,6 @@ class StraightsTurnsSquares:
         cmd.vel_left = 0.0
         cmd.vel_right = 0.0
 
-        self.count_zero_velocity_readings()
-
         if self.is_distance_goal_complete():
             self._dist_goal_active = False
             rospy.loginfo("Distance goal complete!")
@@ -317,7 +330,14 @@ class StraightsTurnsSquares:
             rospy.logerr("Right wheel zero velocity readings count: %s", self._zero_velocity_readings_count_right)
             self.reset()
         else: # both wheels are moving
-            cmd = self.calculate_adjusted_wheel_velocity(self._velocity_adjustment_type)
+            if self._is_obstacle_detected:
+                # stop the robot if an obstacle is detected
+                cmd.vel_left = 0.0
+                cmd.vel_right = 0.0
+            else:
+                self.count_zero_velocity_readings()
+                cmd = self.calculate_adjusted_wheel_velocity(self._velocity_adjustment_type)
+            
         self._velocity_publisher.publish(cmd)
 
     def handle_square_goal(self):
