@@ -199,7 +199,7 @@ class StraightsTurnsSquares:
         abs_left, abs_right = self.calculate_abs_velocity()
 
         if abs_left == 0.0 and abs_right == 0.0:
-            rospy.logerr("The abs_left and abs_right are both zero in calculate_maintain_straight_velocity_scalar()! This should not happen!")
+            # rospy.logerr("The abs_left and abs_right are both zero in calculate_maintain_straight_velocity_scalar()! This should not happen!")
             return (1.0, 1.0)
         else: # adjust the wheel velocities
             # add 0.5 to the scalar to make them closer to 1.0
@@ -331,8 +331,8 @@ class StraightsTurnsSquares:
             rospy.logerr("Right wheel zero velocity readings count: %s", self._zero_velocity_readings_count_right)
             self.reset()
         else: # both wheels are moving
-            if self._is_obstacle_detected and self._velocity_adjustment_type == VelocityAdjustmentType.STRAIGHT:
-                # if an obstacle is detected and the robot is moving straight, stop the robot
+            if self._is_obstacle_detected and self._velocity_adjustment_type == VelocityAdjustmentType.STRAIGHT and self.is_moving_forward() == (True, True):
+                # if an obstacle is detected and the robot is moving forward in a straight line, stop the robot
                 cmd.vel_left = 0.0
                 cmd.vel_right = 0.0
             else:
