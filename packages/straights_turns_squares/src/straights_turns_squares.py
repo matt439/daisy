@@ -199,7 +199,6 @@ class StraightsTurnsSquares:
         abs_left, abs_right = self.calculate_abs_velocity()
 
         if abs_left == 0.0 and abs_right == 0.0:
-            # rospy.logerr("The abs_left and abs_right are both zero in calculate_maintain_straight_velocity_scalar()! This should not happen!")
             return (1.0, 1.0)
         else: # adjust the wheel velocities
             # add 0.5 to the scalar to make them closer to 1.0
