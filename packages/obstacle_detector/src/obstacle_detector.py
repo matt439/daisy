@@ -15,7 +15,7 @@ class ObstacleDetector:
         self.sub_tof = rospy.Subscriber("/vader/front_center_tof_driver/range", Range, self.callback_tof)
 
         # publisher to publish the obstacle detection status
-        self.pub_obstacle = rospy.Publisher('/obstacle_detection', Int8, queue_size=10)
+        self.pub_obstacle = rospy.Publisher('/obstacle_detector', Int8, queue_size=10)
 
         self._obstacle_detected = False
 
