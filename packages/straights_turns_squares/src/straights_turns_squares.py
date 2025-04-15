@@ -88,12 +88,15 @@ class StraightsTurnsSquares:
     
     def obstacle_detector_callback(self, msg):
         if msg.data == 1: # obstacle detected
+            if not self._is_obstacle_detected:
+                rospy.loginfo("Obstacle detected!")
             self._is_obstacle_detected = True
         elif msg.data == 0: # no obstacle detected
             if self._is_obstacle_detected: # obstacle was detected at last check
                 self._goal_start_time = time.time()
                 self._zero_velocity_readings_count_left = 0
                 self._zero_velocity_readings_count_right = 0
+                rospy.loginfo("Obstacle cleared!")
             self._is_obstacle_detected = False
         else:
             rospy.logerr("Invalid obstacle detection message!")
@@ -328,8 +331,8 @@ class StraightsTurnsSquares:
             rospy.logerr("Right wheel zero velocity readings count: %s", self._zero_velocity_readings_count_right)
             self.reset()
         else: # both wheels are moving
-            if self._is_obstacle_detected:
-                # stop the robot if an obstacle is detected
+            if self._is_obstacle_detected and self._velocity_adjustment_type == VelocityAdjustmentType.STRAIGHT:
+                # if an obstacle is detected and the robot is moving straight, stop the robot
                 cmd.vel_left = 0.0
                 cmd.vel_right = 0.0
             else:
