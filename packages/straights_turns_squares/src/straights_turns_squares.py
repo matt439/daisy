@@ -47,8 +47,6 @@ class StraightsTurnsSquares:
         self._zero_velocity_readings_count_left = 0
         self._zero_velocity_readings_count_right = 0
 
-        # self._angle_goal_active = False
-
         self._square_goal_active = False
         self._square_edges_completed = 0
         self._square_edge_length = 0.0

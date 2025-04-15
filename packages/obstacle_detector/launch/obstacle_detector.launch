@@ -1,0 +1,6 @@
+<launch>
+    <!-- vehicle name so it can work with any robot -->
+    <group ns="$(env VEHICLE_NAME)">
+        <node pkg="obstacle_detector" name="obstacle_detector" type="obstacle_detector.py" output="screen"/>
+    </group>
+</launch>
