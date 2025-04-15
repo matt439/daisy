@@ -4,7 +4,7 @@ import rospy
 from sensor_msgs.msg import Range
 from std_msgs.msg import Int8
 
-OBSTACLE_DISTANCE_THRESHOLD = 0.5  # meters, threshold distance to consider an obstacle
+OBSTACLE_DISTANCE_THRESHOLD = 0.2  # meters, threshold distance to consider an obstacle
 
 class ObstacleDetector:
     def __init__(self):
@@ -12,7 +12,7 @@ class ObstacleDetector:
         rospy.init_node('obstacle_detector_node', anonymous=True)
 
         # subscriber to the tof sensor topic
-        self.sub_tof = rospy.Subscriber("/vader/front_center_tof_driver/range", Range, self.callback_tof)
+        self.sub_tof = rospy.Subscriber("/vader/front_center_tof_driver_node/range", Range, self.callback_tof)
 
         # publisher to publish the obstacle detection status
         self.pub_obstacle = rospy.Publisher('/obstacle_detector', Int8, queue_size=10)
