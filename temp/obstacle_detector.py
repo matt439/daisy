@@ -12,10 +12,10 @@ class ObstacleDetector:
         rospy.init_node('obstacle_detector_node', anonymous=True)
 
         # subscriber to the tof sensor topic
-        self.sub_tof = rospy.Subscriber("/tof_sensor/range", Range, self.callback_tof)
+        self.sub_tof = rospy.Subscriber("/vader/tof_sensor/range", Range, self.callback_tof)
 
         # publisher to publish the obstacle detection status
-        self.pub_obstacle = rospy.Publisher('/obstacle_detection', Int8, queue_size=10)
+        self.pub_obstacle = rospy.Publisher('/obstacle_detector', Int8, queue_size=10)
 
         self.obstacle_detected = False
 
