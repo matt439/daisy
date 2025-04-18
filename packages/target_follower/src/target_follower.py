@@ -77,16 +77,17 @@ class Target_Follower:
         return cmd_msg
 
     def move_robot(self, detections):
+        cmd_msg = Twist2DStamped()
         if len(detections) == 0: # No object detected
             cmd_msg = self.seek_object()
-            rospy.loginfo("No object detected. Seeking...")
+            rospy.loginfo("No object detected. Seeking with angular velocity: %f", cmd_msg.omega)
         else: # Object detected
             x = detections[0].transform.translation.x
             y = detections[0].transform.translation.y
             z = detections[0].transform.translation.z
             rospy.loginfo("x,y,z: %f %f %f", x, y, z)
             cmd_msg = self.follow_object(x)
-            rospy.loginfo(f"Following object with angular velocity: {cmd_msg.omega}")
+            rospy.loginfo("Following object with angular velocity: %f", {cmd_msg.omega})
 
         cmd_msg.header.stamp = rospy.Time.now()
         self.cmd_vel_pub.publish(cmd_msg)
