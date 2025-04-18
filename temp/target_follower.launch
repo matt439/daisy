@@ -1,0 +1,6 @@
+<launch>
+    <!-- vehicle name so it can work with any robot -->
+    <group ns="$(env VEHICLE_NAME)">
+        <node pkg="target_follower" name="target_follower" type="target_follower.py" output="screen"/>
+    </group>
+</launch>
