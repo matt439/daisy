@@ -16,8 +16,6 @@ SEARCH_DELAY = 2.0 # seconds
 class Target_Follower:
     def __init__(self):
         
-        self._last_follow_time = rospy.Time.now()
-
         #Initialize ROS node
         rospy.init_node('target_follower_node', anonymous=True)
 
@@ -26,6 +24,8 @@ class Target_Follower:
 
         self.cmd_vel_pub = rospy.Publisher('/vader/car_cmd_switch_node/cmd', Twist2DStamped, queue_size=1)
         rospy.Subscriber('/vader/apriltag_detector_node/detections', AprilTagDetectionArray, self.tag_callback, queue_size=1)
+
+        self._last_follow_time = rospy.Time.now()
 
         rospy.loginfo("Target follower node started!")
         rospy.spin() # Spin forever but listen to message callbacks
