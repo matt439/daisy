@@ -5,13 +5,13 @@ from duckietown_msgs.msg import Twist2DStamped
 from duckietown_msgs.msg import FSMState
 from duckietown_msgs.msg import AprilTagDetectionArray
 
-SEEK_ANGULAR_VELOCITY = -0.0 # rad/s
+SEEK_ANGULAR_VELOCITY = -0.3 # rad/s
 FOLLOW_ANGULAR_VELOCITY = 0.35 # rad/s
 FOLLOW_ANGULAR_VELOCITY_MAX = 0.4 # rad/s
 FOLLOW_ANGULAR_VELOCITY_MIN = 0.3 # rad/s
 FOLLOW_ANGULAR_VELOCITY_AVG_DISTANCE = 0.3 # meter
 FOLLOW_X_DISTANCE_THRESHOLD = 0.05 # meter
-SEARCH_DELAY = 2.0 # seconds
+SEARCH_DELAY = 200.0 # seconds # set to 200 for 5.2C testing
 FOLLOW_Z_DISTANCE_TARGET = 0.2 # meter
 FOLLOW_Z_DISTANCE_THRESHOLD = 0.05 # meter
 FOLLOW_LINEAR_VELOCITY = 0.1 # m/s
