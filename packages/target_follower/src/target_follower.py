@@ -5,16 +5,19 @@ from duckietown_msgs.msg import Twist2DStamped
 from duckietown_msgs.msg import FSMState
 from duckietown_msgs.msg import AprilTagDetectionArray
 
-SEEK_ANGULAR_VELOCITY = -0.0
-FOLLOW_ANGULAR_VELOCITY = 0.3
-FOLLOW_ANGULAR_VELOCITY_MAX = 0.5
-FOLLOW_ANGULAR_VELOCITY_MIN = 0.2
-FOLLOW_ANGULAR_VELOCITY_AVG_DISTANCE = 0.3 # 30cm
-FOLLOW_X_DISTANCE_THRESHOLD = 0.02 # 2cm
+SEEK_ANGULAR_VELOCITY = -0.2 # rad/s
+FOLLOW_ANGULAR_VELOCITY = 0.25 # rad/s
+FOLLOW_ANGULAR_VELOCITY_MAX = 0.3 # rad/s
+FOLLOW_ANGULAR_VELOCITY_MIN = 0.2 # rad/s
+FOLLOW_ANGULAR_VELOCITY_AVG_DISTANCE = 0.3 # meter
+FOLLOW_X_DISTANCE_THRESHOLD = 0.05 # meter
+SEARCH_DELAY = 2.0 # seconds
 
 class Target_Follower:
     def __init__(self):
         
+        self._last_follow_time = rospy.Time.now()
+
         #Initialize ROS node
         rospy.init_node('target_follower_node', anonymous=True)
 
@@ -82,13 +85,16 @@ class Target_Follower:
     def move_robot(self, detections):
         cmd_msg = Twist2DStamped()
         if len(detections) == 0: # No object detected
-            cmd_msg = self.seek_object()
-            rospy.loginfo("No object detected. Seeking with angular velocity: %f", cmd_msg.omega)
+            # If the last follow time was more than SEARCH_DELAY seconds ago, seek for the object
+            if (rospy.Time.now() - self._last_follow_time).to_sec() > SEARCH_DELAY:
+                cmd_msg = self.seek_object()
+                rospy.loginfo("No object detected. Seeking with angular velocity: %f", cmd_msg.omega)
         else: # Object detected
             x = detections[0].transform.translation.x
             y = detections[0].transform.translation.y
             z = detections[0].transform.translation.z
             rospy.loginfo("x,y,z: %f %f %f", x, y, z)
+            self._last_follow_time = rospy.Time.now()
             cmd_msg = self.follow_object(x)
             rospy.loginfo("Following object with angular velocity: %f", cmd_msg.omega)
 
