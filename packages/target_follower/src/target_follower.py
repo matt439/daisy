@@ -5,6 +5,13 @@ from duckietown_msgs.msg import Twist2DStamped
 from duckietown_msgs.msg import FSMState
 from duckietown_msgs.msg import AprilTagDetectionArray
 
+SEEK_ANGULAR_VELOCITY = -0.5
+FOLLOW_ANGULAR_VELOCITY = 0.5
+FOLLOW_ANGULAR_VELOCITY_MAX = 1.0
+FOLLOW_ANGULAR_VELOCITY_MIN = 0.1
+FOLLOW_ANGULAR_PROPORTIONAL_SCALAR = 5.0
+FOLLOW_X_DISTANCE_THRESHOLD = 0.1
+
 class Target_Follower:
     def __init__(self):
         
@@ -36,28 +43,50 @@ class Target_Follower:
         cmd_msg.omega = 0.0
         self.cmd_vel_pub.publish(cmd_msg)
 
-    def move_robot(self, detections):
-
-        #### YOUR CODE GOES HERE ####
-
-        if len(detections) == 0:
-            return
-
-        x = detections[0].transform.translation.x
-        y = detections[0].transform.translation.y
-        z = detections[0].transform.translation.z
-
-        rospy.loginfo("x,y,z: %f %f %f", x, y, z)
-
-
-        # Publish a velocity
+    def seek_object(self):
         cmd_msg = Twist2DStamped()
-        cmd_msg.header.stamp = rospy.Time.now()
+        cmd_msg.omega = SEEK_ANGULAR_VELOCITY
         cmd_msg.v = 0.0
-        cmd_msg.omega = 0.0
-        self.cmd_vel_pub.publish(cmd_msg)
+        return cmd_msg
 
-        #############################
+    # The larger the distance, the larger the velocity
+    def calculate_abs_proportional_follow_velocity(self, x):
+        vel = FOLLOW_ANGULAR_VELOCITY * abs(x) * FOLLOW_ANGULAR_PROPORTIONAL_SCALAR
+        # Clamp the velocity to a maximum value
+        if vel > FOLLOW_ANGULAR_VELOCITY_MAX:
+            vel = FOLLOW_ANGULAR_VELOCITY_MAX
+        elif vel < FOLLOW_ANGULAR_VELOCITY_MIN:
+            vel = FOLLOW_ANGULAR_VELOCITY_MIN
+        return vel
+
+    def calculate_follow_velocity(self, x):
+        # If the object is too close, stop moving
+        if abs(x) < FOLLOW_X_DISTANCE_THRESHOLD:
+            return 0.0
+        
+        vel = self.calculate_abs_proportional_follow_velocity(x)
+        if x < 0.0: # Object is to the left of the robot
+            vel = -vel
+        return vel
+
+    def follow_object(self, x):
+        cmd_msg = Twist2DStamped()
+        cmd_msg.v = 0.0
+        cmd_msg.omega = self.calculate_follow_velocity(x)
+        return cmd_msg
+
+    def move_robot(self, detections):
+        if len(detections) == 0:
+            cmd_msg = self.seek_object()
+        else: # Object detected
+            x = detections[0].transform.translation.x
+            y = detections[0].transform.translation.y
+            z = detections[0].transform.translation.z
+            rospy.loginfo("x,y,z: %f %f %f", x, y, z)
+            cmd_msg = self.follow_object(x)
+
+        cmd_msg.header.stamp = rospy.Time.now()
+        self.cmd_vel_pub.publish(cmd_msg)
 
 if __name__ == '__main__':
     try:
