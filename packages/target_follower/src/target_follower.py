@@ -5,12 +5,12 @@ from duckietown_msgs.msg import Twist2DStamped
 from duckietown_msgs.msg import FSMState
 from duckietown_msgs.msg import AprilTagDetectionArray
 
-SEEK_ANGULAR_VELOCITY = -2.0
-FOLLOW_ANGULAR_VELOCITY = 2.0
-FOLLOW_ANGULAR_VELOCITY_MAX = 3.0
-FOLLOW_ANGULAR_VELOCITY_MIN = 1.0
-FOLLOW_ANGULAR_PROPORTIONAL_SCALAR = 50.0
-FOLLOW_X_DISTANCE_THRESHOLD = 0.005 # 5mm
+SEEK_ANGULAR_VELOCITY = -0.2
+FOLLOW_ANGULAR_VELOCITY = 0.5
+FOLLOW_ANGULAR_VELOCITY_MAX = 1.0
+FOLLOW_ANGULAR_VELOCITY_MIN = 0.2
+FOLLOW_ANGULAR_PROPORTIONAL_SCALAR = 10.0
+FOLLOW_X_DISTANCE_THRESHOLD = 0.01 # 1cm
 
 class Target_Follower:
     def __init__(self):
@@ -63,6 +63,7 @@ class Target_Follower:
     def calculate_follow_velocity(self, x):
         # If the object is too close, stop moving
         if abs(x) < FOLLOW_X_DISTANCE_THRESHOLD:
+            rospy.loginfo("Object is too close. Stopping robot.")
             return 0.0
         
         vel = self.calculate_abs_proportional_follow_velocity(x)
@@ -87,7 +88,7 @@ class Target_Follower:
             z = detections[0].transform.translation.z
             rospy.loginfo("x,y,z: %f %f %f", x, y, z)
             cmd_msg = self.follow_object(x)
-            rospy.loginfo("Following object with angular velocity: %f", {cmd_msg.omega})
+            rospy.loginfo("Following object with angular velocity: %f", cmd_msg.omega)
 
         cmd_msg.header.stamp = rospy.Time.now()
         self.cmd_vel_pub.publish(cmd_msg)
