@@ -5,12 +5,12 @@ from duckietown_msgs.msg import Twist2DStamped
 from duckietown_msgs.msg import FSMState
 from duckietown_msgs.msg import AprilTagDetectionArray
 
-SEEK_ANGULAR_VELOCITY = -0.2
-FOLLOW_ANGULAR_VELOCITY = 0.5
-FOLLOW_ANGULAR_VELOCITY_MAX = 1.0
+SEEK_ANGULAR_VELOCITY = -0.0
+FOLLOW_ANGULAR_VELOCITY = 0.3
+FOLLOW_ANGULAR_VELOCITY_MAX = 0.5
 FOLLOW_ANGULAR_VELOCITY_MIN = 0.2
-FOLLOW_ANGULAR_PROPORTIONAL_SCALAR = 10.0
-FOLLOW_X_DISTANCE_THRESHOLD = 0.01 # 1cm
+FOLLOW_ANGULAR_VELOCITY_AVG_DISTANCE = 0.3 # 30cm
+FOLLOW_X_DISTANCE_THRESHOLD = 0.02 # 2cm
 
 class Target_Follower:
     def __init__(self):
@@ -49,10 +49,12 @@ class Target_Follower:
         cmd_msg.omega = SEEK_ANGULAR_VELOCITY
         cmd_msg.v = 0.0
         return cmd_msg
-
-    # The larger the distance, the larger the velocity
+    
     def calculate_abs_proportional_follow_velocity(self, x):
-        vel = FOLLOW_ANGULAR_VELOCITY * abs(x) * FOLLOW_ANGULAR_PROPORTIONAL_SCALAR
+        # If the object is closer than the average distance, decrease the velocity
+        # If the object is further than the average distance, increase the velocity
+        # The velocity is proportional to the distance
+        vel = FOLLOW_ANGULAR_VELOCITY * abs(x) / FOLLOW_ANGULAR_VELOCITY_AVG_DISTANCE
         # Clamp the velocity to a maximum value
         if vel > FOLLOW_ANGULAR_VELOCITY_MAX:
             vel = FOLLOW_ANGULAR_VELOCITY_MAX
@@ -67,7 +69,7 @@ class Target_Follower:
             return 0.0
         
         vel = self.calculate_abs_proportional_follow_velocity(x)
-        if x < 0.0: # Object is to the left of the robot
+        if x > 0.0:
             vel = -vel
         return vel
 
