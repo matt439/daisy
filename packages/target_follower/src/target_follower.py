@@ -5,12 +5,12 @@ from duckietown_msgs.msg import Twist2DStamped
 from duckietown_msgs.msg import FSMState
 from duckietown_msgs.msg import AprilTagDetectionArray
 
-SEEK_ANGULAR_VELOCITY = -0.5
-FOLLOW_ANGULAR_VELOCITY = 0.5
-FOLLOW_ANGULAR_VELOCITY_MAX = 1.0
-FOLLOW_ANGULAR_VELOCITY_MIN = 0.1
-FOLLOW_ANGULAR_PROPORTIONAL_SCALAR = 5.0
-FOLLOW_X_DISTANCE_THRESHOLD = 0.1
+SEEK_ANGULAR_VELOCITY = -2.0
+FOLLOW_ANGULAR_VELOCITY = 2.0
+FOLLOW_ANGULAR_VELOCITY_MAX = 3.0
+FOLLOW_ANGULAR_VELOCITY_MIN = 1.0
+FOLLOW_ANGULAR_PROPORTIONAL_SCALAR = 50.0
+FOLLOW_X_DISTANCE_THRESHOLD = 0.005 # 5mm
 
 class Target_Follower:
     def __init__(self):
@@ -24,6 +24,7 @@ class Target_Follower:
         self.cmd_vel_pub = rospy.Publisher('/vader/car_cmd_switch_node/cmd', Twist2DStamped, queue_size=1)
         rospy.Subscriber('/vader/apriltag_detector_node/detections', AprilTagDetectionArray, self.tag_callback, queue_size=1)
 
+        rospy.loginfo("Target follower node started!")
         rospy.spin() # Spin forever but listen to message callbacks
 
     # Apriltag Detection Callback
@@ -76,7 +77,7 @@ class Target_Follower:
         return cmd_msg
 
     def move_robot(self, detections):
-        if len(detections) == 0:
+        if len(detections) == 0: # No object detected
             cmd_msg = self.seek_object()
         else: # Object detected
             x = detections[0].transform.translation.x
