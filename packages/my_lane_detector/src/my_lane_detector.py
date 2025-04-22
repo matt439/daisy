@@ -75,26 +75,30 @@ class Lane_Detector:
         mask_yellow = cv2.inRange(img_out, LOWER_YELLOW_MASK, UPPER_YELLOW_MASK)
         img_yellow = cv2.bitwise_and(img_out, img_out, mask=mask_yellow)
 
-        # Apply Canny Edge Detector to the cropped image
-        
+        # convert img_white to grayscale
+        img_white_gray = cv2.cvtColor(img_white, cv2.COLOR_BGR2GRAY)
+        # Apply Canny Edge Detection to the White-filtered image
+
         # Image: Input image to which Canny filter will be applied
         # T_lower: Lower threshold value in Hysteresis Thresholding
         # T_upper: Upper threshold value in Hysteresis Thresholding
         # aperture_size: Aperture size of the Sobel filter.
         # L2Gradient: Boolean parameter used for more precision in calculating Edge Gradient.
-        img_canny = cv2.Canny(img_out, CANNY_TLOWER, CANNY_TUPPER, apertureSize=CANNY_APERTURE_SIZE, 
+        img_white_canny = cv2.Canny(img_white_gray, CANNY_TLOWER, CANNY_TUPPER, apertureSize=CANNY_APERTURE_SIZE, 
                               L2gradient=CANNY_L2_GRADIENT)
-
-        # Apply Hough Transform to the White-filtered image
-        # convert img_white to grayscale
-        img_white_gray = cv2.cvtColor(img_white, cv2.COLOR_BGR2GRAY)
-        hough_lines_white = cv2.HoughLinesP(img_white_gray, HOUGH_RHO, HOUGH_THETA, HOUGH_THRESHOLD, 
-                                            None, HOUGH_MIN_LINE_LENGTH, HOUGH_MAX_LINE_GAP)
-
-        # Apply Hough Transform to the Yellow-filtered image
+        
         # convert img_yellow to grayscale
         img_yellow_gray = cv2.cvtColor(img_yellow, cv2.COLOR_BGR2GRAY)
-        hough_lines_yellow = cv2.HoughLinesP(img_yellow_gray, HOUGH_RHO, HOUGH_THETA, HOUGH_THRESHOLD, 
+        # Apply Canny Edge Detection to the Yellow-filtered image
+        img_yellow_canny = cv2.Canny(img_yellow_gray, CANNY_TLOWER, CANNY_TUPPER, apertureSize=CANNY_APERTURE_SIZE,
+                                L2gradient=CANNY_L2_GRADIENT)
+
+        # Apply Hough Transform to the White-canny image
+        hough_lines_white = cv2.HoughLinesP(img_white_canny, HOUGH_RHO, HOUGH_THETA, HOUGH_THRESHOLD, 
+                                            None, HOUGH_MIN_LINE_LENGTH, HOUGH_MAX_LINE_GAP)
+
+        # Apply Hough Transform to the Yellow-canny image
+        hough_lines_yellow = cv2.HoughLinesP(img_yellow_canny, HOUGH_RHO, HOUGH_THETA, HOUGH_THRESHOLD, 
                                              None, HOUGH_MIN_LINE_LENGTH, HOUGH_MAX_LINE_GAP)
 
         # Draw lines found on both Hough Transforms on the cropped image using OpenCV functions
