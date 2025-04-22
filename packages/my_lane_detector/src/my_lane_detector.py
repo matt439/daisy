@@ -76,12 +76,12 @@ class Lane_Detector:
         mask_yellow = cv2.inRange(img_cropped, LOWER_YELLOW_MASK, UPPER_YELLOW_MASK)
         img_yellow = cv2.bitwise_and(img_cropped, img_cropped, mask=mask_yellow)
         img_yellow_dilated = self.dilate(img_yellow)
-        img_yellow_eroded = self.erode(img_yellow_dilated)
+        #img_yellow_eroded = self.erode(img_yellow_dilated)
 
         # convert img_white_eroded to grayscale
         img_white_gray = cv2.cvtColor(img_white_eroded, cv2.COLOR_BGR2GRAY)
         # convert img_yellow_eroded to grayscale
-        img_yellow_gray = cv2.cvtColor(img_yellow_eroded, cv2.COLOR_BGR2GRAY)
+        img_yellow_gray = cv2.cvtColor(img_yellow_dilated, cv2.COLOR_BGR2GRAY)
 
         # Apply Canny Edge Detection to the White-filtered image
         # Image: Input image to which Canny filter will be applied
@@ -111,7 +111,7 @@ class Lane_Detector:
         # Show image in a window
         # cv2.imshow('img_cropped',img_cropped)
         cv2.imshow('img_white_eroded', img_white_eroded)
-        cv2.imshow('img_yellow_eroded', img_yellow_eroded)
+        cv2.imshow('img_yellow_dilated', img_yellow_dilated)
         cv2.imshow('img_cropped_with_white_hough_lines', img_cropped_with_white_hough_lines)
         cv2.imshow('img_cropped_with_yellow_hough_lines', img_cropped_with_yellow_hough_lines)
         cv2.waitKey(1)
