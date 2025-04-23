@@ -26,11 +26,11 @@ UPPER_WHITE_MASK = np.array([255, 255, 255])
 LOWER_WHITE_MASK = np.array([170, 170, 170])
 UPPER_YELLOW_MASK = np.array([55, 255, 255])
 LOWER_YELLOW_MASK = np.array([0, 100, 100])
-# HSV masks
-UPPER_WHITE_MASK_HSV = np.array([255, 20, 255])
-LOWER_WHITE_MASK_HSV = np.array([0, 0, 100])
-UPPER_YELLOW_MASK_HSV = np.array([60, 255, 255])
-LOWER_YELLOW_MASK_HSV = np.array([50, 100, 100])
+# HSV masks. # Hue: 0-179 (not 0-359), Saturation: 0-255, Value: 0-255
+UPPER_WHITE_MASK_HSV = np.array([179, 25, 255])
+LOWER_WHITE_MASK_HSV = np.array([0, 0, 170])
+UPPER_YELLOW_MASK_HSV = np.array([30, 255, 255])
+LOWER_YELLOW_MASK_HSV = np.array([15, 140, 140])
 CANNY_TLOWER = 50
 CANNY_TUPPER = 150
 CANNY_APERTURE_SIZE = 3
@@ -86,7 +86,7 @@ class Lane_Detector:
         mask_yellow = cv2.inRange(img_cropped, LOWER_YELLOW_MASK, UPPER_YELLOW_MASK)
         img_yellow = cv2.bitwise_and(img_cropped, img_cropped, mask=mask_yellow)
         img_yellow_dilated = self.dilate(img_yellow)
-        #img_yellow_eroded = self.erode(img_yellow_dilated)
+        #img_yellow_eroded = self.erode(img_yellow_dilated) get better results without erode
 
         mask_yellow_hsv = cv2.inRange(img_cropped_hsv, LOWER_YELLOW_MASK_HSV, UPPER_YELLOW_MASK_HSV)
         img_yellow_hsv = cv2.bitwise_and(img_cropped_hsv, img_cropped_hsv, mask=mask_yellow_hsv)
@@ -98,11 +98,6 @@ class Lane_Detector:
         img_yellow_gray = cv2.cvtColor(img_yellow_dilated, cv2.COLOR_BGR2GRAY)
 
         # Apply Canny Edge Detection to the White-filtered image
-        # Image: Input image to which Canny filter will be applied
-        # T_lower: Lower threshold value in Hysteresis Thresholding
-        # T_upper: Upper threshold value in Hysteresis Thresholding
-        # aperture_size: Aperture size of the Sobel filter.
-        # L2Gradient: Boolean parameter used for more precision in calculating Edge Gradient.
         img_white_canny = cv2.Canny(img_white_gray, CANNY_TLOWER, CANNY_TUPPER, apertureSize=CANNY_APERTURE_SIZE, 
                               L2gradient=CANNY_L2_GRADIENT)
         
@@ -125,9 +120,9 @@ class Lane_Detector:
         # Show image in a window
         # cv2.imshow('img_cropped',img_cropped)
         cv2.imshow('img_white_eroded', img_white_eroded)
-        cv2.imshow('img_white_hsv_eroded', img_white_hsv_eroded)
+        cv2.imshow('img_white_hsv_eroded', cv2.cvtColor(img_white_hsv_eroded, cv2.COLOR_HSV2BGR))
         cv2.imshow('img_yellow_dilated', img_yellow_dilated)
-        cv2.imshow('img_yellow_hsv_dilated', img_yellow_hsv_dilated)
+        cv2.imshow('img_yellow_hsv_dilated', cv2.cvtColor(img_yellow_hsv_dilated, cv2.COLOR_HSV2BGR))
         # cv2.imshow('img_cropped_with_white_hough_lines', img_cropped_with_white_hough_lines)
         # cv2.imshow('img_cropped_with_yellow_hough_lines', img_cropped_with_yellow_hough_lines)
         cv2.waitKey(1)
