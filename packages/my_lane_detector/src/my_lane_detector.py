@@ -26,6 +26,11 @@ UPPER_WHITE_MASK = np.array([255, 255, 255])
 LOWER_WHITE_MASK = np.array([170, 170, 170])
 UPPER_YELLOW_MASK = np.array([55, 255, 255])
 LOWER_YELLOW_MASK = np.array([0, 100, 100])
+# HSV masks
+UPPER_WHITE_MASK_HSV = np.array([255, 20, 255])
+LOWER_WHITE_MASK_HSV = np.array([0, 0, 100])
+UPPER_YELLOW_MASK_HSV = np.array([60, 255, 255])
+LOWER_YELLOW_MASK_HSV = np.array([50, 100, 100])
 CANNY_TLOWER = 50
 CANNY_TUPPER = 150
 CANNY_APERTURE_SIZE = 3
@@ -62,7 +67,7 @@ class Lane_Detector:
         img_cropped = img_out[CROP_TOP:CROP_BOTTOM, CROP_LEFT:CROP_RIGHT]
 
         # Converts the cropped image to an HSV Color Space (For demonstration purposes)
-        img_hsv = cv2.cvtColor(img_cropped, cv2.COLOR_BGR2HSV)
+        img_cropped_hsv = cv2.cvtColor(img_cropped, cv2.COLOR_BGR2HSV)
 
         # Apply color filtering for White pixels so the lane markers are visible in the
         # output image.
@@ -71,12 +76,21 @@ class Lane_Detector:
         img_white_dilated = self.dilate(img_white)
         img_white_eroded = self.erode(img_white_dilated)
 
+        mask_white_hsv = cv2.inRange(img_cropped_hsv, LOWER_WHITE_MASK_HSV, UPPER_WHITE_MASK_HSV)
+        img_white_hsv = cv2.bitwise_and(img_cropped_hsv, img_cropped_hsv, mask=mask_white_hsv)
+        img_white_hsv_dilated = self.dilate(img_white_hsv)
+        img_white_hsv_eroded = self.erode(img_white_hsv_dilated)
+
         # Apply color filtering for Yellow pixels so the dashed lines in the middle of a
         # lane are visible in the output image
         mask_yellow = cv2.inRange(img_cropped, LOWER_YELLOW_MASK, UPPER_YELLOW_MASK)
         img_yellow = cv2.bitwise_and(img_cropped, img_cropped, mask=mask_yellow)
         img_yellow_dilated = self.dilate(img_yellow)
         #img_yellow_eroded = self.erode(img_yellow_dilated)
+
+        mask_yellow_hsv = cv2.inRange(img_cropped_hsv, LOWER_YELLOW_MASK_HSV, UPPER_YELLOW_MASK_HSV)
+        img_yellow_hsv = cv2.bitwise_and(img_cropped_hsv, img_cropped_hsv, mask=mask_yellow_hsv)
+        img_yellow_hsv_dilated = self.dilate(img_yellow_hsv)
 
         # convert img_white_eroded to grayscale
         img_white_gray = cv2.cvtColor(img_white_eroded, cv2.COLOR_BGR2GRAY)
@@ -111,9 +125,11 @@ class Lane_Detector:
         # Show image in a window
         # cv2.imshow('img_cropped',img_cropped)
         cv2.imshow('img_white_eroded', img_white_eroded)
+        cv2.imshow('img_white_hsv_eroded', img_white_hsv_eroded)
         cv2.imshow('img_yellow_dilated', img_yellow_dilated)
-        cv2.imshow('img_cropped_with_white_hough_lines', img_cropped_with_white_hough_lines)
-        cv2.imshow('img_cropped_with_yellow_hough_lines', img_cropped_with_yellow_hough_lines)
+        cv2.imshow('img_yellow_hsv_dilated', img_yellow_hsv_dilated)
+        # cv2.imshow('img_cropped_with_white_hough_lines', img_cropped_with_white_hough_lines)
+        # cv2.imshow('img_cropped_with_yellow_hough_lines', img_cropped_with_yellow_hough_lines)
         cv2.waitKey(1)
 
     def erode(self, img):
