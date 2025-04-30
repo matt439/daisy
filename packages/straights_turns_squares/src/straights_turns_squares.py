@@ -105,7 +105,7 @@ class StraightsTurnsSquares:
         rospy.loginfo("Received goal angle: %s", msg.data)
         if msg.data == 0.0:
             return
-        distance = self.rotation_to_distance(msg.data, AXLE_LENGTH)
+        distance = abs(self.rotation_to_distance(msg.data, AXLE_LENGTH))
         clockwise = True if msg.data < 0.0 else False
         if clockwise:
             left_distance = distance
