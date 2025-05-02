@@ -30,17 +30,9 @@
   	</include>
 
 	<!-- Parameters -->
-	<param name="/vader/line_detector_node/colors/WHITE/high" value="[180, 25, 255]"/>
-	<param name="/vader/line_detector_node/colors/WHITE/low" value="[0, 0, 200]"/>
-	<param name="/vader/line_detector_node/colors/YELLOW/high" value="[30, 255, 255]"/>
-	<param name="/vader/line_detector_node/colors/YELLOW/low" value="[15, 140, 160]"/>
+	<!-- <param name="/vader/line_detector_node/colors" value="{ "WHITE": { "high": [180, 25, 255], "low": [0, 0, 200] }, "YELLOW": { "high": [30, 255, 255], "low": [15, 140, 160] } }"/> -->
 	<param name="/vader/line_detector_node/img_size" value="[125, 165]"/>
-	<param name="/vader/line_detector_node/line_detector_parameters/canny_aperture_size" type="int" value="3"/>
-	<param name="/vader/line_detector_node/line_detector_parameters/canny_thresholds" value="[80, 200]"/>
-	<param name="/vader/line_detector_node/line_detector_parameters/dilation_kernel_size" type="int" value="3"/>
-	<param name="/vader/line_detector_node/line_detector_parameters/hough_max_line_gap" type="int" value="5"/>
-	<param name="/vader/line_detector_node/line_detector_parameters/hough_min_line_length" type="int" value="10"/>
-	<param name="/vader/line_detector_node/line_detector_parameters/hough_threshold" type="int" value="10"/>
+	<param name="/vader/line_detector_node/line_detector_parameters" value="{ "canny_aperture_size": 3, "canny_thresholds": [80, 200], "dilation_kernel_size": 3, "hough_max_line_gap": 5, "hough_min_line_length": 10, "hough_threshold": 10 }"/>
 	<param name="/vader/line_detector_node/top_cutoff" type="int" value="41"/>
 
 </launch>
