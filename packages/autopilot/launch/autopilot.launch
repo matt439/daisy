@@ -29,32 +29,4 @@
 
   	</include>
 
-	<!-- Parameters -->
-	<param name="/vader/line_detector_node/colors" value="{ 
-		&quot;RED&quot;: { 
-			&quot;high_1&quot;: [15, 255, 255], 
-			&quot;high_2&quot;: [180, 255, 255], 
-			&quot;low_1&quot;: [0, 140, 100], 
-			&quot;low_2&quot;: [165, 140, 100] 
-		}, 
-		&quot;WHITE&quot;: { 
-			&quot;high&quot;: [180, 25, 255], 
-			&quot;low&quot;: [0, 0, 200] 
-		}, 
-		&quot;YELLOW&quot;: { 
-			&quot;high&quot;: [30, 255, 255], 
-			&quot;low&quot;: [15, 140, 160] 
-		} 
-	}"/>
-	<param name="/vader/line_detector_node/img_size" value="[125, 165]"/>
-	<param name="/vader/line_detector_node/line_detector_parameters" value="{ 
-		&quot;canny_aperture_size&quot;: 3, 
-		&quot;canny_thresholds&quot;: [80, 200], 
-		&quot;dilation_kernel_size&quot;: 3, 
-		&quot;hough_max_line_gap&quot;: 5, 
-		&quot;hough_min_line_length&quot;: 10, 
-		&quot;hough_threshold&quot;: 10 
-	}"/>
-	<param name="/vader/line_detector_node/top_cutoff" type="int" value="41"/>
-
 </launch>
