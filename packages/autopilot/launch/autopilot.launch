@@ -21,7 +21,6 @@
 	    <arg name="lane_following" value="true"/>
 	    <arg name="/lane_following/line_detection" value="true"/>
 	    <arg name="line_detector_param_file_name" value="default" />
-		<param name="/lane_following/line_detection/top_cutoff" type="int" value="0"/>
 	    <arg name="/lane_following/ground_projection" value="true"/>
 	    <arg name="/lane_following/lane_filter" value="true"/>
 	    <arg name="/lane_following/lane_controller" value="true"/>
@@ -29,5 +28,8 @@
 	    <arg name="/LED/emitter" value="true"/>
 
   	</include>
+
+	<!-- Parameters -->
+	<param name="/vader/line_detector_node/top_cutoff" type="int" value="0"/>
 
 </launch>
