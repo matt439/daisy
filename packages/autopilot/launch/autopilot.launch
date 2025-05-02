@@ -32,7 +32,14 @@
 	<!-- Parameters -->
 	<!-- <param name="/vader/line_detector_node/colors" value="{ "WHITE": { "high": [180, 25, 255], "low": [0, 0, 200] }, "YELLOW": { "high": [30, 255, 255], "low": [15, 140, 160] } }"/> -->
 	<param name="/vader/line_detector_node/img_size" value="[125, 165]"/>
-	<param name="/vader/line_detector_node/line_detector_parameters" value="{ "canny_aperture_size": 3, "canny_thresholds": [80, 200], "dilation_kernel_size": 3, "hough_max_line_gap": 5, "hough_min_line_length": 10, "hough_threshold": 10 }"/>
+	<param name="/vader/line_detector_node/line_detector_parameters" value="{ 
+		&quot;canny_aperture_size&quot;: 3, 
+		&quot;canny_thresholds&quot;: [80, 200], 
+		&quot;dilation_kernel_size&quot;: 3, 
+		&quot;hough_max_line_gap&quot;: 5, 
+		&quot;hough_min_line_length&quot;: 10, 
+		&quot;hough_threshold&quot;: 10 
+	}"/>
 	<param name="/vader/line_detector_node/top_cutoff" type="int" value="41"/>
 
 </launch>
