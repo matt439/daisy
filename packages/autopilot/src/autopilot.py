@@ -20,6 +20,23 @@ class Autopilot:
         self.state_pub = rospy.Publisher('/vader/fsm_node/mode', FSMState, queue_size=1)
         rospy.Subscriber('/vader/apriltag_detector_node/detections', AprilTagDetectionArray, self.tag_callback, queue_size=1)
 
+        # Set parameters for the line detector
+        rospy.set_param('/vader/line_detector_node/colors/WHITE/high', [180, 25, 255])
+        rospy.set_param('/vader/line_detector_node/colors/WHITE/low', [0, 0, 200])
+        rospy.set_param('/vader/line_detector_node/colors/YELLOW/high', [30, 255, 255])
+        rospy.set_param('/vader/line_detector_node/colors/YELLOW/low', [15, 140, 160])
+
+        rospy.set_param('/vader/line_detector_node/img_size', [125, 165])
+
+        rospy.set_param('/vader/line_detector_node/line_detector_parameters/canny_aperture_size', 3)
+        rospy.set_param('/vader/line_detector_node/line_detector_parameters/canny_thresholds', [80, 200])
+        rospy.set_param('/vader/line_detector_node/line_detector_parameters/dilation_kernel_size', 3)
+        rospy.set_param('/vader/line_detector_node/line_detector_parameters/hough_max_line_gap', 5)
+        rospy.set_param('/vader/line_detector_node/line_detector_parameters/hough_min_line_length', 10)
+        rospy.set_param('/vader/line_detector_node/line_detector_parameters/hough_threshold', 10)
+
+        rospy.set_param('/vader/line_detector_node/top_cutoff', 41)
+
         rospy.spin() # Spin forever but listen to message callbacks
 
     # Apriltag Detection Callback
