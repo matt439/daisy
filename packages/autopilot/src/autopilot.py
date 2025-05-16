@@ -1,9 +1,274 @@
 #!/usr/bin/env python3
 
 import rospy
-from duckietown_msgs.msg import Twist2DStamped
-from duckietown_msgs.msg import FSMState
-from duckietown_msgs.msg import AprilTagDetectionArray
+from duckietown_msgs.msg import Twist2DStamped, FSMState, AprilTagDetectionArray
+from std_msgs.msg import Float64
+from enum import Enum
+from abc import ABC, abstractmethod
+
+# class DuckiebotStateType(Enum):
+#     LANE_FOLLOWING = 0
+#     STOPPING_FOR_STOP_SIGN = 1
+#     WAITING_AT_STOP_SIGN = 2
+#     LANE_FOLLOWING_STOP_SIGN = 3
+#     STOPPING_FOR_CAR = 4
+#     WAITING_FOR_CAR = 5
+#     OVERTAKING = 6
+#     TURNING_LEFT = 7
+#     TURNING_RIGHT = 8
+
+STOP_SIGN_WAITING_TIME = 5.0  # seconds
+CAR_WAITING_TIME = 5.0  # seconds
+LANE_FOLLOWING_STOP_SIGN_TIME = 3.0  # seconds
+STOPPING_DISTANCE_TARGET = 0.1  # meters
+
+class DuckieBotEvent(Enum):
+    STOP_SIGN_DETECTED = 0
+    BOT_BECOMES_STOPPED = 1
+    CAR_DETECTED = 2
+    CAR_REMOVED = 3
+    TURN_LEFT_SIGN_DETECTED = 4
+    TURN_RIGHT_SIGN_DETECTED = 5
+    MOVEMENT_CONTROLLER_SUCCEEDED = 6
+    MOVEMENT_CONTROLLER_FAILED = 7
+    OVERTAKING_SUCCEEDED = 8
+    OVERTAKING_FAILED = 9
+    TURNING_SUCCEEDED = 10
+    TURNING_FAILED = 11
+
+class Timer:
+    def __init__(self, duration: float):
+        self._duration = duration
+        self._start_time = None
+    def start(self):
+        self._start_time = rospy.get_time()
+    def is_expired(self) -> bool:
+        if self._start_time is None:
+            return False
+        return (rospy.get_time() - self._start_time) >= self._duration
+    def reset(self):
+        self._start_time = None
+
+class Duckiebot():
+    def __init__(self, state: DuckiebotState) -> None:
+        self._state_publisher = rospy.Publisher('/vader/fsm_node/mode', FSMState, queue_size=1)
+        self._goal_distance_publisher = rospy.Publisher('/vader/goal_distance', Float64, queue_size=1)
+        self._goal_angle_publisher = rospy.Publisher('/vader/goal_angle', Float64, queue_size=1)
+        rospy.subscriber('/vader/fsm_node/mode', FSMState, self.FSM_state_callback, queue_size=1)
+        rospy.loginfo("Duckiebot class initialized!")
+        self.transition_to(state)
+
+    def transition_to(self, state: DuckiebotState):
+        self._state = state
+        self._state._context = self
+        rospy.loginfo(f"Transitioning to state: {type(state).__name__}")
+
+    def on_event(self, event: DuckieBotEvent) -> None:
+        self._state.on_event(event)
+
+    def update(self):
+        self._state.update()
+
+    def publish_FSM_state(self, state: str):
+        fsm_state_msg = FSMState()
+        fsm_state_msg.header.stamp = rospy.Time.now()
+        fsm_state_msg.state = state
+        self._state_publisher.publish(fsm_state_msg)
+
+    def publish_goal_distance(self, distance: float):
+        goal_distance_msg = Float64()
+        goal_distance_msg.header.stamp = rospy.Time.now()
+        goal_distance_msg.data = distance
+        self._goal_distance_publisher.publish(goal_distance_msg)
+
+    def FSM_state_callback(self, msg: FSMState):
+        rospy.loginfo(f"FSM state changed to: {msg.state}")
+        if msg.state == 'MOVEMENT_CONTROLLER_SUCCESS':
+            self.on_event(DuckieBotEvent.MOVEMENT_CONTROLLER_SUCCEEDED)
+            self.on_event(DuckieBotEvent.BOT_BECOMES_STOPPED)
+        elif msg.state == 'MOVEMENT_CONTROLLER_FAILURE':
+            self.on_event(DuckieBotEvent.MOVEMENT_CONTROLLER_FAILED)
+        elif msg.state == 'OVERTAKING_SUCCESS':
+            self.on_event(DuckieBotEvent.OVERTAKING_SUCCEEDED)
+        elif msg.state == 'OVERTAKING_FAILURE':
+            self.on_event(DuckieBotEvent.OVERTAKING_FAILED)
+
+    def stop_bot(self):
+        self.publish_goal_distance(STOPPING_DISTANCE_TARGET)
+
+class DuckiebotState(ABC):
+    @property
+    def context(self) -> Duckiebot:
+        return self._context
+    
+    @context.setter
+    def context(self, context: Duckiebot) -> None:
+        self._context = context
+
+    @abstractmethod
+    def on_event(self, event: DuckieBotEvent) -> None:
+        pass
+
+    @abstractmethod
+    def update(self) -> None:
+        pass
+
+class LaneFollowingState(DuckiebotState):
+    def __init__(self):
+        self._context.publish_FSM_state('LANE_FOLLOWING')
+
+    def on_event(self, event: DuckieBotEvent) -> None:
+        if event == DuckieBotEvent.STOP_SIGN_DETECTED:
+            self.context.transition_to(StoppingForStopSignState())
+        elif event == DuckieBotEvent.CAR_DETECTED:
+            self.context.transition_to(StoppingForCarState())
+        elif event == DuckieBotEvent.TURN_LEFT_SIGN_DETECTED:
+            self.context.transition_to(TurningLeftState())
+        elif event == DuckieBotEvent.TURN_RIGHT_SIGN_DETECTED:
+            self.context.transition_to(TurningRightState())
+
+    def update(self) -> None:
+        pass
+
+class StoppingForStopSignState(DuckiebotState):
+    def __init__(self):
+        self._context.publish_FSM_state('NORMAL_JOYSTICK_CONTROL') # Stop lane following
+        self._context.stop_bot() # Stop the robot
+
+    def on_event(self, event: DuckieBotEvent) -> None:
+        if event == DuckieBotEvent.BOT_BECOMES_STOPPED:
+            self.context.transition_to(WaitingAtStopSignState())
+
+    def update(self) -> None:
+        pass
+
+class WaitingAtStopSignState(DuckiebotState):
+    def __init__(self):
+        self._timer = Timer(STOP_SIGN_WAITING_TIME)
+        self._timer.start()
+
+    def on_event(self, event: DuckieBotEvent) -> None:
+        pass
+
+    def update(self) -> None:
+        if self._timer.is_expired():
+            self.context.transition_to(LaneFollowingStopSignState())
+
+class LaneFollowingStopSignState(DuckiebotState):
+    def __init__(self):
+        self._context.publish_FSM_state('LANE_FOLLOWING')
+        self._timer = Timer(LANE_FOLLOWING_STOP_SIGN_TIME)
+        self._timer.start()
+
+    # No event handling for stop sign detection in this state
+    def on_event(self, event: DuckieBotEvent) -> None:
+        if event == DuckieBotEvent.CAR_DETECTED:
+            self.context.transition_to(StoppingForCarState())
+        elif event == DuckieBotEvent.TURN_LEFT_SIGN_DETECTED:
+            self.context.transition_to(TurningLeftState())
+        elif event == DuckieBotEvent.TURN_RIGHT_SIGN_DETECTED:
+            self.context.transition_to(TurningRightState())
+
+    def update(self) -> None:
+        if self._timer.is_expired():
+            self.context.transition_to(LaneFollowingState())
+    
+class StoppingForCarState(DuckiebotState):
+    def __init__(self):
+        self._context.publish_FSM_state('NORMAL_JOYSTICK_CONTROL') # Stop lane following
+        self._context.stop_bot() # Stop the robot
+
+    def on_event(self, event: DuckieBotEvent) -> None:
+        if event == DuckieBotEvent.BOT_BECOMES_STOPPED:
+            self.context.transition_to(WaitingForCarState())
+
+    def update(self) -> None:
+        pass
+
+class WaitingForCarState(DuckiebotState):
+    def __init__(self):
+        self._timer = Timer(CAR_WAITING_TIME)
+        self._timer.start()
+
+    def on_event(self, event: DuckieBotEvent) -> None:
+        if event == DuckieBotEvent.CAR_REMOVED:
+            self.context.transition_to(LaneFollowingState())
+
+    def update(self) -> None:
+        if self._timer.is_expired():
+            self.context.transition_to(OvertakingState())
+
+class DuckieOvertaker:
+    def __init__(self):
+        pass
+
+    def execute_overtake(self):
+        # Implement
+        pass
+        
+    def update(self):
+        # Implement overtaking logic here
+        pass
+
+class OvertakingState(DuckiebotState):
+    def __init__(self):
+        self._overtaker = DuckieOvertaker()
+        self._overtaker.execute_overtake()
+
+    def on_event(self, event: DuckieBotEvent) -> None:
+        if event == DuckieBotEvent.OVERTAKING_SUCCEEDED:
+            self.context.transition_to(LaneFollowingState())
+        elif event == DuckieBotEvent.OVERTAKING_FAILED:
+            rospy.logerr("Overtaking failed. Transitioning to lane following state.")
+            self.context.transition_to(LaneFollowingState())
+
+    def update(self) -> None:
+        self._overtaker.update()
+
+class Direction (Enum):
+    LEFT = 0
+    RIGHT = 1
+
+class DuckieTurner:
+    def __init__(self):
+        pass
+
+    def execute_turn(self, direction: Direction):
+        pass
+
+    def update(self):
+        # Implement turning logic here
+        pass
+
+class TurningLeftState(DuckiebotState):
+    def __init__(self):
+        self._turner = DuckieTurner()
+        self._turner.execute_turn(Direction.LEFT)
+
+    def on_event(self, event: DuckieBotEvent) -> None:
+        if event == DuckieBotEvent.TURNING_SUCCEEDED:
+            self.context.transition_to(LaneFollowingState())
+        elif event == DuckieBotEvent.TURNING_FAILED:
+            rospy.logerr("Turning left failed. Transitioning to lane following state.")
+            self.context.transition_to(LaneFollowingState())
+
+    def update(self) -> None:
+        self._turner.update()
+
+class TurningRightState(DuckiebotState):
+    def __init__(self):
+        self._turner = DuckieTurner()
+        self._turner.execute_turn(Direction.RIGHT)
+
+    def on_event(self, event: DuckieBotEvent) -> None:
+        if event == DuckieBotEvent.TURNING_SUCCEEDED:
+            self.context.transition_to(LaneFollowingState())
+        elif event == DuckieBotEvent.TURNING_FAILED:
+            rospy.logerr("Turning right failed. Transitioning to lane following state.")
+            self.context.transition_to(LaneFollowingState())
+
+    def update(self) -> None:
+        self._turner.update()
 
 class Autopilot:
     def __init__(self):
@@ -11,7 +276,8 @@ class Autopilot:
         #Initialize ROS node
         rospy.init_node('autopilot_node', anonymous=True)
 
-        self.robot_state = "LANE_FOLLOWING"
+        self._turner = DuckieTurner()
+        self._overtaker = DuckieOvertaker()
 
         # When shutdown signal is received, we run clean_shutdown function
         rospy.on_shutdown(self.clean_shutdown)
@@ -19,23 +285,6 @@ class Autopilot:
         self.cmd_vel_pub = rospy.Publisher('/vader/car_cmd_switch_node/cmd', Twist2DStamped, queue_size=1)
         self.state_pub = rospy.Publisher('/vader/fsm_node/mode', FSMState, queue_size=1)
         rospy.Subscriber('/vader/apriltag_detector_node/detections', AprilTagDetectionArray, self.tag_callback, queue_size=1)
-
-        # # Set parameters for the line detector
-        # rospy.set_param('/vader/line_detector_node/colors/WHITE/high', [180, 25, 255])
-        # rospy.set_param('/vader/line_detector_node/colors/WHITE/low', [0, 0, 200])
-        # rospy.set_param('/vader/line_detector_node/colors/YELLOW/high', [30, 255, 255])
-        # rospy.set_param('/vader/line_detector_node/colors/YELLOW/low', [15, 140, 160])
-
-        # rospy.set_param('/vader/line_detector_node/img_size', [125, 165])
-
-        # rospy.set_param('/vader/line_detector_node/line_detector_parameters/canny_aperture_size', 3)
-        # rospy.set_param('/vader/line_detector_node/line_detector_parameters/canny_thresholds', [80, 200])
-        # rospy.set_param('/vader/line_detector_node/line_detector_parameters/dilation_kernel_size', 3)
-        # rospy.set_param('/vader/line_detector_node/line_detector_parameters/hough_max_line_gap', 5)
-        # rospy.set_param('/vader/line_detector_node/line_detector_parameters/hough_min_line_length', 10)
-        # rospy.set_param('/vader/line_detector_node/line_detector_parameters/hough_threshold', 10)
-
-        # rospy.set_param('/vader/line_detector_node/top_cutoff', 41)
 
         rospy.loginfo("Autopilot node initialized!")
 
