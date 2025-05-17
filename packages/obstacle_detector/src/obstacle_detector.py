@@ -15,7 +15,7 @@ class ObstacleDetector:
         self.sub_tof = rospy.Subscriber("/vader/front_center_tof_driver_node/range", Range, self.callback_tof)
 
         # publisher to publish the obstacle detection status
-        self.pub_obstacle = rospy.Publisher('/obstacle_detector', Int8, queue_size=10)
+        self.pub_obstacle = rospy.Publisher('/vader/obstacle_detector', Int8, queue_size=10)
 
         self._obstacle_detected = False
 
@@ -45,6 +45,7 @@ class ObstacleDetector:
 if __name__ == '__main__':
     try:
         obstacle_detector = ObstacleDetector()
+        # no need to call run() as it relies on the callbacks from TOF to update the state
         rospy.spin()
     except rospy.ROSInterruptException:
         pass

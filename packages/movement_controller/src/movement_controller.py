@@ -319,6 +319,7 @@ class MovementController:
 if __name__ == '__main__':
     try:
         movement_controller = MovementController()
+        # no need to call run() as it relies on the callbacks from wheel_movement_info to update the state
         rospy.spin()
     except rospy.ROSInterruptException:
         pass

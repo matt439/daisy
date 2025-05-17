@@ -2,7 +2,7 @@
 
 import rospy
 from duckietown_msgs.msg import Twist2DStamped, FSMState, AprilTagDetectionArray
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64, Int8
 from enum import Enum
 from abc import ABC, abstractmethod
 
@@ -17,6 +17,7 @@ from abc import ABC, abstractmethod
 #     TURNING_LEFT = 7
 #     TURNING_RIGHT = 8
 
+AUTOPILOT_UPDATE_FREQUENCY = 20  # Hz
 STOP_SIGN_WAITING_TIME = 5.0  # seconds
 CAR_WAITING_TIME = 5.0  # seconds
 LANE_FOLLOWING_STOP_SIGN_TIME = 3.0  # seconds
@@ -35,7 +36,7 @@ LANE_CONTROLLER_NODE_K_IPHI = "/vader/lane_controller_node/k_IphI" # integral te
 LANE_CONTROLLER_NODE_THETA_THRES_MIN = "/vader/lane_controller_node/theta_thres_min" # minimum value for heading error
 LANE_CONTROLLER_NODE_THETA_THRES_MAX = "/vader/lane_controller_node/theta_thres_max" # maximum value for heading error
 
-V_BAR = 1.0 # 0 to 5
+V_BAR = 0.5 # 0 to 5
 K_D = 0.0 # -100 to 100
 K_THERA = 0.0 # -100 to 100
 K_ID = 0.0 # -100 to 100
@@ -336,16 +337,28 @@ class Autopilot:
         rospy.Subscriber('/vader/fsm_node/mode', FSMState, self.FSM_state_callback, queue_size=1)
         rospy.Subscriber('/vader/apriltag_detector_node/detections',
                          AprilTagDetectionArray, self.april_tag_callback, queue_size=1)
+        rospy.Subscriber('/vader/obstacle_detector', Int8, self.obstacle_callback, queue_size=1)
 
         self.set_lane_following_parameters()
+        
+        self._obstacle_detected = 0 # Initialise local variable (0 = no obstacle, 1 = obstacle detected)
 
         self._duckiebot = Duckiebot(LaneFollowingState(), self._state_publisher,
                                     self._goal_distance_publisher, self._goal_angle_publisher)
 
         rospy.loginfo("Initialized autopilot node!")
-
-        rospy.spin() # Spin forever but listen to message callbacks
  
+    def obstacle_callback(self, msg: Int8):
+        if msg.data == 1 and self._obstacle_detected == 0:
+            self._duckiebot.on_event(DuckieBotEvent.CAR_DETECTED)
+        elif msg.data == 0 and self._obstacle_detected == 1:
+            self._duckiebot.on_event(DuckieBotEvent.CAR_REMOVED)
+        elif msg.data != 0 and msg.data != 1:
+            rospy.logwarn("Unknown obstacle state received.")
+
+        self._obstacle_detected = msg.data
+
+
     def FSM_state_callback(self, msg: FSMState):
         rospy.loginfo(f"FSM state changed to: {msg.state}")
         if msg.state == 'MOVEMENT_CONTROLLER_SUCCESS':
@@ -400,9 +413,17 @@ class Autopilot:
         return tag_id in LEFT_INTERSECTION_SIGNS_IDS
     def is_right_intersection_sign_id(self, tag_id):
         return tag_id in RIGHT_INTERSECTION_SIGNS_IDS
+    
+    def run(self):
+        rate = rospy.Rate(AUTOPILOT_UPDATE_FREQUENCY)
+        while not rospy.is_shutdown():
+            self._duckiebot.update()
+            rate.sleep()
 
 if __name__ == '__main__':
     try:
-        autopilot_instance = Autopilot()
+        autopilot = Autopilot()
+        autopilot.run()
+        rospy.spin()
     except rospy.ROSInterruptException:
         pass

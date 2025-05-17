@@ -7,7 +7,7 @@ import math
 from std_msgs.msg import Float64MultiArray, MultiArrayLayout, MultiArrayDimension
 from duckietown_msgs.msg import WheelEncoderStamped
 
-FREQUENCY = 10 # Hz
+FREQUENCY = 20 # Hz
 WHEEL_DIAMETER = 0.0318 * 2 # meters. value from calibration report
 WHEEL_CIRCUMFERENCE = math.pi * WHEEL_DIAMETER # meters
 
@@ -32,7 +32,7 @@ class WheelMovementInfo:
         self.sub_left = rospy.Subscriber("/vader/left_wheel_encoder_node/tick", WheelEncoderStamped, self.callback_left)
         self.sub_right = rospy.Subscriber("/vader/right_wheel_encoder_node/tick", WheelEncoderStamped, self.callback_right)
 
-        self.movement_info_publisher = rospy.Publisher('/wheel_movement_info', Float64MultiArray, queue_size=10)
+        self.movement_info_publisher = rospy.Publisher('/vader/wheel_movement_info', Float64MultiArray, queue_size=10)
 
         # Printing to the terminal, ROS style
         rospy.loginfo("Initalized wheel_movement_info node!")
