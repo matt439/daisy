@@ -67,6 +67,8 @@ class DuckieBotEvent(Enum):
     OVERTAKING_FAILED = 9
     TURNING_SUCCEEDED = 10
     TURNING_FAILED = 11
+    PAUSE_COMMAND_RECEIVED = 12
+    RESUME_COMMAND_RECEIVED = 13
 
 class Timer:
     def __init__(self, duration: float):
@@ -321,6 +323,20 @@ class TurningRightState(DuckiebotState):
     def update(self) -> None:
         self._turner.update()
 
+    class PauseState(DuckiebotState):
+        def __init__(self):
+            pass
+
+        def on_enter(self):
+            self._context.publish_FSM_state('PAUSED')
+
+        def on_event(self, event: DuckieBotEvent) -> None:
+            if event == DuckieBotEvent.CAR_REMOVED:
+                self.context.transition_to(LaneFollowingState())
+
+        def update(self) -> None:
+            pass
+
 class Autopilot:
     def __init__(self):
         
@@ -338,26 +354,35 @@ class Autopilot:
         rospy.Subscriber('/vader/apriltag_detector_node/detections',
                          AprilTagDetectionArray, self.april_tag_callback, queue_size=1)
         rospy.Subscriber('/vader/obstacle_detector', Int8, self.obstacle_callback, queue_size=1)
+        rospy.Subscriber('/vader/autopilot_node/mode', Int8, self.autopilot_control_callback, queue_size=1)
 
         self.set_lane_following_parameters()
-        
+
         self._obstacle_detected = 0 # Initialise local variable (0 = no obstacle, 1 = obstacle detected)
+        self._autopilot_control = 1 # Initialise local variable (0 = stop, 1 = go)
 
         self._duckiebot = Duckiebot(LaneFollowingState(), self._state_publisher,
                                     self._goal_distance_publisher, self._goal_angle_publisher)
 
         rospy.loginfo("Initialized autopilot node!")
  
+    def autopilot_control_callback(self, msg: Int8):
+        if msg.data != 0 and msg.data != 1:
+            rospy.logwarn("Unknown autopilot control state received.")
+            return
+        self._autopilot_control = msg.data
+
     def obstacle_callback(self, msg: Int8):
+        if msg.data != 0 and msg.data != 1:
+            rospy.logwarn("Unknown obstacle state received.")
+            return
+
         if msg.data == 1 and self._obstacle_detected == 0:
             self._duckiebot.on_event(DuckieBotEvent.CAR_DETECTED)
         elif msg.data == 0 and self._obstacle_detected == 1:
             self._duckiebot.on_event(DuckieBotEvent.CAR_REMOVED)
-        elif msg.data != 0 and msg.data != 1:
-            rospy.logwarn("Unknown obstacle state received.")
-
+        
         self._obstacle_detected = msg.data
-
 
     def FSM_state_callback(self, msg: FSMState):
         rospy.loginfo(f"FSM state changed to: {msg.state}")
