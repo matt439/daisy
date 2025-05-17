@@ -278,7 +278,7 @@ class Autopilot:
         self._state_publisher = rospy.Publisher('/vader/fsm_node/mode', FSMState, queue_size=1)
         self._goal_distance_publisher = rospy.Publisher('/vader/goal_distance', Float64, queue_size=1)
         self._goal_angle_publisher = rospy.Publisher('/vader/goal_angle', Float64, queue_size=1)
-        rospy.subscriber('/vader/fsm_node/mode', FSMState, self.FSM_state_callback, queue_size=1)
+        rospy.Subscriber('/vader/fsm_node/mode', FSMState, self.FSM_state_callback, queue_size=1)
         rospy.Subscriber('/vader/apriltag_detector_node/detections', AprilTagDetectionArray, self.tag_callback, queue_size=1)
 
         self._duckiebot = Duckiebot(LaneFollowingState(), self._state_publisher,
