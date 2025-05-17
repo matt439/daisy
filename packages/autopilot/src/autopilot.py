@@ -21,6 +21,37 @@ STOP_SIGN_WAITING_TIME = 5.0  # seconds
 CAR_WAITING_TIME = 5.0  # seconds
 LANE_FOLLOWING_STOP_SIGN_TIME = 3.0  # seconds
 STOPPING_DISTANCE_TARGET = 0.1  # meters
+STOP_SIGN_IDS = [20, 21, 22, 23, 24, 25, 26, 27, 28]
+LEFT_INTERSECTION_SIGNS_IDS = [61, 62]
+RIGHT_INTERSECTION_SIGNS_IDS = [57, 58]
+LANE_FOLLOWING_FSM_STATE = "LANE_FOLLOWING"
+NORMAL_JOYSTICK_CONTROL_FSM_STATE = "NORMAL_JOYSTICK_CONTROL"
+
+LANE_CONTROLLER_NODE_V_BAR = "/vader/lane_controller_node/v_bar" # nominal velocity in m/s
+LANE_CONTROLLER_NODE_K_D = "/vader/lane_controller_node/k_d" # proportional term for lateral deviation
+LANE_CONTROLLER_NODE_K_THETA = "/vader/lane_controller_node/k_theta" # proportional term for heading deviation
+LANE_CONTROLLER_NODE_K_ID = "/vader/lane_controller_node/k_Id" # integral term for lateral deviation
+LANE_CONTROLLER_NODE_K_IPHI = "/vader/lane_controller_node/k_IphI" # integral term for lateral deviation?
+LANE_CONTROLLER_NODE_THETA_THRES_MIN = "/vader/lane_controller_node/theta_thres_min" # minimum value for heading error
+LANE_CONTROLLER_NODE_THETA_THRES_MAX = "/vader/lane_controller_node/theta_thres_max" # maximum value for heading error
+
+V_BAR = 1.0 # 0 to 5
+K_D = 0.0 # -100 to 100
+K_THERA = 0.0 # -100 to 100
+K_ID = 0.0 # -100 to 100
+K_IPHI = 0.0 # -100 to 100
+THETA_THRES_MIN = 0.0 # -100 to 100
+THETA_THRES_MAX = 0.0 # -100 to 100
+
+#      Lane controller node parameters which cannot be set dynamically
+# d_thres (:obj:`float`): Maximum value for lateral error
+# d_offset (:obj:`float`): Goal offset from center of the lane
+# integral_bounds (:obj:`dict`): Bounds for integral term
+# d_resolution (:obj:`float`): Resolution of lateral position estimate
+# phi_resolution (:obj:`float`): Resolution of heading estimate
+# omega_ff (:obj:`float`): Feedforward part of controller
+# verbose (:obj:`bool`): Verbosity level (0,1,2)
+# stop_line_slowdown (:obj:`dict`): Start and end distances for slowdown at stop lines
 
 class DuckieBotEvent(Enum):
     STOP_SIGN_DETECTED = 0
@@ -110,7 +141,7 @@ class LaneFollowingState(DuckiebotState):
         pass
 
     def on_enter(self):
-        self._context.publish_FSM_state('LANE_FOLLOWING')
+        self._context.publish_FSM_state(LANE_FOLLOWING_FSM_STATE)
 
     def on_event(self, event: DuckieBotEvent) -> None:
         if event == DuckieBotEvent.STOP_SIGN_DETECTED:
@@ -130,7 +161,7 @@ class StoppingForStopSignState(DuckiebotState):
         pass
 
     def on_enter(self):
-        self._context.publish_FSM_state('NORMAL_JOYSTICK_CONTROL') # Stop lane following
+        self._context.publish_FSM_state(NORMAL_JOYSTICK_CONTROL_FSM_STATE) # Stop lane following
         self._context.stop_bot() # Stop the robot
 
     def on_event(self, event: DuckieBotEvent) -> None:
@@ -159,7 +190,7 @@ class LaneFollowingStopSignState(DuckiebotState):
         self._timer = Timer(LANE_FOLLOWING_STOP_SIGN_TIME)
 
     def on_enter(self):
-        self._context.publish_FSM_state('LANE_FOLLOWING')
+        self._context.publish_FSM_state(LANE_FOLLOWING_FSM_STATE)
         self._timer.start()
 
     # No event handling for stop sign detection in this state
@@ -180,7 +211,7 @@ class StoppingForCarState(DuckiebotState):
         pass
 
     def on_enter(self):
-        self._context.publish_FSM_state('NORMAL_JOYSTICK_CONTROL') # Stop lane following
+        self._context.publish_FSM_state(NORMAL_JOYSTICK_CONTROL_FSM_STATE) # Stop lane following
         self._context.stop_bot() # Stop the robot
 
     def on_event(self, event: DuckieBotEvent) -> None:
@@ -289,10 +320,6 @@ class TurningRightState(DuckiebotState):
     def update(self) -> None:
         self._turner.update()
 
-STOP_SIGN_IDS = [20, 21, 22, 23, 24, 25, 26, 27, 28]
-LEFT_INTERSECTION_SIGNS_IDS = [61, 62]
-RIGHT_INTERSECTION_SIGNS_IDS = [57, 58]
-
 class Autopilot:
     def __init__(self):
         
@@ -303,7 +330,6 @@ class Autopilot:
         rospy.on_shutdown(self.clean_shutdown)
         
         self.cmd_vel_pub = rospy.Publisher('/vader/car_cmd_switch_node/cmd', Twist2DStamped, queue_size=1)
-        self.state_pub = rospy.Publisher('/vader/fsm_node/mode', FSMState, queue_size=1)
         self._state_publisher = rospy.Publisher('/vader/fsm_node/mode', FSMState, queue_size=1)
         self._goal_distance_publisher = rospy.Publisher('/vader/goal_distance', Float64, queue_size=1)
         self._goal_angle_publisher = rospy.Publisher('/vader/goal_angle', Float64, queue_size=1)
@@ -343,6 +369,16 @@ class Autopilot:
             else:
                 rospy.loginfo(f"Unknown tag ID: {tag_id}")
     
+    def set_lane_following_parameters(self):
+        rospy.set_param(LANE_CONTROLLER_NODE_V_BAR, V_BAR)
+        rospy.set_param(LANE_CONTROLLER_NODE_K_D, K_D)
+        rospy.set_param(LANE_CONTROLLER_NODE_K_THETA, K_THERA)
+        rospy.set_param(LANE_CONTROLLER_NODE_K_ID, K_ID)
+        rospy.set_param(LANE_CONTROLLER_NODE_K_IPHI, K_IPHI)
+        rospy.set_param(LANE_CONTROLLER_NODE_THETA_THRES_MIN, THETA_THRES_MIN)
+        rospy.set_param(LANE_CONTROLLER_NODE_THETA_THRES_MAX, THETA_THRES_MAX)
+        rospy.loginfo("Lane following parameters set!")
+
     # Stop Robot before node has shut down. This ensures the robot keep moving with the latest velocity command
     def clean_shutdown(self):
         rospy.loginfo("System shutting down. Stopping robot...")
