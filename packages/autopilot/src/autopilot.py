@@ -50,14 +50,14 @@ class Timer:
         self._start_time = None
 
 class Duckiebot():
-    def __init__(self, state: DuckiebotState, state_pub, goal_dist_pub, goal_angle_pub) -> None:
+    def __init__(self, state: 'DuckiebotState', state_pub, goal_dist_pub, goal_angle_pub) -> None:
         self._state_publisher = state_pub
         self._goal_distance_publisher = goal_dist_pub
         self._goal_angle_publisher = goal_angle_pub
         rospy.loginfo("Duckiebot class initialized!")
         self.transition_to(state)
 
-    def transition_to(self, state: DuckiebotState):
+    def transition_to(self, state: 'DuckiebotState'):
         self._state = state
         self._state._context = self
         rospy.loginfo(f"Transitioning to state: {type(state).__name__}")
