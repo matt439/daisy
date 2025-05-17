@@ -356,7 +356,6 @@ class TurningRightState(DuckiebotState):
 
 class Autopilot:
     def __init__(self):
-        
         #Initialize ROS node
         rospy.init_node('autopilot_node', anonymous=True)
 
