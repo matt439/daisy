@@ -337,6 +337,8 @@ class Autopilot:
         rospy.Subscriber('/vader/apriltag_detector_node/detections',
                          AprilTagDetectionArray, self.april_tag_callback, queue_size=1)
 
+        self.set_lane_following_parameters()
+
         self._duckiebot = Duckiebot(LaneFollowingState(), self._state_publisher,
                                     self._goal_distance_publisher, self._goal_angle_publisher)
 
