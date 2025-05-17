@@ -35,7 +35,7 @@ class WheelMovementInfo:
         self.movement_info_publisher = rospy.Publisher('/wheel_movement_info', Float64MultiArray, queue_size=10)
 
         # Printing to the terminal, ROS style
-        rospy.loginfo("Initalized node!")
+        rospy.loginfo("Initalized wheel_movement_info node!")
 
     def callback_left(self, msg):
         # calculate distance travelled by left wheel

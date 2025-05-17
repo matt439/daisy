@@ -60,7 +60,7 @@ class MovementController:
         self._state_publisher = rospy.Publisher('/vader/fsm_node/mode', FSMState, queue_size=1)
 
         # Printing to the terminal, ROS style
-        rospy.loginfo("Initalized node!")
+        rospy.loginfo("Initalized movement_controller node!")
 
     def wheel_movement_info_callback(self, msg):
         self._last_distance_left = msg.data[0]

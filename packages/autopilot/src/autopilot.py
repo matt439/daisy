@@ -284,7 +284,7 @@ class Autopilot:
         self._duckiebot = Duckiebot(LaneFollowingState(), self._state_publisher,
                                     self._goal_distance_publisher, self._goal_angle_publisher)
 
-        rospy.loginfo("Autopilot node initialized!")
+        rospy.loginfo("Initialized autopilot node!")
 
         rospy.spin() # Spin forever but listen to message callbacks
  

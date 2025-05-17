@@ -20,7 +20,7 @@ class ObstacleDetector:
         self._obstacle_detected = False
 
         # Printing to the terminal, ROS style
-        rospy.loginfo("Initalized node!")
+        rospy.loginfo("Initalized obstacle_detector node!")
 
     def callback_tof(self, msg):
         # Check if the distance is less than the threshold
