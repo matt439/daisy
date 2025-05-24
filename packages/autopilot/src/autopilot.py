@@ -25,9 +25,9 @@ LANE_CONTROLLER_NODE_K_IPHI = "/vader/lane_controller_node/k_IphI" # integral te
 LANE_CONTROLLER_NODE_THETA_THRES_MIN = "/vader/lane_controller_node/theta_thres_min" # minimum value for heading error
 LANE_CONTROLLER_NODE_THETA_THRES_MAX = "/vader/lane_controller_node/theta_thres_max" # maximum value for heading error
 
-V_BAR = 0.5 # clamped from 0 to 5
-K_D = 0.0 # clamped from -100 to 100
-K_THERA = 0.0 # clamped from -100 to 100
+V_BAR = 0.3 # clamped from 0 to 5
+K_D = -50.0 # clamped from -100 to 100
+K_THETA = 0.0 # clamped from -100 to 100
 K_ID = 0.0 # clamped from -100 to 100
 K_IPHI = 0.0 # clamped from -100 to 100
 THETA_THRES_MIN = 0.0 # clamped from -100 to 100
@@ -432,7 +432,7 @@ class Autopilot:
     def set_lane_following_parameters(self):
         rospy.set_param(LANE_CONTROLLER_NODE_V_BAR, V_BAR)
         rospy.set_param(LANE_CONTROLLER_NODE_K_D, K_D)
-        rospy.set_param(LANE_CONTROLLER_NODE_K_THETA, K_THERA)
+        rospy.set_param(LANE_CONTROLLER_NODE_K_THETA, K_THETA)
         rospy.set_param(LANE_CONTROLLER_NODE_K_ID, K_ID)
         rospy.set_param(LANE_CONTROLLER_NODE_K_IPHI, K_IPHI)
         rospy.set_param(LANE_CONTROLLER_NODE_THETA_THRES_MIN, THETA_THRES_MIN)
