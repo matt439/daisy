@@ -18,6 +18,6 @@ line_detector_parameters:
   canny_thresholds: [80,200]
   canny_aperture_size: 3
   dilation_kernel_size: 3
-  hough_threshold: 10
-  hough_min_line_length: 10
-  hough_max_line_gap: 7
+  hough_threshold: 2
+  hough_min_line_length: 3
+  hough_max_line_gap: 1
