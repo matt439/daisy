@@ -6,17 +6,6 @@ from std_msgs.msg import Float64, Int8
 from enum import Enum
 from abc import ABC, abstractmethod
 
-# class DuckiebotStateType(Enum):
-#     LANE_FOLLOWING = 0
-#     STOPPING_FOR_STOP_SIGN = 1
-#     WAITING_AT_STOP_SIGN = 2
-#     LANE_FOLLOWING_STOP_SIGN = 3
-#     STOPPING_FOR_CAR = 4
-#     WAITING_FOR_CAR = 5
-#     OVERTAKING = 6
-#     TURNING_LEFT = 7
-#     TURNING_RIGHT = 8
-
 AUTOPILOT_UPDATE_FREQUENCY = 20  # Hz
 STOP_SIGN_WAITING_TIME = 5.0  # seconds
 CAR_WAITING_TIME = 5.0  # seconds
@@ -36,15 +25,16 @@ LANE_CONTROLLER_NODE_K_IPHI = "/vader/lane_controller_node/k_IphI" # integral te
 LANE_CONTROLLER_NODE_THETA_THRES_MIN = "/vader/lane_controller_node/theta_thres_min" # minimum value for heading error
 LANE_CONTROLLER_NODE_THETA_THRES_MAX = "/vader/lane_controller_node/theta_thres_max" # maximum value for heading error
 
-V_BAR = 0.5 # 0 to 5
-K_D = 0.0 # -100 to 100
-K_THERA = 0.0 # -100 to 100
-K_ID = 0.0 # -100 to 100
-K_IPHI = 0.0 # -100 to 100
-THETA_THRES_MIN = 0.0 # -100 to 100
-THETA_THRES_MAX = 0.0 # -100 to 100
+V_BAR = 0.5 # clamped from 0 to 5
+K_D = 0.0 # clamped from -100 to 100
+K_THERA = 0.0 # clamped from -100 to 100
+K_ID = 0.0 # clamped from -100 to 100
+K_IPHI = 0.0 # clamped from -100 to 100
+THETA_THRES_MIN = 0.0 # clamped from -100 to 100
+THETA_THRES_MAX = 0.0 # clamped from -100 to 100
 
-#      Lane controller node parameters which cannot be set dynamically
+# Lane controller node parameters which cannot be set dynamically:
+#
 # d_thres (:obj:`float`): Maximum value for lateral error
 # d_offset (:obj:`float`): Goal offset from center of the lane
 # integral_bounds (:obj:`dict`): Bounds for integral term
@@ -69,6 +59,13 @@ class DuckieBotEvent(Enum):
     TURNING_FAILED = 11
     PAUSE_COMMAND_RECEIVED = 12
     RESUME_COMMAND_RECEIVED = 13
+
+class TaskType(Enum):
+    TASK_7_2C = 0
+    TASK_7_3D = 1
+    TASK_7_4HD = 2
+
+TASK = TaskType.TASK_7_2C
 
 class Timer:
     def __init__(self, duration: float):
@@ -392,6 +389,9 @@ class Autopilot:
             self._duckiebot.on_event(DuckieBotEvent.PAUSE_COMMAND_RECEIVED)
 
     def obstacle_callback(self, msg: Int8):
+        if TASK == TaskType.TASK_7_2C:
+            return
+        
         if msg.data != 0 and msg.data != 1:
             rospy.logwarn("Unknown obstacle state received.")
             return
@@ -421,10 +421,11 @@ class Autopilot:
             tag_id = detection.id[0]
             if self.is_stop_sign_id(tag_id):
                 self._duckiebot.on_event(DuckieBotEvent.STOP_SIGN_DETECTED)
-            elif self.is_left_intersection_sign_id(tag_id):
-                self._duckiebot.on_event(DuckieBotEvent.TURN_LEFT_SIGN_DETECTED)
-            elif self.is_right_intersection_sign_id(tag_id):
-                self._duckiebot.on_event(DuckieBotEvent.TURN_RIGHT_SIGN_DETECTED)
+            if TASK == TaskType.TASK_7_4HD:
+                if self.is_left_intersection_sign_id(tag_id):
+                    self._duckiebot.on_event(DuckieBotEvent.TURN_LEFT_SIGN_DETECTED)
+                elif self.is_right_intersection_sign_id(tag_id):
+                    self._duckiebot.on_event(DuckieBotEvent.TURN_RIGHT_SIGN_DETECTED)
             else:
                 rospy.loginfo(f"Unknown tag ID: {tag_id}")
     
