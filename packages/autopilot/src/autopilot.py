@@ -26,8 +26,8 @@ LANE_CONTROLLER_NODE_THETA_THRES_MIN = "/vader/lane_controller_node/theta_thres_
 LANE_CONTROLLER_NODE_THETA_THRES_MAX = "/vader/lane_controller_node/theta_thres_max" # maximum value for heading error
 
 V_BAR = 0.3 # clamped from 0 to 5
-K_D = -50 # clamped from -100 to 100
-K_THETA = 0.0 # clamped from -100 to 100
+K_D = -40.0 # clamped from -100 to 100
+K_THETA = -10.0 # clamped from -100 to 100
 K_ID = 0.0 # clamped from -100 to 100
 K_IPHI = 0.0 # clamped from -100 to 100
 THETA_THRES_MIN = 0.0 # clamped from -100 to 100
