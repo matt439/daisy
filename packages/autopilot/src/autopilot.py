@@ -25,9 +25,9 @@ LANE_CONTROLLER_NODE_K_IPHI = "/vader/lane_controller_node/k_IphI" # integral te
 LANE_CONTROLLER_NODE_THETA_THRES_MIN = "/vader/lane_controller_node/theta_thres_min" # minimum value for heading error
 LANE_CONTROLLER_NODE_THETA_THRES_MAX = "/vader/lane_controller_node/theta_thres_max" # maximum value for heading error
 
-V_BAR = 0.3 # clamped from 0 to 5, default 0.19
-K_D = -6.0 # clamped from -100 to 100, default -6.0
-K_THETA = -5.0 # clamped from -100 to 100, default -5.0
+V_BAR = 0.27 # clamped from 0 to 5, default 0.19
+K_D = -45.0 # clamped from -100 to 100, default -6.0
+K_THETA = -11.0 # clamped from -100 to 100, default -5.0
 K_ID = -0.3 # clamped from -100 to 100, default -0.3
 K_IPHI = 0.0 # clamped from -100 to 100, default 0.0
 THETA_THRES_MIN = -0.5 # clamped from -100 to 100, default -0.5
