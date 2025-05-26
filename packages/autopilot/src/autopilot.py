@@ -418,16 +418,16 @@ class Autopilot:
     def april_tag_callback(self, msg: AprilTagDetectionArray):
         # Process the AprilTag detections
         for detection in msg.detections:
-            for id in detection.id:
-                if self.is_stop_sign_id(id):
-                    self._duckiebot.on_event(DuckieBotEvent.STOP_SIGN_DETECTED)
-                elif TASK == TaskType.TASK_7_4HD:
-                    if self.is_left_intersection_sign_id(id):
-                        self._duckiebot.on_event(DuckieBotEvent.TURN_LEFT_SIGN_DETECTED)
-                    elif self.is_right_intersection_sign_id(id):
-                        self._duckiebot.on_event(DuckieBotEvent.TURN_RIGHT_SIGN_DETECTED)
-                else:
-                    rospy.loginfo(f"Unknown tag ID: {id}")
+            id = detection.tag_id
+            if self.is_stop_sign_id(id):
+                self._duckiebot.on_event(DuckieBotEvent.STOP_SIGN_DETECTED)
+            elif TASK == TaskType.TASK_7_4HD:
+                if self.is_left_intersection_sign_id(id):
+                    self._duckiebot.on_event(DuckieBotEvent.TURN_LEFT_SIGN_DETECTED)
+                elif self.is_right_intersection_sign_id(id):
+                    self._duckiebot.on_event(DuckieBotEvent.TURN_RIGHT_SIGN_DETECTED)
+            else:
+                rospy.loginfo(f"Unknown tag ID: {id}")
     
     def set_lane_following_parameters(self):
         rospy.set_param(LANE_CONTROLLER_NODE_V_BAR, V_BAR)
