@@ -110,7 +110,10 @@ class MovementController:
         self._zero_velocity_readings_count_left = 0
         self._zero_velocity_readings_count_right = 0
         self._dist_goal_active = True
-        self._state_publisher.publish(STATE_ACTIVE)
+        fsm_msg = FSMState()
+        fsm_msg.header.stamp = rospy.Time.now()
+        fsm_msg.state = STATE_ACTIVE
+        self._state_publisher.publish(fsm_msg)
 
     def calculate_distance_to_goal(self):
         left = self._goal_distance_left - self._last_distance_left
@@ -284,7 +287,10 @@ class MovementController:
             rospy.loginfo("Distance goal complete!")
             rospy.loginfo("Left wheel final displacement: %s", self._last_distance_left - self._goal_distance_left)
             rospy.loginfo("Right wheel final displacement: %s", self._last_distance_right - self._goal_distance_right)
-            self._state_publisher.publish(STATE_SUCCESS)
+            fsm_msg = FSMState()
+            fsm_msg.header.stamp = rospy.Time.now()
+            fsm_msg.state = STATE_SUCCESS
+            self._state_publisher.publish(fsm_msg)
         elif self.is_zero_velocity_readings_count_exceeded() and self.is_goal_start_time_period_complete():
             # one or both wheels are not moving and the goal start time period is complete
             rospy.logerr("One or both wheels are not moving in handle_distance_goal()!")
@@ -294,7 +300,10 @@ class MovementController:
             # print zero velocity readings count
             rospy.logerr("Left wheel zero velocity readings count: %s", self._zero_velocity_readings_count_left)
             rospy.logerr("Right wheel zero velocity readings count: %s", self._zero_velocity_readings_count_right)
-            self._state_publisher.publish(STATE_FAILURE)
+            fsm_msg = FSMState()
+            fsm_msg.header.stamp = rospy.Time.now()
+            fsm_msg.state = STATE_FAILURE
+            self._state_publisher.publish(fsm_msg)
             self.reset()
         else: # both wheels are moving
             self.count_zero_velocity_readings()
@@ -323,4 +332,4 @@ if __name__ == '__main__':
         rospy.spin()
     except rospy.ROSInterruptException:
         pass
-    
+
