@@ -12,9 +12,9 @@ STOP_SIGN_WAITING_TIME = 5.0  # seconds
 CAR_WAITING_TIME = 5.0  # seconds
 LANE_FOLLOWING_STOP_SIGN_TIME = 3.0  # seconds
 STOPPING_DISTANCE_TARGET = 0.1  # meters
-STOP_SIGN_IDS = [20, 21, 22, 23, 24, 25, 26, 27, 28]
-LEFT_INTERSECTION_SIGNS_IDS = [61, 62]
-RIGHT_INTERSECTION_SIGNS_IDS = [57, 58]
+STOP_SIGN_IDS = [1, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38]
+LEFT_INTERSECTION_SIGNS_IDS = [10, 61, 62, 63, 64]
+RIGHT_INTERSECTION_SIGNS_IDS = [9, 57, 58, 59, 60]
 LANE_FOLLOWING_FSM_STATE = "LANE_FOLLOWING"
 NORMAL_JOYSTICK_CONTROL_FSM_STATE = "NORMAL_JOYSTICK_CONTROL"
 
@@ -96,7 +96,7 @@ class Duckiebot():
         self._state.on_enter()  # Call on_enter after context is set
 
     def on_event(self, event: DuckieBotEvent) -> None:
-        self.rospy.loginfo(f"Event received: {event}")
+        rospy.loginfo(f"Event received: {event}")
         self._state.on_event(event)
 
     def update(self):
@@ -110,7 +110,6 @@ class Duckiebot():
 
     def publish_goal_distance(self, distance: float):
         goal_distance_msg = Float64()
-        goal_distance_msg.header.stamp = rospy.Time.now()
         goal_distance_msg.data = distance
         self._goal_distance_publisher.publish(goal_distance_msg)
 
@@ -423,14 +422,14 @@ class Autopilot:
     def FSM_state_callback(self, msg: FSMState):
         rospy.loginfo(f"FSM state changed to: {msg.state}")
         if msg.state == 'MOVEMENT_CONTROLLER_SUCCESS':
-            self.on_event(DuckieBotEvent.MOVEMENT_CONTROLLER_SUCCEEDED)
-            self.on_event(DuckieBotEvent.BOT_BECOMES_STOPPED)
+            self._duckiebot.on_event(DuckieBotEvent.MOVEMENT_CONTROLLER_SUCCEEDED)
+            self._duckiebot.on_event(DuckieBotEvent.BOT_BECOMES_STOPPED)
         elif msg.state == 'MOVEMENT_CONTROLLER_FAILURE':
-            self.on_event(DuckieBotEvent.MOVEMENT_CONTROLLER_FAILED)
+            self._duckiebot.on_event(DuckieBotEvent.MOVEMENT_CONTROLLER_FAILED)
         elif msg.state == 'OVERTAKING_SUCCESS':
-            self.on_event(DuckieBotEvent.OVERTAKING_SUCCEEDED)
+            self._duckiebot.on_event(DuckieBotEvent.OVERTAKING_SUCCEEDED)
         elif msg.state == 'OVERTAKING_FAILURE':
-            self.on_event(DuckieBotEvent.OVERTAKING_FAILED)
+            self._duckiebot.on_event(DuckieBotEvent.OVERTAKING_FAILED)
 
     def april_tag_callback(self, msg: AprilTagDetectionArray):
         # Process the AprilTag detections
