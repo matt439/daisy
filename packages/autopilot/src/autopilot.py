@@ -109,7 +109,6 @@ class Duckiebot():
 
     def publish_goal_distance(self, distance: float):
         goal_distance_msg = Float64()
-        goal_distance_msg.header.stamp = rospy.Time.now()
         goal_distance_msg.data = distance
         self._goal_distance_publisher.publish(goal_distance_msg)
 
