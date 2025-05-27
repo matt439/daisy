@@ -11,6 +11,7 @@ AUTOPILOT_UPDATE_FREQUENCY = 20  # Hz
 STOP_SIGN_WAITING_TIME = 5.0  # seconds
 CAR_WAITING_TIME = 5.0  # seconds
 LANE_FOLLOWING_STOP_SIGN_TIME = 3.0  # seconds
+OVERTAKING_TIMEOUT_DURATION = 10.0  # seconds
 STOPPING_DISTANCE_TARGET = 0.1  # meters
 STOP_SIGN_IDS = [1, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38]
 LEFT_INTERSECTION_SIGNS_IDS = [10, 61, 62, 63, 64]
@@ -267,32 +268,14 @@ class WaitingForCarState(DuckiebotState):
         if self._timer.is_expired():
             self.context.transition_to(OvertakingState())
 
-class OvertakingProgress(Enum):
-    START = 0
-    TURN_1_ACTIVE = 1
-    TURN_1_COMPLETED = 2
-    FORWARD_DRIVE_1_ACTIVE = 3
-    FORWARD_DRIVE_1_COMPLETED = 4
-    TURN_2_ACTIVE = 5
-    TURN_2_COMPLETED = 6
-    FORWARD_DRIVE_2_ACTIVE = 7
-    FORWARD_DRIVE_2_COMPLETED = 8
-    TURN_3_ACTIVE = 9
-    TURN_3_COMPLETED = 10
-
-OVERTAKING_TURN_1 = math.pi / 4.0 # radians
-OVERTAKING_FORWARD_DRIVE_1 = 0.5 # meters
-OVERTAKING_TURN_2 = -math.pi / 2.0 # radians
-OVERTAKING_FORWARD_DRIVE_2 = 0.5 # meters
-OVERTAKING_TURN_3 = math.pi / 4.0 # radians
-
 class OvertakingState(DuckiebotState):
     def __init__(self):
-        self._current_state = OvertakingProgress.START
-
+        self._timer = Timer(OVERTAKING_TIMEOUT_DURATION)
+    
     def on_enter(self):
-        self._overtaker._context = self._context
-        self._context.publish_FSM_state('OVERTAKING')
+        self._timer.start()
+        # Send command to the overtaker node to start overtaking
+        self._context.publish_FSM_state('OVERTAKING START')
 
     def on_event(self, event: DuckieBotEvent) -> None:
         if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
@@ -304,11 +287,9 @@ class OvertakingState(DuckiebotState):
             self.context.transition_to(LaneFollowingState())
 
     def update(self) -> None:
-        if self._progress == OvertakingProgress.START:
-            # Start overtaking process
-            self._context.publish_FSM_state('OVERTAKING_START')
-            self._context.publish_goal_angle(OVERTAKING_TURN_1)
-            self._progress = OvertakingProgress.TURN_1_ACTIVE
+        if self._timer.is_expired():
+            rospy.logwarn("Overtaking timer expired, transitioning to lane following state.")
+            self.context.transition_to(LaneFollowingState())
 
 class Direction (Enum):
     LEFT = 0
