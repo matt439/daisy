@@ -95,7 +95,7 @@ class Duckiebot():
         self._state.on_enter()  # Call on_enter after context is set
 
     def on_event(self, event: DuckieBotEvent) -> None:
-        self.rospy.loginfo(f"Event received: {event}")
+        rospy.loginfo(f"Event received: {event}")
         self._state.on_event(event)
 
     def update(self):
