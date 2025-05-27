@@ -405,14 +405,14 @@ class Autopilot:
     def FSM_state_callback(self, msg: FSMState):
         rospy.loginfo(f"FSM state changed to: {msg.state}")
         if msg.state == 'MOVEMENT_CONTROLLER_SUCCESS':
-            self.on_event(DuckieBotEvent.MOVEMENT_CONTROLLER_SUCCEEDED)
-            self.on_event(DuckieBotEvent.BOT_BECOMES_STOPPED)
+            self._duckiebot.on_event(DuckieBotEvent.MOVEMENT_CONTROLLER_SUCCEEDED)
+            self._duckiebot.on_event(DuckieBotEvent.BOT_BECOMES_STOPPED)
         elif msg.state == 'MOVEMENT_CONTROLLER_FAILURE':
-            self.on_event(DuckieBotEvent.MOVEMENT_CONTROLLER_FAILED)
+            self._duckiebot.on_event(DuckieBotEvent.MOVEMENT_CONTROLLER_FAILED)
         elif msg.state == 'OVERTAKING_SUCCESS':
-            self.on_event(DuckieBotEvent.OVERTAKING_SUCCEEDED)
+            self._duckiebot.on_event(DuckieBotEvent.OVERTAKING_SUCCEEDED)
         elif msg.state == 'OVERTAKING_FAILURE':
-            self.on_event(DuckieBotEvent.OVERTAKING_FAILED)
+            self._duckiebot.on_event(DuckieBotEvent.OVERTAKING_FAILED)
 
     def april_tag_callback(self, msg: AprilTagDetectionArray):
         # Process the AprilTag detections
