@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import rospy
+import math
 from duckietown_msgs.msg import Twist2DStamped, FSMState, AprilTagDetectionArray
 from std_msgs.msg import Float64, Int8
 from enum import Enum
@@ -112,6 +113,12 @@ class Duckiebot():
         goal_distance_msg.header.stamp = rospy.Time.now()
         goal_distance_msg.data = distance
         self._goal_distance_publisher.publish(goal_distance_msg)
+
+    def publish_goal_angle(self, angle: float):
+        goal_angle_msg = Float64()
+        goal_angle_msg.header.stamp = rospy.Time.now()
+        goal_angle_msg.data = angle
+        self._goal_angle_publisher.publish(goal_angle_msg)
 
     def stop_bot(self):
         self.publish_goal_distance(STOPPING_DISTANCE_TARGET)
@@ -261,26 +268,32 @@ class WaitingForCarState(DuckiebotState):
         if self._timer.is_expired():
             self.context.transition_to(OvertakingState())
 
-class DuckieOvertaker:
-    # def __init__(self):
-    #     pass
+class OvertakingProgress(Enum):
+    START = 0
+    TURN_1_ACTIVE = 1
+    TURN_1_COMPLETED = 2
+    FORWARD_DRIVE_1_ACTIVE = 3
+    FORWARD_DRIVE_1_COMPLETED = 4
+    TURN_2_ACTIVE = 5
+    TURN_2_COMPLETED = 6
+    FORWARD_DRIVE_2_ACTIVE = 7
+    FORWARD_DRIVE_2_COMPLETED = 8
+    TURN_3_ACTIVE = 9
+    TURN_3_COMPLETED = 10
 
-    def execute_overtake(self):
-        self._context.publish_FSM_state('OVERTAKING')
-        
-    def update(self):
-        if True:
-            self._context.publish_FSM_state('OVERTAKING_SUCCESS')
-        else:
-            self._context.publish_FSM_state('OVERTAKING_FAILURE')
+OVERTAKING_TURN_1 = math.pi / 4.0 # radians
+OVERTAKING_FORWARD_DRIVE_1 = 0.5 # meters
+OVERTAKING_TURN_2 = -math.pi / 2.0 # radians
+OVERTAKING_FORWARD_DRIVE_2 = 0.5 # meters
+OVERTAKING_TURN_3 = math.pi / 4.0 # radians
 
 class OvertakingState(DuckiebotState):
     def __init__(self):
-        self._overtaker = DuckieOvertaker()
+        self._current_state = OvertakingProgress.START
 
     def on_enter(self):
         self._overtaker._context = self._context
-        self._overtaker.execute_overtake()
+        self._context.publish_FSM_state('OVERTAKING')
 
     def on_event(self, event: DuckieBotEvent) -> None:
         if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
@@ -292,7 +305,11 @@ class OvertakingState(DuckiebotState):
             self.context.transition_to(LaneFollowingState())
 
     def update(self) -> None:
-        self._overtaker.update()
+        if self._progress == OvertakingProgress.START:
+            # Start overtaking process
+            self._context.publish_FSM_state('OVERTAKING_START')
+            self._context.publish_goal_angle(OVERTAKING_TURN_1)
+            self._progress = OvertakingProgress.TURN_1_ACTIVE
 
 class Direction (Enum):
     LEFT = 0
