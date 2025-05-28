@@ -6,5 +6,6 @@
 		<node pkg="obstacle_detector" name="obstacle_detector" type="obstacle_detector.py" output="screen"/>
         <node pkg="autopilot" name="autopilot" type="autopilot.py" output="screen"/>
         <node pkg="overtaker" name="overtaker" type="overtaker.py" output="screen"/>
+        <node pkg="intersection_handler" name="intersection_handler" type="intersection_handler.py" output="screen"/>
     </group>
 </launch>
