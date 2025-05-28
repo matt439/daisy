@@ -67,7 +67,7 @@ class TaskType(Enum):
     TASK_7_3D = 1
     TASK_7_4HD = 2
 
-TASK = TaskType.TASK_7_2C
+TASK = TaskType.TASK_7_3D
 
 class Timer:
     def __init__(self, duration: float):
