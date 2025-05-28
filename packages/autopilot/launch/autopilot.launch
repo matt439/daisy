@@ -5,5 +5,6 @@
         <node pkg="movement_controller" name="movement_controller" type="movement_controller.py" output="screen"/>
 		<node pkg="obstacle_detector" name="obstacle_detector" type="obstacle_detector.py" output="screen"/>
         <node pkg="autopilot" name="autopilot" type="autopilot.py" output="screen"/>
+        <node pkg="overtaker" name="overtaker" type="overtaker.py" output="screen"/>
     </group>
 </launch>
