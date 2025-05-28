@@ -34,8 +34,6 @@ THETA_THRES_MAX = 0.75 # clamped from -100 to 100, default 0.75
 class DuckieBotEvent(Enum):
     STOP_SIGN_DETECTED = 0
     BOT_BECOMES_STOPPED = 1
-    MOVEMENT_CONTROLLER_SUCCEEDED = 6
-    MOVEMENT_CONTROLLER_FAILED = 7
 
 class Timer:
     def __init__(self, duration: float):
@@ -182,7 +180,6 @@ class Autopilot:
         self._state_publisher = rospy.Publisher('/vader/fsm_node/mode', FSMState, queue_size=1)
         self._goal_distance_publisher = rospy.Publisher('/vader/goal_distance', Float64, queue_size=1)
         self._goal_angle_publisher = rospy.Publisher('/vader/goal_angle', Float64, queue_size=1)
-        rospy.Subscriber('/vader/fsm_node/mode', FSMState, self.FSM_state_callback, queue_size=1)
         rospy.Subscriber('/vader/apriltag_detector_node/detections',
                          AprilTagDetectionArray, self.april_tag_callback, queue_size=1)
 
@@ -192,14 +189,6 @@ class Autopilot:
                                     self._goal_distance_publisher, self._goal_angle_publisher)
 
         rospy.loginfo("Initialized autopilot node!")
-
-    def FSM_state_callback(self, msg: FSMState):
-        rospy.loginfo(f"FSM state changed to: {msg.state}")
-        if msg.state == 'MOVEMENT_CONTROLLER_SUCCESS':
-            self._duckiebot.on_event(DuckieBotEvent.MOVEMENT_CONTROLLER_SUCCEEDED)
-            self._duckiebot.on_event(DuckieBotEvent.BOT_BECOMES_STOPPED)
-        elif msg.state == 'MOVEMENT_CONTROLLER_FAILURE':
-            self._duckiebot.on_event(DuckieBotEvent.MOVEMENT_CONTROLLER_FAILED)
 
     def april_tag_callback(self, msg: AprilTagDetectionArray):
         # Process the AprilTag detections
