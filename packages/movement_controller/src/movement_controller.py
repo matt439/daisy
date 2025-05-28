@@ -150,7 +150,8 @@ class MovementController:
             self._zero_velocity_readings_count_right += 1
     
     def is_zero_velocity_readings_count_exceeded(self):
-        if self._zero_velocity_readings_count_left > ZERO_VELOCITY_READINGS_COUNT_THRESHOLD or self._zero_velocity_readings_count_right > ZERO_VELOCITY_READINGS_COUNT_THRESHOLD:
+        if (self._zero_velocity_readings_count_left > ZERO_VELOCITY_READINGS_COUNT_THRESHOLD or
+                    self._zero_velocity_readings_count_right > ZERO_VELOCITY_READINGS_COUNT_THRESHOLD):
             return True
         return False
 
