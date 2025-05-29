@@ -7,7 +7,7 @@ from std_msgs.msg import Float64
 from enum import Enum
 from abc import ABC, abstractmethod
 
-OVERTAKER_UPDATE_FREQUENCY = 10.0 # Hz
+OVERTAKER_UPDATE_FREQUENCY = 20.0 # Hz
 OVERTAKER_TIMEOUT_DURATION = 5.0 # seconds
 OVERTAKING_TURN_1 = math.pi / 4.0 # radians
 OVERTAKING_FORWARD_DRIVE_1 = 0.5 # meters
