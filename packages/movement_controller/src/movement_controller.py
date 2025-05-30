@@ -251,6 +251,7 @@ class OvertakingState(MovementControllerState):
         left_velocity, right_velocity = self.calculate_overtaking_velocity()
         # Publish the velocities to the wheels
         self.context.publish_velocity(left_velocity, right_velocity)
+        rospy.loginfo(f"Overtaking velocities - Left: {left_velocity}, Right: {right_velocity}")
 
     def calculate_overtaking_velocity(self) -> tuple:
         adjusted_time = self._goal_timer.get_elapsed_time() / OVERTAKING_GOAL_TIMER_DURATION
