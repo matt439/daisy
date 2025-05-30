@@ -368,8 +368,6 @@ class Autopilot:
 
         self.set_lane_following_parameters()
 
-        self._obstacle_detected = 0 # Initialise local variable (0 = no obstacle, 1 = obstacle detected)
-
         self._duckiebot = Duckiebot(LaneFollowingState(), self._state_publisher,
                                     self._goal_distance_publisher, self._goal_angle_publisher)
 
@@ -380,12 +378,10 @@ class Autopilot:
             rospy.logwarn("Unknown autopilot control state received.")
             return
         
-        if msg.data == 1 and self._obstacle_detected == 0:
+        if msg.data == 1:
             self._duckiebot.on_event(DuckieBotEvent.RESUME_COMMAND_RECEIVED)
-        elif msg.data == 0 and self._obstacle_detected == 1:
+        else: # msg.data == 0
             self._duckiebot.on_event(DuckieBotEvent.PAUSE_COMMAND_RECEIVED)
-
-        self._obstacle_detected = msg.data  # Update local obstacle state
 
     def obstacle_callback(self, msg: Int8):
         if TASK == TaskType.TASK_7_2C:
