@@ -7,18 +7,26 @@ from std_msgs.msg import Float64, Int8
 from enum import Enum
 from abc import ABC, abstractmethod
 
+# Autopilot node constants
 AUTOPILOT_UPDATE_FREQUENCY = 20  # Hz
-STOP_SIGN_WAITING_TIME = 5.0  # seconds
-CAR_WAITING_TIME = 5.0  # seconds
-LANE_FOLLOWING_STOP_SIGN_TIME = 3.0  # seconds
-OVERTAKING_TIMEOUT_DURATION = 10.0  # seconds
-STOPPING_DISTANCE_TARGET = 0.1  # meters
-STOP_SIGN_IDS = [1, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38]
-LEFT_INTERSECTION_SIGNS_IDS = [10, 61, 62, 63, 64]
-RIGHT_INTERSECTION_SIGNS_IDS = [9, 57, 58, 59, 60]
 LANE_FOLLOWING_FSM_STATE = "LANE_FOLLOWING"
 NORMAL_JOYSTICK_CONTROL_FSM_STATE = "NORMAL_JOYSTICK_CONTROL"
+STOPPING_DISTANCE_TARGET = 0.05  # meters
 
+# Stop sign constants
+STOP_SIGN_WAITING_TIME = 5.0  # seconds
+LANE_FOLLOWING_STOP_SIGN_TIME = 3.0  # seconds
+STOP_SIGN_IDS = [1, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38]
+
+# Overtaking constants
+OVERTAKING_TIMEOUT_DURATION = 10.0  # seconds
+CAR_WAITING_TIME = 5.0  # seconds
+
+# Intersection constants
+LEFT_INTERSECTION_SIGNS_IDS = [10, 61, 62, 63, 64]
+RIGHT_INTERSECTION_SIGNS_IDS = [9, 57, 58, 59, 60]
+
+# Lane controller node parameters constants
 LANE_CONTROLLER_NODE_V_BAR = "/vader/lane_controller_node/v_bar" # nominal velocity in m/s
 LANE_CONTROLLER_NODE_K_D = "/vader/lane_controller_node/k_d" # proportional term for lateral deviation
 LANE_CONTROLLER_NODE_K_THETA = "/vader/lane_controller_node/k_theta" # proportional term for heading deviation
@@ -26,7 +34,6 @@ LANE_CONTROLLER_NODE_K_ID = "/vader/lane_controller_node/k_Id" # integral term f
 LANE_CONTROLLER_NODE_K_IPHI = "/vader/lane_controller_node/k_IphI" # integral term for lateral deviation?
 LANE_CONTROLLER_NODE_THETA_THRES_MIN = "/vader/lane_controller_node/theta_thres_min" # minimum value for heading error
 LANE_CONTROLLER_NODE_THETA_THRES_MAX = "/vader/lane_controller_node/theta_thres_max" # maximum value for heading error
-
 V_BAR = 0.3 # clamped from 0 to 5, default 0.19
 K_D = -30.0 # clamped from -100 to 100, default -6.0
 K_THETA = -9.0 # clamped from -100 to 100, default -5.0
