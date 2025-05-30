@@ -198,7 +198,7 @@ class MovementController:
     def run(self):
         rate = rospy.Rate(MOVEMENT_CONTROLLER_UPDATE_FREQUENCY)
         while not rospy.is_shutdown():
-            self._movement_controller.update()
+            self.update()
             rate.sleep()
 
 class MovementControllerState(ABC):
