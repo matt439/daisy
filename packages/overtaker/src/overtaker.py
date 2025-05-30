@@ -75,7 +75,6 @@ class Overtaker:
 
     def publish_goal_angle(self, angle: float):
         goal_angle_msg = Float64()
-        goal_angle_msg.header.stamp = rospy.Time.now()
         goal_angle_msg.data = angle
         self._goal_angle_publisher.publish(goal_angle_msg)
 
