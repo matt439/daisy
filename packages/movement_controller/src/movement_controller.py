@@ -7,21 +7,35 @@ from duckietown_msgs.msg import WheelsCmdStamped, FSMState
 from enum import Enum
 
 AXLE_LENGTH = 0.1  # meters
+
+# Velocity constants
 WHEEL_VELOCITY = 0.4  # m/s
 WHEEL_TURN_VELOCITY = 0.5  # m/s
 MAX_VELOCITY = 0.6  # m/s
 MIN_VELOCITY = 0.2  # m/s
-DISTANCE_COMPLETE_THRESHOLD = 0.01  # meters
-DISTANCE_SLOWDOWN_THRESHOLD_FINAL = 0.05  # meters
-SLOWDOWN_SCALAR_FINAL = 0.5
-DISTANCE_SLOWDOWN_THRESHOLD_APPROACH = 0.1  # meters
-SLOWDOWN_SCALAR_APPROACH = 0.7
-WHEEL_VELOCITY_STOPPED_THRESHOLD = 0.01  # m/s
+WHEEL_VELOCITY_STOPPED_THRESHOLD = 0.01  # m/s, threshold to consider the wheel stopped
+
+# Goal start time period and slowdown scalars
 GOAL_START_TIME_PERIOD = 0.5  # seconds
-START_TIME_PERIOD_SLOWDOWN_SCALAR = 0.7
+START_TIME_PERIOD_SLOWDOWN_SCALAR = 0.7 # scalar to slow down the wheels during the start time period
+
+# Approach and final slowdown thresholds and scalars
+DISTANCE_SLOWDOWN_THRESHOLD_APPROACH = 0.1  # meters
+SLOWDOWN_SCALAR_APPROACH = 0.7 # scalar to slow down the wheels when approaching the goal
+DISTANCE_SLOWDOWN_THRESHOLD_FINAL = 0.05  # meters
+SLOWDOWN_SCALAR_FINAL = 0.5 # scalar to slow down the wheels when near the goal
+
+# Distance completion threshold
+DISTANCE_COMPLETE_THRESHOLD = 0.01  # meters
+
+# Number of readings to consider the wheels not moving
 ZERO_VELOCITY_READINGS_COUNT_THRESHOLD = 10  # number of readings
+
+# Error correction scalars for left and right wheels
 LEFT_ERROR_CORRECTION_SCALAR = 0.88
 RIGHT_ERROR_CORRECTION_SCALAR = 1.0 / LEFT_ERROR_CORRECTION_SCALAR
+
+# FSM States
 STATE_SUCCESS = 'MOVEMENT_CONTROLLER_SUCCESS'
 STATE_FAILURE = 'MOVEMENT_CONTROLLER_FAILURE'
 STATE_ACTIVE = 'MOVEMENT_CONTROLLER_ACTIVE'
