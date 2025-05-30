@@ -4,7 +4,7 @@ import rospy
 from sensor_msgs.msg import Range
 from std_msgs.msg import Int8
 
-OBSTACLE_DISTANCE_THRESHOLD = 0.2  # meters, threshold distance to consider an obstacle
+OBSTACLE_DISTANCE_THRESHOLD = 0.25  # meters, threshold distance to consider an obstacle
 
 class ObstacleDetector:
     def __init__(self):
