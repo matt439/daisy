@@ -10,7 +10,7 @@ AXLE_LENGTH = 0.1  # meters
 
 # Velocity constants
 WHEEL_VELOCITY = 0.4  # m/s
-WHEEL_TURN_VELOCITY = 0.5  # m/s
+WHEEL_TURN_VELOCITY = 0.4  # m/s
 MAX_VELOCITY = 0.6  # m/s
 MIN_VELOCITY = 0.2  # m/s
 WHEEL_VELOCITY_STOPPED_THRESHOLD = 0.01  # m/s, threshold to consider the wheel stopped
