@@ -16,10 +16,9 @@ OVERTAKING_TIMEOUT_DURATION = 10.0  # seconds
 TURNING_TIMEOUT_DURATION = 10.0  # seconds
 STOPPING_TIMEOUT_DURATION = 10.0  # seconds
 
-OVERTAKING_TIMER_DURATION = 9.0  # seconds
-OVERTAKING_TIMER_OFFSET = 2.0  # seconds, offset for the overtaking timer
-LEFT_WHEEL_TIMER_DELAY = 0.5  # seconds, delay for the left wheel timer
-RIGHT_WHEEL_TIMER_DELAY = 0.5  # seconds, delay for the right wheel timer
+S_BEND_TIMER_DURATION = 5.0  # seconds
+S_BEND_WHEEL_TIMER_OFFSET = 1.0  # seconds, offset for the wheel timers
+S_BEND_FUNCTION_DURATION = S_BEND_TIMER_DURATION - S_BEND_WHEEL_TIMER_OFFSET
 
 OVERTAKING_START_FSM_STATE = 'OVERTAKING_START'
 OVERTAKING_SUCCESS_FSM_STATE = 'OVERTAKING_SUCCESS'
@@ -33,6 +32,8 @@ STOPPING_START_FSM_STATE = 'STOPPING_START'
 STOPPING_SUCCESS_FSM_STATE = 'STOPPING_SUCCESS'
 STOPPING_FAILURE_FSM_STATE = 'STOPPING_FAILURE'
 
+# Generalized logistic function parameters
+# These parameters can be tuned based on the desired behavior of the overtaking maneuver
 A = 0.0
 K = 0.8
 B = 3.0
@@ -216,7 +217,7 @@ class IdleState(MovementControllerState):
 
     def on_event(self, event: MovementControllerEvent) -> None:
         if event == MovementControllerEvent.START_OVERTAKING:
-            self.context.transition_to(OvertakingState())
+            self.context.transition_to(OvertakingFirstSBendState())
         elif event == MovementControllerEvent.START_TURNING:
             self.context.transition_to(TurningState())
         elif event == MovementControllerEvent.START_STOPPING:
@@ -225,10 +226,49 @@ class IdleState(MovementControllerState):
     def update(self) -> None:
         pass
 
-class OvertakingState(MovementControllerState):
+class OvertakingTools:
+    @staticmethod
+    def calculate_overtaking_velocity(first_s_bend: bool, timer: float) -> tuple:
+        adjusted_times = OvertakingTools.calculate_adjusted_times(first_s_bend, timer)
+        left_velocity = OvertakingTools.derivative_generalized_logistic_function(
+                                                    adjusted_times[0], A, K, B, V, Q, C)
+        
+        right_velocity = OvertakingTools.derivative_generalized_logistic_function(
+                                                    adjusted_times[1], A, K, B, V, Q, C)
+            
+        return left_velocity, right_velocity
+
+    @staticmethod
+    def derivative_generalized_logistic_function(t: float, A: float, K: float, B: float,
+                                                v: float, Q: float, C: float=1.0) -> float:
+        # Derivative of the generalized logistic function
+        # This is used to calculate the rate of change of velocity
+        exp_term = math.exp(-B * t)
+        return (K - A) * B * Q * exp_term / (C + Q * exp_term) ** (1 + 1 / v)
+    
+    @staticmethod
+    def calculate_adjusted_times(first_s_bend: bool, timer: float) -> tuple:
+        if first_s_bend:
+            return (timer - S_BEND_WHEEL_TIMER_OFFSET, timer)
+        else: # second S-bend
+            return (timer, timer - S_BEND_WHEEL_TIMER_OFFSET)
+    
+    # def generalized_logistic_function(self, t: float, A: float, K: float, B: float,
+    #                                     v: float, Q: float, C: float=1.0) -> float:
+    #     # Generalized logistic function:
+    #     # t = time (independent variable)
+    #     # A = lower asymptote (value as t -> -inf)
+    #     # K = upper asymptote (value as t -> inf)
+    #     # B = growth rate (steepness of the curve)
+    #     # v = exponent (controls the shape of the curve)
+    #     # Q = inflection point (where the curve changes direction)
+    #     # C = horizontal shift (default is 1.0, can be adjusted)
+    #     return A + (K - A) / (C + Q * math.exp(-B * t)) ** (1 / v)
+
+class OvertakingFirstSBendState(MovementControllerState):
     def __init__(self):
         self._timeout_timer = Timer(OVERTAKING_TIMEOUT_DURATION)
-        self._goal_timer = Timer(OVERTAKING_TIMER_DURATION)
+        self._goal_timer = Timer(S_BEND_TIMER_DURATION)
 
     def on_enter(self) -> None:
         self.context.publish_fsm_state(OVERTAKING_START_FSM_STATE)
@@ -246,59 +286,47 @@ class OvertakingState(MovementControllerState):
             return
 
         if self._goal_timer.is_expired():
+            self.context.transition_to(OvertakingSecondSBendState())
+            return
+        
+        # Calculate the velocities for overtaking
+        left_velocity, right_velocity = OvertakingTools.calculate_overtaking_velocity(
+            first_s_bend=True, timer=self._goal_timer.get_elapsed_time())
+        # Publish the velocities to the wheels
+        self.context.publish_velocity(left_velocity, right_velocity)
+        rospy.loginfo(f"Overtaking velocities - Left: {left_velocity}, Right: {right_velocity}")
+
+class OvertakingSecondSBendState(MovementControllerState):
+    def __init__(self):
+        self._timeout_timer = Timer(OVERTAKING_TIMEOUT_DURATION)
+        self._goal_timer = Timer(S_BEND_TIMER_DURATION)
+
+    def on_enter(self) -> None:
+        self._timeout_timer.start()
+        self._goal_timer.start()
+        rospy.loginfo("Entering second S-bend of overtaking maneuver")
+
+    def on_event(self, event: MovementControllerEvent) -> None:
+        pass
+
+    def update(self) -> None:
+        if self._timeout_timer.is_expired():
+            rospy.logwarn("Overtaking timed out, transitioning to IdleState")
+            self.context.publish_fsm_state(OVERTAKING_FAILURE_FSM_STATE)
+            self.context.transition_to(IdleState())
+            return
+
+        if self._goal_timer.is_expired():
             self.context.publish_fsm_state(OVERTAKING_SUCCESS_FSM_STATE)
             self.context.transition_to(IdleState())
             return
         
         # Calculate the velocities for overtaking
-        left_velocity, right_velocity = self.calculate_overtaking_velocity()
+        left_velocity, right_velocity = OvertakingTools.calculate_overtaking_velocity(
+            first_s_bend=False, timer=self._goal_timer.get_elapsed_time())
         # Publish the velocities to the wheels
         self.context.publish_velocity(left_velocity, right_velocity)
         rospy.loginfo(f"Overtaking velocities - Left: {left_velocity}, Right: {right_velocity}")
-
-    def calculate_adjusted_time(self, is_left_wheel: bool) -> float:
-        adjusted_time = self._goal_timer.get_elapsed_time() + OVERTAKING_TIMER_OFFSET
-        first_s_bend = self._goal_timer.is_timer_less_than_half_expired()
-
-        if first_s_bend:
-            if is_left_wheel:
-                adjusted_time -= LEFT_WHEEL_TIMER_DELAY
-        else:
-            adjusted_time -= OVERTAKING_TIMER_DURATION / 2.0
-            if not is_left_wheel:
-                adjusted_time -= RIGHT_WHEEL_TIMER_DELAY
-
-        return adjusted_time
-
-    def calculate_overtaking_velocity(self) -> tuple:
-        first_s_bend = self._goal_timer.is_timer_less_than_half_expired()
-
-        if first_s_bend:
-            left_velocity = self.derivative_generalized_logistic_function(
-                self.calculate_adjusted_time(True), A, K, B, V, Q, C)
-        right_velocity = self.derivative_generalized_logistic_function(
-                self.calculate_adjusted_time(False), A, K, B, V, Q, C)
-            
-        return left_velocity, right_velocity
-
-    # def generalized_logistic_function(self, t: float, A: float, K: float, B: float,
-    #                                     v: float, Q: float, C: float=1.0) -> float:
-    #     # Generalized logistic function:
-    #     # t = time (independent variable)
-    #     # A = lower asymptote (value as t -> -inf)
-    #     # K = upper asymptote (value as t -> inf)
-    #     # B = growth rate (steepness of the curve)
-    #     # v = exponent (controls the shape of the curve)
-    #     # Q = inflection point (where the curve changes direction)
-    #     # C = horizontal shift (default is 1.0, can be adjusted)
-    #     return A + (K - A) / (C + Q * math.exp(-B * t)) ** (1 / v)
-
-    def derivative_generalized_logistic_function(self, t: float, A: float, K: float, B: float,
-                                                v: float, Q: float, C: float=1.0) -> float:
-        # Derivative of the generalized logistic function
-        # This is used to calculate the rate of change of velocity
-        exp_term = math.exp(-B * t)
-        return (K - A) * B * Q * exp_term / (C + Q * exp_term) ** (1 + 1 / v)
 
 class TurningState(MovementControllerState):
     def __init__(self):
