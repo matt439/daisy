@@ -1,51 +1,107 @@
 #!/usr/bin/env python3
 
 import rospy
-import time
-from std_msgs.msg import Float64MultiArray, Float64
+import math
+from std_msgs.msg import Float64MultiArray, Float64, UInt8
 from duckietown_msgs.msg import WheelsCmdStamped, FSMState
+from abc import ABC, abstractmethod
 from enum import Enum
 
-AXLE_LENGTH = 0.1  # meters
+MOVEMENT_CONTROLLER_UPDATE_FREQUENCY = 20.0  # Hz
 
-# Velocity constants
-WHEEL_VELOCITY = 0.4  # m/s
-WHEEL_TURN_VELOCITY = 0.4  # m/s
-MAX_VELOCITY = 0.6  # m/s
-MIN_VELOCITY = 0.2  # m/s
 WHEEL_VELOCITY_STOPPED_THRESHOLD = 0.01  # m/s, threshold to consider the wheel stopped
 
-# Goal start time period and slowdown scalars
-GOAL_START_TIME_PERIOD = 0.5  # seconds
-START_TIME_PERIOD_SLOWDOWN_SCALAR = 0.7 # scalar to slow down the wheels during the start time period
+OVERTAKING_FORWARD_DISTANCE = 0.6  # meters
+OVERTAKING_GOAL_TIMER_DURATION = 6.0  # seconds
+OVERTAKING_TIMEOUT_DURATION = 10.0  # seconds
+TURNING_TIMEOUT_DURATION = 10.0  # seconds
+STOPPING_TIMEOUT_DURATION = 10.0  # seconds
 
-# Approach and final slowdown thresholds and scalars
-DISTANCE_SLOWDOWN_THRESHOLD_APPROACH = 0.1  # meters
-SLOWDOWN_SCALAR_APPROACH = 0.7 # scalar to slow down the wheels when approaching the goal
-DISTANCE_SLOWDOWN_THRESHOLD_FINAL = 0.05  # meters
-SLOWDOWN_SCALAR_FINAL = 0.5 # scalar to slow down the wheels when near the goal
+OVERTAKING_START_FSM_STATE = 'OVERTAKING_START'
+OVERTAKING_SUCCESS_FSM_STATE = 'OVERTAKING_SUCCESS'
+OVERTAKING_FAILURE_FSM_STATE = 'OVERTAKING_FAILURE'
 
-# Distance completion threshold
-DISTANCE_COMPLETE_THRESHOLD = 0.01  # meters
+TURNING_START_FSM_STATE = 'TURNING_START'
+TURNING_SUCCESS_FSM_STATE = 'TURNING_SUCCESS'
+TURNING_FAILURE_FSM_STATE = 'TURNING_FAILURE'
 
-# Number of readings to consider the wheels not moving
-ZERO_VELOCITY_READINGS_COUNT_THRESHOLD = 10  # number of readings
+STOPPING_START_FSM_STATE = 'STOPPING_START'
+STOPPING_SUCCESS_FSM_STATE = 'STOPPING_SUCCESS'
+STOPPING_FAILURE_FSM_STATE = 'STOPPING_FAILURE'
 
-# Error correction scalars for left and right wheels
-LEFT_ERROR_CORRECTION_SCALAR = 0.88
-RIGHT_ERROR_CORRECTION_SCALAR = 1.0 / LEFT_ERROR_CORRECTION_SCALAR
+A = 0.0
+K = 0.3
+B = -40.0
+V = 1.0
+QL = 500.0 # Q for left wheel
+QR = 25.0 # Q for right wheel
+C = 1.0
 
-# FSM States
-STATE_SUCCESS = 'MOVEMENT_CONTROLLER_SUCCESS'
-STATE_FAILURE = 'MOVEMENT_CONTROLLER_FAILURE'
-STATE_ACTIVE = 'MOVEMENT_CONTROLLER_ACTIVE'
+class MovementControllerEvent(Enum):
+    START_OVERTAKING = 0
+    START_TURNING = 1
+    START_STOPPING = 2
 
-class VelocityAdjustmentType(Enum):
-    STRAIGHT = 0
-    TURN = 1
+class Timer:
+    def __init__(self, duration: float):
+        self._duration = duration
+        self._start_time = None
+    def start(self):
+        self._start_time = rospy.get_time()
+    def is_expired(self) -> bool:
+        if self._start_time is None:
+            return False
+        return (rospy.get_time() - self._start_time) >= self._duration
+    def reset(self):
+        self._start_time = None
+    def get_remaining_time(self) -> float:
+        if self._start_time is None:
+            return self._duration
+        remaining_time = self._duration - (rospy.get_time() - self._start_time)
+        return max(0.0, remaining_time)
+    def is_timer_less_than_half_expired(self) -> bool:
+        if self._start_time is None:
+            return False
+        elapsed_time = rospy.get_time() - self._start_time
+        return elapsed_time < (self._duration / 2.0)
+    def get_elapsed_time(self) -> float:
+        if self._start_time is None:
+            return 0.0
+        return rospy.get_time() - self._start_time
+
+class WheelMovementInfo:
+    def __init__(self):
+        self._left_distance = 0.0
+        self._left_displacement = 0.0
+        self._left_velocity = 0.0
+        self._right_distance = 0.0
+        self._right_displacement = 0.0
+        self._right_velocity = 0.0
+
+    def update(self, msg: Float64MultiArray):
+        if len(msg.data) != 6:
+            rospy.logwarn("Invalid wheel movement info message received, expected six elements.")
+            return
+        self._left_distance = msg.data[0]
+        self._left_displacement = msg.data[1]
+        self._left_velocity = msg.data[2]
+        self._right_distance = msg.data[3]
+        self._right_displacement = msg.data[4]
+        self._right_velocity = msg.data[5]
+
+    def get_left_info(self):
+        return (self._left_distance, self._left_displacement, self._left_velocity)
+
+    def get_right_info(self):
+        return (self._right_distance, self._right_displacement, self._right_velocity)
 
 class MovementController:
-    def __init__(self):
+    def __init__(self, state: 'MovementControllerState'):
+        # Initialize the node
+        rospy.init_node('movement_controller_node', anonymous=True)
+
+        self._wheel_movement_info = WheelMovementInfo()
+
         # Initialize class variables
         self._last_distance_left = 0.0
         self._last_displacement_left = 0.0
@@ -54,297 +110,280 @@ class MovementController:
         self._last_displacement_right = 0.0
         self._last_velocity_right = 0.0
 
-        self._goal_distance_left = 0.0
-        self._goal_distance_right = 0.0
-        self._dist_goal_active = False
-        self._velocity_adjustment_type = VelocityAdjustmentType.STRAIGHT
+        self._overtaking_goal = (0.0, 0.0)  # horizontal_distance, forward_distance
+        self._turning_goal = (0.0, 0.0)  # horizontal_distance, forward_distance
+        self._state = None
 
-        self._goal_start_time = time.time()
-        self._zero_velocity_readings_count_left = 0
-        self._zero_velocity_readings_count_right = 0
-
-        # Initialize the node
-        rospy.init_node('movement_controller_node', anonymous=True)
-
-        # Initialise subscribers and publishers
-        rospy.Subscriber("/vader/goal_angle", Float64, self.goal_angle_callback)
-        rospy.Subscriber("/vader/goal_distance", Float64, self.goal_distance_callback)
         rospy.Subscriber('/vader/wheel_movement_info', Float64MultiArray, self.wheel_movement_info_callback)
+        rospy.Subscriber('/vader/movement_controller/goal_overtaking', Float64MultiArray, self.goal_overtaking_callback)
+        rospy.Subscriber('/vader/movement_controller/goal_stopping', UInt8, self.goal_stopping_callback)
+        rospy.Subscriber('/vader/movement_controller/goal_turning', Float64MultiArray, self.goal_turning_callback)
         self._velocity_publisher = rospy.Publisher("/vader/wheels_driver_node/wheels_cmd", WheelsCmdStamped, queue_size=1)
         self._state_publisher = rospy.Publisher('/vader/fsm_node/mode', FSMState, queue_size=1)
 
         # Printing to the terminal, ROS style
-        rospy.loginfo("Initalized movement_controller node!")
+        rospy.loginfo("Initialized movement_controller node!")
+        self.transition_to(state)
+
+    def transition_to(self, state: 'MovementControllerState'):
+        self._state = state
+        self._state.context = self
+        rospy.loginfo(f"Transitioning to state: {type(state).__name__}")
+        self._state.on_enter()
+
+    def on_event(self, event: MovementControllerEvent) -> None:
+        rospy.loginfo(f"Event received: {event}")
+        self._state.on_event(event)
+
+    def update(self):
+        self._state.update()
+
+    def publish_fsm_state(self, state: str):
+        fsm_state_msg = FSMState()
+        fsm_state_msg.header.stamp = rospy.Time.now()
+        fsm_state_msg.state = state
+        self._state_publisher.publish(fsm_state_msg)
 
     def wheel_movement_info_callback(self, msg):
-        self._last_distance_left = msg.data[0]
-        self._last_displacement_left = msg.data[1]
-        self._last_velocity_left = msg.data[2]
-        self._last_distance_right = msg.data[3]
-        self._last_displacement_right = msg.data[4]
-        self._last_velocity_right = msg.data[5]
-        self.handle_goals()
+        self._wheel_movement_info.update(msg)
 
-    def rotation_to_distance(self, rotation, axle_length):
-        distance = rotation * axle_length / 2.0
-        return distance
-
-    def goal_angle_callback(self, msg):
-        rospy.loginfo("Received goal angle: %s", msg.data)
-        if msg.data == 0.0:
+    def goal_overtaking_callback(self, msg):
+        # msg.data is expected to be a Float64MultiArray with two elements: [horizontal_distance, forward_distance]
+        if len(msg.data) != 2:
+            rospy.logwarn("Invalid goal_overtaking message received, expected two elements.")
             return
-        distance = abs(self.rotation_to_distance(msg.data, AXLE_LENGTH))
-        clockwise = True if msg.data < 0.0 else False
-        if clockwise:
-            left_distance = distance
-            right_distance = -distance
-        else:
-            left_distance = -distance
-            right_distance = distance
-        self._goal_distance_left = self._last_distance_left + left_distance
-        self._goal_distance_right = self._last_distance_right + right_distance
-        self._velocity_adjustment_type = VelocityAdjustmentType.TURN
-        self._goal_start_time = time.time()
-        self._zero_velocity_readings_count_left = 0
-        self._zero_velocity_readings_count_right = 0
-        self._dist_goal_active = True
-
-    def goal_distance_callback(self, msg):
-        rospy.loginfo("Received goal distance: %s", msg.data)
-        if msg.data == 0.0:
+        if msg.data[0] <= 0 or msg.data[1] <= 0:
+            rospy.logwarn("Invalid goal_overtaking message received, distances must be positive.")
             return
-        self._goal_distance_left = self._last_distance_left + msg.data
-        self._goal_distance_right = self._last_distance_right + msg.data
-        rospy.loginfo("Last distance left: %s", self._last_distance_left)
-        rospy.loginfo("Last distance right: %s", self._last_distance_right)
-        rospy.loginfo("Goal distance left: %s", self._goal_distance_left)
-        rospy.loginfo("Goal distance right: %s", self._goal_distance_right)
-        self._velocity_adjustment_type = VelocityAdjustmentType.STRAIGHT
-        self._goal_start_time = time.time()
-        self._zero_velocity_readings_count_left = 0
-        self._zero_velocity_readings_count_right = 0
-        self._dist_goal_active = True
-        fsm_msg = FSMState()
-        fsm_msg.header.stamp = rospy.Time.now()
-        fsm_msg.state = STATE_ACTIVE
-        self._state_publisher.publish(fsm_msg)
+        self._overtaking_goal = (msg.data[0], msg.data[1])
+        rospy.loginfo(f"Received goal for overtaking: {self._overtaking_goal}")
+        self.on_event(MovementControllerEvent.START_OVERTAKING)
 
-    def calculate_distance_to_goal(self):
-        left = self._goal_distance_left - self._last_distance_left
-        right = self._goal_distance_right - self._last_distance_right
-        return (left, right)
+    def goal_stopping_callback(self, msg):
+        if msg.data == 1:
+            rospy.loginfo("Received goal to stop")
+            self.on_event(MovementControllerEvent.START_STOPPING)
 
-    def calculate_abs_distance_to_goal(self):
-        left, right = self.calculate_distance_to_goal()
-        return (abs(left), abs(right))
+    def goal_turning_callback(self, msg):
+        # msg.data is expected to be a Float64MultiArray with two elements: [horizontal_distance, forward_distance]
+        if len(msg.data) != 2:
+            rospy.logwarn("Invalid goal_turning message received, expected two elements.")
+            return
+        if msg.data[1] <= 0:
+            rospy.logwarn("Invalid goal_turning message received, forward distance must be positive.")
+            return
+        if msg.data[0] == 0:
+            rospy.logwarn("Invalid goal_turning message received, horizontal distance cannot be zero.")
+            return
+        self._turning_goal = (msg.data[0], msg.data[1])
+        rospy.loginfo(f"Received goal for turning: {self._turning_goal}")
+        self.on_event(MovementControllerEvent.START_TURNING)
 
-    def is_distance_goal_complete(self):
-        abs_left, abs_right = self.calculate_abs_distance_to_goal()
-        if abs_left < DISTANCE_COMPLETE_THRESHOLD or abs_right < DISTANCE_COMPLETE_THRESHOLD:
-            return True
-        return False
+    def get_overtaking_goal(self) -> tuple:
+        return self._overtaking_goal
     
-    def is_moving_forward(self):
-        distance_to_goal = self.calculate_distance_to_goal()
-        left_forward = True if distance_to_goal[0] > 0.0 else False
-        right_forward = True if distance_to_goal[1] > 0.0 else False
-        return (left_forward, right_forward)
+    def get_turning_goal(self) -> tuple:
+        return self._turning_goal
     
-    def calculate_direction_scalar(self):
-        left_forward, right_forward = self.is_moving_forward()
-        left_scalar = 1.0 if left_forward else -1.0
-        right_scalar = 1.0 if right_forward else -1.0
-        return (left_scalar, right_scalar)
+    def get_wheel_movement_info(self) -> WheelMovementInfo:
+        return self._wheel_movement_info
     
-    def count_zero_velocity_readings(self):
-        left_moving, right_moving = self.is_wheels_moving()
-        if not left_moving:
-            self._zero_velocity_readings_count_left += 1
-        if not right_moving:
-            self._zero_velocity_readings_count_right += 1
-    
-    def is_zero_velocity_readings_count_exceeded(self):
-        if (self._zero_velocity_readings_count_left > ZERO_VELOCITY_READINGS_COUNT_THRESHOLD or
-                    self._zero_velocity_readings_count_right > ZERO_VELOCITY_READINGS_COUNT_THRESHOLD):
-            return True
-        return False
+    def publish_velocity(self, left_velocity: float, right_velocity: float):
+        wheels_cmd = WheelsCmdStamped()
+        wheels_cmd.header.stamp = rospy.Time.now()
+        wheels_cmd.vel_left = left_velocity
+        wheels_cmd.vel_right = right_velocity
+        self._velocity_publisher.publish(wheels_cmd)
 
-    def is_wheels_moving(self):
-        abs_vel_left, abs_vel_right = self.calculate_abs_velocity()
-        return (abs_vel_left > WHEEL_VELOCITY_STOPPED_THRESHOLD, abs_vel_right > WHEEL_VELOCITY_STOPPED_THRESHOLD)
-    
-    def calculate_abs_velocity(self):
-        abs_left = abs(self._last_velocity_left)
-        abs_right = abs(self._last_velocity_right)
-        return (abs_left, abs_right)
-    
-    def calculate_maintain_straight_velocity_scalar(self):
-        abs_left, abs_right = self.calculate_abs_velocity()
+    def run(self):
+        rate = rospy.Rate(MOVEMENT_CONTROLLER_UPDATE_FREQUENCY)
+        while not rospy.is_shutdown():
+            self._movement_controller.update()
+            rate.sleep()
 
-        if abs_left == 0.0 and abs_right == 0.0:
-            return (1.0, 1.0)
-        else: # adjust the wheel velocities
-            # add 0.5 to the scalar to make them closer to 1.0
-            left_velocity_scalar = (abs_right / (abs_left + abs_right)) + 0.5
-            right_velocity_scalar = (abs_left / (abs_left + abs_right)) + 0.5
-        return (left_velocity_scalar, right_velocity_scalar)
-    
-    def clamp_and_correct_vel_direction(self, left_vel, right_vel):
-        # get absolute values of the velocities
-        abs_left = abs(left_vel)
-        abs_right = abs(right_vel)
-        # clamp the velocities to a maximum and minimum value
-        left_vel = max(min(abs_left, MAX_VELOCITY), MIN_VELOCITY)
-        right_vel = max(min(abs_right, MAX_VELOCITY), MIN_VELOCITY)
-        # calculate the direction of the wheels (positive for forward, negative for backward)
-        left_direction_scalar, right_direction_scalar = self.calculate_direction_scalar()
-        # multiply the velocities by the direction scalars to get the correct direction
-        left_vel *= left_direction_scalar
-        right_vel *= right_direction_scalar
-        return (left_vel, right_vel)
-    
-    def calculate_start_time_period_slowdown_scalar(self):
-        if self.is_goal_start_time_period_complete():
-            return (1.0, 1.0)
-        return (START_TIME_PERIOD_SLOWDOWN_SCALAR, START_TIME_PERIOD_SLOWDOWN_SCALAR)
-    
-    def calculate_near_goal_slowdown_scalar(self):
-        abs_left, abs_right = self.calculate_abs_distance_to_goal()
-        if abs_left < DISTANCE_SLOWDOWN_THRESHOLD_FINAL:
-            left_slowdown_scalar = SLOWDOWN_SCALAR_FINAL
-        elif abs_left < DISTANCE_SLOWDOWN_THRESHOLD_APPROACH:
-            left_slowdown_scalar = SLOWDOWN_SCALAR_APPROACH
-        else:
-            left_slowdown_scalar = 1.0
+class MovementControllerState(ABC):
+    @property
+    def context(self) -> MovementController:
+        return self._context
 
-        if abs_right < DISTANCE_SLOWDOWN_THRESHOLD_FINAL:
-            right_slowdown_scalar = SLOWDOWN_SCALAR_FINAL
-        elif abs_right < DISTANCE_SLOWDOWN_THRESHOLD_APPROACH:
-            right_slowdown_scalar = SLOWDOWN_SCALAR_APPROACH
-        else:
-            right_slowdown_scalar = 1.0
+    @context.setter
+    def context(self, context: MovementController) -> None:
+        self._context = context
 
-        return (left_slowdown_scalar, right_slowdown_scalar)    
-    
-    def is_goal_start_time_period_complete(self):
-        if time.time() - self._goal_start_time > GOAL_START_TIME_PERIOD:
-            return True
-        return False
+    @abstractmethod
+    def on_enter(self) -> None:
+        pass
 
-    def calculate_adjusted_wheel_velocity(self, velocity_adjustment_type):
-        if velocity_adjustment_type == VelocityAdjustmentType.STRAIGHT:
-            return self.calculate_straight_adjusted_wheel_velocity()
-        elif velocity_adjustment_type == VelocityAdjustmentType.TURN:
-            return self.calculate_turn_adjusted_wheel_velocity()
-        else:
-            rospy.logerr("Invalid velocity adjustment type!")
-            return WheelsCmdStamped()
+    @abstractmethod
+    def on_event(self, event: MovementControllerEvent) -> None:
+        pass
+
+    @abstractmethod
+    def update(self) -> None:
+        pass
+
+class IdleState(MovementControllerState):
+    def __init__(self):
+        pass
+
+    def on_enter(self) -> None:
+        pass
+
+    def on_event(self, event: MovementControllerEvent) -> None:
+        if event == MovementControllerEvent.START_OVERTAKING:
+            self.context.transition_to(OvertakingState())
+        elif event == MovementControllerEvent.START_TURNING:
+            self.context.transition_to(TurningState())
+        elif event == MovementControllerEvent.START_STOPPING:
+            self.context.transition_to(StoppingState())
+
+    def update(self) -> None:
+        pass
+
+class OvertakingState(MovementControllerState):
+    def __init__(self):
+        self._timeout_timer = Timer(OVERTAKING_TIMEOUT_DURATION)
+        self._goal_timer = Timer(OVERTAKING_GOAL_TIMER_DURATION)
+        self._overtaking_goal = None
+
+    def on_enter(self) -> None:
+        self.context.publish_fsm_state(OVERTAKING_START_FSM_STATE)
+        self._overtaking_goal = self.context.get_overtaking_goal()
+        self._timeout_timer.start()
+        self._goal_timer.start()
+
+    def on_event(self, event: MovementControllerEvent) -> None:
+        pass
+
+    def update(self) -> None:
+        if self._timeout_timer.is_expired():
+            rospy.logwarn("Overtaking timed out, transitioning to IdleState")
+            self.context.publish_fsm_state(OVERTAKING_FAILURE_FSM_STATE)
+            self.context.transition_to(IdleState())
+            return
+
+        if self._goal_timer.is_expired():
+            self.context.publish_fsm_state(OVERTAKING_SUCCESS_FSM_STATE)
+            self.context.transition_to(IdleState())
+            return
         
-    def calculate_turn_adjusted_wheel_velocity(self):
-        # calculate direction scalars
-        left_direction_scalar, right_direction_scalar = self.calculate_direction_scalar()
+        # Calculate the velocities for overtaking
+        left_velocity, right_velocity = self.calculate_overtaking_velocity()
+        # Publish the velocities to the wheels
+        self.context.publish_velocity(left_velocity, right_velocity)
 
-        cmd = WheelsCmdStamped()
-        cmd.vel_left = WHEEL_TURN_VELOCITY * left_direction_scalar
-        cmd.vel_right = WHEEL_TURN_VELOCITY * right_direction_scalar
+    def calculate_overtaking_velocity(self) -> tuple:
+        adjusted_time = self._goal_timer.get_elapsed_time() / OVERTAKING_GOAL_TIMER_DURATION
+        first_s_bend = self._goal_timer.is_timer_less_than_half_expired()
 
-        # apply error correction scalars
-        cmd.vel_left *= LEFT_ERROR_CORRECTION_SCALAR
-        cmd.vel_right *= RIGHT_ERROR_CORRECTION_SCALAR
-        return cmd
-    
-    def calculate_straight_adjusted_wheel_velocity(self):
-        abs_vel_left, abs_vel_right = self.calculate_abs_velocity()
-
-        # calculate the scaling factors for the wheel velocities
-        left_maintain_velocity_scalar, right_maintain_velocity_scalar = self.calculate_maintain_straight_velocity_scalar()
-        
-        cmd = WheelsCmdStamped()
-        if abs_vel_left > abs_vel_right: # left wheel is faster
-            # slow down the left wheel
-            cmd.vel_left = WHEEL_VELOCITY * left_maintain_velocity_scalar
-            cmd.vel_right = WHEEL_VELOCITY * right_maintain_velocity_scalar
-        elif abs_vel_right > abs_vel_left: # right wheel is faster
-            # slow down the right wheel
-            cmd.vel_left = WHEEL_VELOCITY * left_maintain_velocity_scalar
-            cmd.vel_right = WHEEL_VELOCITY * right_maintain_velocity_scalar
-        else: # both wheels are moving at the same speed
-            # maintain the same speed
-            cmd.vel_left = WHEEL_VELOCITY
-            cmd.vel_right = WHEEL_VELOCITY
-
-        # apply the start time period slowdown scalars (if in the start time period)
-        left_start_time_period_slowdown_scalar, right_start_time_period_slowdown_scalar = self.calculate_start_time_period_slowdown_scalar()
-        cmd.vel_left *= left_start_time_period_slowdown_scalar
-        cmd.vel_right *= right_start_time_period_slowdown_scalar
-
-        # slow down the wheels if they are too close to the goal to avoid overshooting
-        if self.is_goal_start_time_period_complete(): # only apply this if the start time period is complete
-            left_slowdown_scalar, right_slowdown_scalar = self.calculate_near_goal_slowdown_scalar()
-            cmd.vel_left *= left_slowdown_scalar
-            cmd.vel_right *= right_slowdown_scalar
-
-        # apply error correction scalars
-        cmd.vel_left *= LEFT_ERROR_CORRECTION_SCALAR
-        cmd.vel_right *= RIGHT_ERROR_CORRECTION_SCALAR
-
-        # clamp the velocities to a maximum and minimum value and correct the direction
-        cmd.vel_left, cmd.vel_right = self.clamp_and_correct_vel_direction(cmd.vel_left, cmd.vel_right)
-        return cmd
-
-    def handle_distance_goal(self):
-        cmd = WheelsCmdStamped()
-        cmd.vel_left = 0.0
-        cmd.vel_right = 0.0
-
-        if self.is_distance_goal_complete():
-            self._dist_goal_active = False
-            rospy.loginfo("Distance goal complete!")
-            rospy.loginfo("Left wheel final displacement: %s", self._last_distance_left - self._goal_distance_left)
-            rospy.loginfo("Right wheel final displacement: %s", self._last_distance_right - self._goal_distance_right)
-            fsm_msg = FSMState()
-            fsm_msg.header.stamp = rospy.Time.now()
-            fsm_msg.state = STATE_SUCCESS
-            self._state_publisher.publish(fsm_msg)
-        elif self.is_zero_velocity_readings_count_exceeded() and self.is_goal_start_time_period_complete():
-            # one or both wheels are not moving and the goal start time period is complete
-            rospy.logerr("One or both wheels are not moving in handle_distance_goal()!")
-            rospy.logerr("This should not happen!")
-            rospy.logerr("Left wheel final displacement: %s", self._last_distance_left - self._goal_distance_left)
-            rospy.logerr("Right wheel final displacement: %s", self._last_distance_right - self._goal_distance_right)
-            # print zero velocity readings count
-            rospy.logerr("Left wheel zero velocity readings count: %s", self._zero_velocity_readings_count_left)
-            rospy.logerr("Right wheel zero velocity readings count: %s", self._zero_velocity_readings_count_right)
-            fsm_msg = FSMState()
-            fsm_msg.header.stamp = rospy.Time.now()
-            fsm_msg.state = STATE_FAILURE
-            self._state_publisher.publish(fsm_msg)
-            self.reset()
-        else: # both wheels are moving
-            self.count_zero_velocity_readings()
-            cmd = self.calculate_adjusted_wheel_velocity(self._velocity_adjustment_type)
+        if first_s_bend:
+            left_velocity = self.generalized_logistic_function(
+                adjusted_time, A, K, B, V, QL, C)
+            right_velocity = self.generalized_logistic_function(
+                adjusted_time, A, K, B, V, QR, C)
+        else: # second_s_bend
+            left_velocity = self.generalized_logistic_function(
+                adjusted_time, -A, -K, B, V, QR, C)
+            right_velocity = self.generalized_logistic_function(
+                adjusted_time, -A, -K, B, V, QL, C)
             
-        self._velocity_publisher.publish(cmd)
-    
-    def handle_goals(self):
-        if self._dist_goal_active:
-            self.handle_distance_goal()
+        return left_velocity, right_velocity
 
-    def reset(self):
-        self._goal_distance_left = 0.0
-        self._goal_distance_right = 0.0
-        self._dist_goal_active = False
-        self._velocity_adjustment_type = VelocityAdjustmentType.STRAIGHT
+    def generalized_logistic_function(self, t: float, A: float, K: float, B: float,
+                                        v: float, Q: float, C: float=1.0) -> float:
+        # Generalized logistic function:
+        # t = time (independent variable)
+        # A = lower asymptote (value as t -> -inf)
+        # K = upper asymptote (value as t -> inf)
+        # B = growth rate (steepness of the curve)
+        # v = exponent (controls the shape of the curve)
+        # Q = inflection point (where the curve changes direction)
+        # C = horizontal shift (default is 1.0, can be adjusted)
+        if t < 0:
+            rospy.logwarn("Time t must be non-negative for the generalized logistic function.")
+            return A
+        if K <= A:
+            rospy.logwarn("Upper asymptote K must be greater than lower asymptote A.")
+            return A
+        if B <= 0:
+            rospy.logwarn("Growth rate B must be positive.")
+            return A
+        if v <= 0:
+            rospy.logwarn("Exponent v must be positive.")
+            return A
+        if C <= 0:
+            rospy.logwarn("Horizontal shift C must be positive.")
+            return A
+        if Q <= 0:
+            rospy.logwarn("Inflection point Q must be positive.")
+            return A
+        # Calculate the generalized logistic function value
+        return A + (K - A) / (C + Q * math.exp(-B * t)) ** (1 / v)
 
-        self._goal_start_time = time.time()
-        self._zero_velocity_readings_count_left = 0
-        self._zero_velocity_readings_count_right = 0
+class TurningState(MovementControllerState):
+    def __init__(self):
+        self._timer = Timer(TURNING_TIMEOUT_DURATION)
+        self._turning_goal = None
+
+    def on_enter(self) -> None:
+        self.context.publish_fsm_state(TURNING_START_FSM_STATE)
+        self._turning_goal = self.context.get_turning_goal()
+        self._timer.start()
+
+    def on_event(self, event: MovementControllerEvent) -> None:
+        pass
+
+    def update(self) -> None:
+        if self._timer.is_expired():
+            rospy.logwarn("Turning timed out, transitioning to IdleState")
+            self.context.publish_fsm_state(TURNING_FAILURE_FSM_STATE)
+            self.context.transition_to(IdleState())
+            return
+
+        if 1:
+            self.context.publish_fsm_state(TURNING_SUCCESS_FSM_STATE)
+            self.context.transition_to(IdleState())
+
+class StoppingState(MovementControllerState):
+    def __init__(self):
+        self._timer = Timer(STOPPING_TIMEOUT_DURATION)
+
+    def on_enter(self) -> None:
+        self.context.publish_fsm_state(STOPPING_START_FSM_STATE)
+        self._timer.start()
+        self.send_stop_command()
+
+    def on_event(self, event: MovementControllerEvent) -> None:
+        pass
+
+    def update(self) -> None:
+        if self._timer.is_expired():
+            rospy.logwarn("Stopping timed out, transitioning to IdleState")
+            self.context.publish_fsm_state(STOPPING_FAILURE_FSM_STATE)
+            self.context.transition_to(IdleState())
+            return
+
+        if self.is_wheels_stopped():
+            self.context.publish_fsm_state(STOPPING_SUCCESS_FSM_STATE)
+            self.context.transition_to(IdleState())
+            return
+
+        self.send_stop_command()
+
+    def send_stop_command(self):
+        self.context.publish_velocity(0.0, 0.0)
+
+    def is_wheels_stopped(self) -> bool:
+        wheel_info = self.context.get_wheel_movement_info()
+        left_velocity = wheel_info.get_left_info()[2]
+        right_velocity = wheel_info.get_right_info()[2]
+        return abs(left_velocity) < WHEEL_VELOCITY_STOPPED_THRESHOLD and \
+               abs(right_velocity) < WHEEL_VELOCITY_STOPPED_THRESHOLD
 
 if __name__ == '__main__':
     try:
-        movement_controller = MovementController()
-        # no need to call run() as it relies on the callbacks from wheel_movement_info to update the state
+        movement_controller = MovementController(IdleState())
+        movement_controller.run()
         rospy.spin()
     except rospy.ROSInterruptException:
         pass
-
