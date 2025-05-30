@@ -2,7 +2,7 @@
 
 import rospy
 import math
-from std_msgs.msg import Float64MultiArray, Float64, UInt8
+from std_msgs.msg import Float64MultiArray, Int8
 from duckietown_msgs.msg import WheelsCmdStamped, FSMState
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -110,14 +110,12 @@ class MovementController:
         self._last_displacement_right = 0.0
         self._last_velocity_right = 0.0
 
-        self._overtaking_goal = (0.0, 0.0)  # horizontal_distance, forward_distance
-        self._turning_goal = (0.0, 0.0)  # horizontal_distance, forward_distance
         self._state = None
 
         rospy.Subscriber('/vader/wheel_movement_info', Float64MultiArray, self.wheel_movement_info_callback)
-        rospy.Subscriber('/vader/movement_controller/goal_overtaking', Float64MultiArray, self.goal_overtaking_callback)
-        rospy.Subscriber('/vader/movement_controller/goal_stopping', UInt8, self.goal_stopping_callback)
-        rospy.Subscriber('/vader/movement_controller/goal_turning', Float64MultiArray, self.goal_turning_callback)
+        rospy.Subscriber('/vader/movement_controller_node/goal_overtaking', Int8, self.goal_overtaking_callback)
+        rospy.Subscriber('/vader/movement_controller_node/goal_stopping', Int8, self.goal_stopping_callback)
+        rospy.Subscriber('/vader/movement_controller_node/goal_turning', Int8, self.goal_turning_callback)
         self._velocity_publisher = rospy.Publisher("/vader/wheels_driver_node/wheels_cmd", WheelsCmdStamped, queue_size=1)
         self._state_publisher = rospy.Publisher('/vader/fsm_node/mode', FSMState, queue_size=1)
 
@@ -148,16 +146,11 @@ class MovementController:
         self._wheel_movement_info.update(msg)
 
     def goal_overtaking_callback(self, msg):
-        # msg.data is expected to be a Float64MultiArray with two elements: [horizontal_distance, forward_distance]
-        if len(msg.data) != 2:
-            rospy.logwarn("Invalid goal_overtaking message received, expected two elements.")
-            return
-        if msg.data[0] <= 0 or msg.data[1] <= 0:
-            rospy.logwarn("Invalid goal_overtaking message received, distances must be positive.")
-            return
-        self._overtaking_goal = (msg.data[0], msg.data[1])
-        rospy.loginfo(f"Received goal for overtaking: {self._overtaking_goal}")
-        self.on_event(MovementControllerEvent.START_OVERTAKING)
+        if msg.data == 1:
+            rospy.loginfo("Received goal to overtake")
+            self.on_event(MovementControllerEvent.START_OVERTAKING)
+        else:
+            rospy.logwarn("Invalid overtaking goal received, expected 1 to start overtaking.")
 
     def goal_stopping_callback(self, msg):
         if msg.data == 1:
@@ -165,25 +158,14 @@ class MovementController:
             self.on_event(MovementControllerEvent.START_STOPPING)
 
     def goal_turning_callback(self, msg):
-        # msg.data is expected to be a Float64MultiArray with two elements: [horizontal_distance, forward_distance]
-        if len(msg.data) != 2:
-            rospy.logwarn("Invalid goal_turning message received, expected two elements.")
-            return
-        if msg.data[1] <= 0:
-            rospy.logwarn("Invalid goal_turning message received, forward distance must be positive.")
-            return
-        if msg.data[0] == 0:
-            rospy.logwarn("Invalid goal_turning message received, horizontal distance cannot be zero.")
-            return
-        self._turning_goal = (msg.data[0], msg.data[1])
-        rospy.loginfo(f"Received goal for turning: {self._turning_goal}")
-        self.on_event(MovementControllerEvent.START_TURNING)
-
-    def get_overtaking_goal(self) -> tuple:
-        return self._overtaking_goal
-    
-    def get_turning_goal(self) -> tuple:
-        return self._turning_goal
+        if msg.data == 1:
+            rospy.loginfo("Received goal to turn left")
+            self.on_event(MovementControllerEvent.START_TURNING)
+        elif msg.data == 2:
+            rospy.loginfo("Received goal to turn right")
+            self.on_event(MovementControllerEvent.START_TURNING)
+        else:
+            rospy.logwarn("Invalid turning goal received, expected 1 for left turn or 2 for right turn.")
     
     def get_wheel_movement_info(self) -> WheelMovementInfo:
         return self._wheel_movement_info
@@ -244,11 +226,9 @@ class OvertakingState(MovementControllerState):
     def __init__(self):
         self._timeout_timer = Timer(OVERTAKING_TIMEOUT_DURATION)
         self._goal_timer = Timer(OVERTAKING_GOAL_TIMER_DURATION)
-        self._overtaking_goal = None
 
     def on_enter(self) -> None:
         self.context.publish_fsm_state(OVERTAKING_START_FSM_STATE)
-        self._overtaking_goal = self.context.get_overtaking_goal()
         self._timeout_timer.start()
         self._goal_timer.start()
 
@@ -323,11 +303,9 @@ class OvertakingState(MovementControllerState):
 class TurningState(MovementControllerState):
     def __init__(self):
         self._timer = Timer(TURNING_TIMEOUT_DURATION)
-        self._turning_goal = None
 
     def on_enter(self) -> None:
         self.context.publish_fsm_state(TURNING_START_FSM_STATE)
-        self._turning_goal = self.context.get_turning_goal()
         self._timer.start()
 
     def on_event(self, event: MovementControllerEvent) -> None:
