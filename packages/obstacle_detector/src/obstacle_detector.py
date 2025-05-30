@@ -17,34 +17,24 @@ class ObstacleDetector:
         # publisher to publish the obstacle detection status
         self.pub_obstacle = rospy.Publisher('/vader/obstacle_detector', Int8, queue_size=10)
 
-        self._obstacle_detected = False
+        self._prev_obstacle_detected = False
 
         # Printing to the terminal, ROS style
         rospy.loginfo("Initalized obstacle_detector node!")
 
-    def publish_obstacle_status(self):
-        # Publish the current obstacle detection status
-        self.pub_obstacle.publish(self.convert_to_int8(self._obstacle_detected))
+    def publish_obstacle_status(self, obstacle_detected):
+        self.pub_obstacle.publish(int(obstacle_detected))
 
     def callback_tof(self, msg):
-        # Check if the distance is less than the threshold
-        if msg.range < OBSTACLE_DISTANCE_THRESHOLD:
-            if self._obstacle_detected == False: # Only log when the state changes
+        obstacle_now = msg.range < OBSTACLE_DISTANCE_THRESHOLD
+        if obstacle_now != self._prev_obstacle_detected:
+            if obstacle_now:
                 rospy.loginfo("Obstacle detected!")
-                self.publish_obstacle_status()
-            self._obstacle_detected = True
-        else:
-            if self._obstacle_detected == True: # Only log when the state changes
+            else:
                 rospy.loginfo("Obstacle cleared!")
-                self.publish_obstacle_status()
-            self._obstacle_detected = False
+            self.publish_obstacle_status(obstacle_now)
+        self._prev_obstacle_detected = obstacle_now
 
-    def convert_to_int8(self, value):
-        if value:
-            return 1
-        else:
-            return 0
-        
 if __name__ == '__main__':
     try:
         obstacle_detector = ObstacleDetector()
@@ -52,4 +42,4 @@ if __name__ == '__main__':
         rospy.spin()
     except rospy.ROSInterruptException:
         pass
-    
+
