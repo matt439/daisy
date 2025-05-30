@@ -20,7 +20,7 @@ STOP_SIGN_IDS = [1, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 
 
 # Overtaking constants
 OVERTAKING_TIMEOUT_DURATION = 10.0  # seconds
-CAR_WAITING_TIME = 3.0  # seconds
+CAR_WAITING_TIME = 5.0  # seconds
 
 # Intersection constants
 LEFT_INTERSECTION_SIGNS_IDS = [10, 61, 62, 63, 64]
