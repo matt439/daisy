@@ -279,25 +279,6 @@ class OvertakingState(MovementControllerState):
         # v = exponent (controls the shape of the curve)
         # Q = inflection point (where the curve changes direction)
         # C = horizontal shift (default is 1.0, can be adjusted)
-        if t < 0:
-            rospy.logwarn("Time t must be non-negative for the generalized logistic function.")
-            return A
-        if K <= A:
-            rospy.logwarn("Upper asymptote K must be greater than lower asymptote A.")
-            return A
-        if B <= 0:
-            rospy.logwarn("Growth rate B must be positive.")
-            return A
-        if v <= 0:
-            rospy.logwarn("Exponent v must be positive.")
-            return A
-        if C <= 0:
-            rospy.logwarn("Horizontal shift C must be positive.")
-            return A
-        if Q <= 0:
-            rospy.logwarn("Inflection point Q must be positive.")
-            return A
-        # Calculate the generalized logistic function value
         return A + (K - A) / (C + Q * math.exp(-B * t)) ** (1 / v)
 
 class TurningState(MovementControllerState):
