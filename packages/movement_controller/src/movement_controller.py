@@ -258,29 +258,36 @@ class OvertakingState(MovementControllerState):
         first_s_bend = self._goal_timer.is_timer_less_than_half_expired()
 
         if first_s_bend:
-            left_velocity = self.generalized_logistic_function(
+            left_velocity = self.derivative_generalized_logistic_function(
                 adjusted_time, A, K, B, V, QL, C)
-            right_velocity = self.generalized_logistic_function(
+            right_velocity = self.derivative_generalized_logistic_function(
                 adjusted_time, A, K, B, V, QR, C)
         else: # second_s_bend
-            left_velocity = self.generalized_logistic_function(
+            left_velocity = self.derivative_generalized_logistic_function(
                 adjusted_time, -A, -K, B, V, QR, C)
-            right_velocity = self.generalized_logistic_function(
+            right_velocity = self.derivative_generalized_logistic_function(
                 adjusted_time, -A, -K, B, V, QL, C)
             
         return left_velocity, right_velocity
 
-    def generalized_logistic_function(self, t: float, A: float, K: float, B: float,
-                                        v: float, Q: float, C: float=1.0) -> float:
-        # Generalized logistic function:
-        # t = time (independent variable)
-        # A = lower asymptote (value as t -> -inf)
-        # K = upper asymptote (value as t -> inf)
-        # B = growth rate (steepness of the curve)
-        # v = exponent (controls the shape of the curve)
-        # Q = inflection point (where the curve changes direction)
-        # C = horizontal shift (default is 1.0, can be adjusted)
-        return A + (K - A) / (C + Q * math.exp(-B * t)) ** (1 / v)
+    # def generalized_logistic_function(self, t: float, A: float, K: float, B: float,
+    #                                     v: float, Q: float, C: float=1.0) -> float:
+    #     # Generalized logistic function:
+    #     # t = time (independent variable)
+    #     # A = lower asymptote (value as t -> -inf)
+    #     # K = upper asymptote (value as t -> inf)
+    #     # B = growth rate (steepness of the curve)
+    #     # v = exponent (controls the shape of the curve)
+    #     # Q = inflection point (where the curve changes direction)
+    #     # C = horizontal shift (default is 1.0, can be adjusted)
+    #     return A + (K - A) / (C + Q * math.exp(-B * t)) ** (1 / v)
+
+    def derivative_generalized_logistic_function(self, t: float, A: float, K: float, B: float,
+                                                v: float, Q: float, C: float=1.0) -> float:
+        # Derivative of the generalized logistic function
+        # This is used to calculate the rate of change of velocity
+        exp_term = math.exp(-B * t)
+        return (K - A) * B * Q * exp_term / (C + Q * exp_term) ** (1 + 1 / v)
 
 class TurningState(MovementControllerState):
     def __init__(self):
