@@ -20,7 +20,7 @@ STOP_SIGN_IDS = [1, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 
 
 # Overtaking constants
 OVERTAKING_TIMEOUT_DURATION = 10.0  # seconds
-CAR_WAITING_TIME = 5.0  # seconds
+CAR_WAITING_TIME = 3.0  # seconds
 
 # Intersection constants
 LEFT_INTERSECTION_SIGNS_IDS = [10, 61, 62, 63, 64]
@@ -282,7 +282,7 @@ class OvertakingState(DuckiebotState):
     def on_enter(self):
         self._timer.start()
         # Send command to the overtaker node to start overtaking
-        self._context.publish_FSM_state('OVERTAKING START')
+        self._context.publish_FSM_state('OVERTAKING_START')
 
     def on_event(self, event: DuckieBotEvent) -> None:
         if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
