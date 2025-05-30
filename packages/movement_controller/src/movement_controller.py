@@ -12,10 +12,14 @@ MOVEMENT_CONTROLLER_UPDATE_FREQUENCY = 20.0  # Hz
 WHEEL_VELOCITY_STOPPED_THRESHOLD = 0.01  # m/s, threshold to consider the wheel stopped
 
 OVERTAKING_FORWARD_DISTANCE = 0.6  # meters
-OVERTAKING_GOAL_TIMER_DURATION = 6.0  # seconds
 OVERTAKING_TIMEOUT_DURATION = 10.0  # seconds
 TURNING_TIMEOUT_DURATION = 10.0  # seconds
 STOPPING_TIMEOUT_DURATION = 10.0  # seconds
+
+OVERTAKING_TIMER_DURATION = 9.0  # seconds
+OVERTAKING_TIMER_OFFSET = 2.0  # seconds, offset for the overtaking timer
+LEFT_WHEEL_TIMER_DELAY = 0.5  # seconds, delay for the left wheel timer
+RIGHT_WHEEL_TIMER_DELAY = 0.5  # seconds, delay for the right wheel timer
 
 OVERTAKING_START_FSM_STATE = 'OVERTAKING_START'
 OVERTAKING_SUCCESS_FSM_STATE = 'OVERTAKING_SUCCESS'
@@ -30,11 +34,10 @@ STOPPING_SUCCESS_FSM_STATE = 'STOPPING_SUCCESS'
 STOPPING_FAILURE_FSM_STATE = 'STOPPING_FAILURE'
 
 A = 0.0
-K = 0.3
-B = -40.0
+K = 0.8
+B = 3.0
+Q = 500.0
 V = 1.0
-QL = 500.0 # Q for left wheel
-QR = 25.0 # Q for right wheel
 C = 1.0
 
 class MovementControllerEvent(Enum):
@@ -225,7 +228,7 @@ class IdleState(MovementControllerState):
 class OvertakingState(MovementControllerState):
     def __init__(self):
         self._timeout_timer = Timer(OVERTAKING_TIMEOUT_DURATION)
-        self._goal_timer = Timer(OVERTAKING_GOAL_TIMER_DURATION)
+        self._goal_timer = Timer(OVERTAKING_TIMER_DURATION)
 
     def on_enter(self) -> None:
         self.context.publish_fsm_state(OVERTAKING_START_FSM_STATE)
@@ -253,20 +256,28 @@ class OvertakingState(MovementControllerState):
         self.context.publish_velocity(left_velocity, right_velocity)
         rospy.loginfo(f"Overtaking velocities - Left: {left_velocity}, Right: {right_velocity}")
 
+    def calculate_adjusted_time(self, is_left_wheel: bool) -> float:
+        adjusted_time = self._goal_timer.get_elapsed_time() + OVERTAKING_TIMER_OFFSET
+        first_s_bend = self._goal_timer.is_timer_less_than_half_expired()
+
+        if first_s_bend:
+            if is_left_wheel:
+                adjusted_time -= LEFT_WHEEL_TIMER_DELAY
+        else:
+            adjusted_time -= OVERTAKING_TIMER_DURATION / 2.0
+            if not is_left_wheel:
+                adjusted_time -= RIGHT_WHEEL_TIMER_DELAY
+
+        return adjusted_time
+
     def calculate_overtaking_velocity(self) -> tuple:
-        adjusted_time = self._goal_timer.get_elapsed_time() / OVERTAKING_GOAL_TIMER_DURATION
         first_s_bend = self._goal_timer.is_timer_less_than_half_expired()
 
         if first_s_bend:
             left_velocity = self.derivative_generalized_logistic_function(
-                adjusted_time, A, K, B, V, QL, C)
-            right_velocity = self.derivative_generalized_logistic_function(
-                adjusted_time, A, K, B, V, QR, C)
-        else: # second_s_bend
-            left_velocity = self.derivative_generalized_logistic_function(
-                adjusted_time, -A, -K, B, V, QR, C)
-            right_velocity = self.derivative_generalized_logistic_function(
-                adjusted_time, -A, -K, B, V, QL, C)
+                self.calculate_adjusted_time(True), A, K, B, V, Q, C)
+        right_velocity = self.derivative_generalized_logistic_function(
+                self.calculate_adjusted_time(False), A, K, B, V, Q, C)
             
         return left_velocity, right_velocity
 
