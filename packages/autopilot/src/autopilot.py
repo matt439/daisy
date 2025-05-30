@@ -2,7 +2,7 @@
 
 import rospy
 from duckietown_msgs.msg import Twist2DStamped, FSMState, AprilTagDetectionArray
-from std_msgs.msg import Float64, Int8
+from std_msgs.msg import Int8
 from enum import Enum
 from abc import ABC, abstractmethod
 
@@ -87,6 +87,10 @@ class TaskType(Enum):
     TASK_7_3D = 1
     TASK_7_4HD = 2
 
+class Direction (Enum):
+    LEFT = 1
+    RIGHT = 2
+
 TASK = TaskType.TASK_7_3D
 
 class Timer:
@@ -103,10 +107,12 @@ class Timer:
         self._start_time = None
 
 class Duckiebot():
-    def __init__(self, state: 'DuckiebotState', state_pub, goal_dist_pub, goal_angle_pub) -> None:
+    def __init__(self, state: 'DuckiebotState', state_pub, stopping_pub,
+                 overtaking_pub, turning_pub) -> None:
         self._state_publisher = state_pub
-        self._goal_distance_publisher = goal_dist_pub
-        self._goal_angle_publisher = goal_angle_pub
+        self._stopping_publisher = stopping_pub
+        self._overtaking_publisher = overtaking_pub
+        self._turning_publisher = turning_pub
         rospy.loginfo("Duckiebot class initialized!")
         self.transition_to(state)
 
@@ -129,18 +135,29 @@ class Duckiebot():
         fsm_state_msg.state = state
         self._state_publisher.publish(fsm_state_msg)
 
-    def publish_goal_distance(self, distance: float):
-        goal_distance_msg = Float64()
-        goal_distance_msg.data = distance
-        self._goal_distance_publisher.publish(goal_distance_msg)
-
-    def publish_goal_angle(self, angle: float):
-        goal_angle_msg = Float64()
-        goal_angle_msg.data = angle
-        self._goal_angle_publisher.publish(goal_angle_msg)
+    def publish_stopping_goal(self):
+        stopping_goal_msg = Int8()
+        stopping_goal_msg.data = 1  # 1 indicates the bot should stop
+        self._stopping_publisher.publish(stopping_goal_msg)
 
     def stop_bot(self):
-        self.publish_goal_distance(STOPPING_DISTANCE_TARGET)
+        self.publish_stopping_goal()
+
+    def publish_overtaking_goal(self):
+        overtaking_goal_msg = Int8()
+        overtaking_goal_msg.data = 1  # 1 indicates the bot should start overtaking
+        self._overtaking_publisher.publish(overtaking_goal_msg)
+
+    def publish_turning_goal(self, direction: Direction):
+        turning_goal_msg = Int8()
+        if direction == Direction.LEFT:
+            turning_goal_msg.data = 1  # 1 indicates the bot should turn left
+        elif direction == Direction.RIGHT:
+            turning_goal_msg.data = 2  # 2 indicates the bot should turn right
+        else:
+            rospy.logerr("Invalid direction for turning goal.")
+            return
+        self._turning_publisher.publish(turning_goal_msg)
 
 class DuckiebotState(ABC):
     @property
@@ -295,7 +312,7 @@ class OvertakingState(DuckiebotState):
     def on_enter(self):
         self._timer.start()
         # Send command to the overtaker node to start overtaking
-        self._context.publish_FSM_state('OVERTAKING_START')
+        self._context.publish_overtaking_goal()
 
     def on_event(self, event: DuckieBotEvent) -> None:
         if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
@@ -310,10 +327,6 @@ class OvertakingState(DuckiebotState):
         if self._timer.is_expired():
             rospy.logwarn("Overtaking timer expired, transitioning to lane following state.")
             self.context.transition_to(LaneFollowingState())
-
-class Direction (Enum):
-    LEFT = 0
-    RIGHT = 1
 
 class TurningLeftState(DuckiebotState):
     def __init__(self):
@@ -365,8 +378,9 @@ class Autopilot:
         
         self.cmd_vel_pub = rospy.Publisher('/vader/car_cmd_switch_node/cmd', Twist2DStamped, queue_size=1)
         self._state_publisher = rospy.Publisher('/vader/fsm_node/mode', FSMState, queue_size=1)
-        self._goal_distance_publisher = rospy.Publisher('/vader/goal_distance', Float64, queue_size=1)
-        self._goal_angle_publisher = rospy.Publisher('/vader/goal_angle', Float64, queue_size=1)
+        self._stopping_publisher = rospy.Publisher('/vader/movement_controller_node/goal_stopping', Int8, queue_size=1)
+        self._overtaking_publisher = rospy.Publisher('/vader/movement_controller_node/goal_overtaking', Int8, queue_size=1)
+        self._turning_publisher = rospy.Publisher('/vader/movement_controller_node/goal_turning', Int8, queue_size=1)
         rospy.Subscriber('/vader/fsm_node/mode', FSMState, self.FSM_state_callback, queue_size=1)
         rospy.Subscriber('/vader/apriltag_detector_node/detections',
                          AprilTagDetectionArray, self.april_tag_callback, queue_size=1)
@@ -375,8 +389,11 @@ class Autopilot:
 
         self.set_lane_following_parameters()
 
-        self._duckiebot = Duckiebot(LaneFollowingState(), self._state_publisher,
-                                    self._goal_distance_publisher, self._goal_angle_publisher)
+        self._duckiebot = Duckiebot(LaneFollowingState(),
+                                    self._state_publisher,
+                                    self._stopping_publisher,
+                                    self._overtaking_publisher,
+                                    self._turning_publisher)
 
         rospy.loginfo("Initialized autopilot node!")
  
