@@ -20,8 +20,8 @@ OVERTAKING_TIMEOUT_DURATION = 15.0  # seconds
 TURNING_TIMEOUT_DURATION = 10.0  # seconds
 STOPPING_TIMEOUT_DURATION = 10.0  # seconds
 
-MAX_VELOCITY = 2.0  # m/s, maximum velocity for the overtaking maneuver
-MIN_VELOCITY = 0.1  # m/s, minimum velocity for the overtaking maneuver
+MAX_VELOCITY = 0.6  # m/s, maximum velocity for the overtaking maneuver
+MIN_VELOCITY = 0.0  # m/s, minimum velocity for the overtaking maneuver
 
 # Generalized logistic function parameters
 # These parameters can be tuned based on the desired behavior of the overtaking maneuver
