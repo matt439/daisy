@@ -8,7 +8,6 @@ from abc import ABC, abstractmethod
 from enum import Enum
 
 MOVEMENT_CONTROLLER_UPDATE_FREQUENCY = 20.0  # Hz
-MOVEMENT_CONTROLLER_UPDATE_PERIOD = 1.0 / MOVEMENT_CONTROLLER_UPDATE_FREQUENCY  # seconds
 
 WHEEL_VELOCITY_STOPPED_THRESHOLD = 0.01  # m/s, threshold to consider the wheel stopped
 
@@ -51,6 +50,7 @@ class MovementControllerEvent(Enum):
     START_OVERTAKING = 0
     START_TURNING = 1
     START_STOPPING = 2
+    WHEEL_MOVEMENT_INFO_UPDATED = 3
 
 class Timer:
     def __init__(self, duration: float):
@@ -101,9 +101,20 @@ class WheelMovementInfo:
 
     def get_left_info(self):
         return (self._left_distance, self._left_displacement, self._left_velocity)
-
+    def get_left_distance(self):
+        return self._left_distance
+    def get_left_displacement(self):
+        return self._left_displacement
+    def get_left_velocity(self):
+        return self._left_velocity
     def get_right_info(self):
         return (self._right_distance, self._right_displacement, self._right_velocity)
+    def get_right_distance(self):
+        return self._right_distance
+    def get_right_displacement(self):
+        return self._right_displacement
+    def get_right_velocity(self):
+        return self._right_velocity
 
 class MovementController:
     def __init__(self, state: 'MovementControllerState'):
@@ -154,6 +165,7 @@ class MovementController:
 
     def wheel_movement_info_callback(self, msg):
         self._wheel_movement_info.update(msg)
+        self._state.on_event(MovementControllerEvent.WHEEL_MOVEMENT_INFO_UPDATED)
 
     def goal_overtaking_callback(self, msg):
         if msg.data == 1:
@@ -293,17 +305,20 @@ class OvertakingState(MovementControllerState):
         self._goal_timer = Timer(OVERTAKING_MANEUVER_DURATION)
         self._start_left_distance = 0.0
         self._start_right_distance = 0.0
+        self._last_wheel_info_time = None
 
     def on_enter(self) -> None:
         self.context.publish_fsm_state(OVERTAKING_START_FSM_STATE)
         self._timeout_timer.start()
         self._goal_timer.start()
         wheel_info = self.context.get_wheel_movement_info()
-        self._start_left_distance = wheel_info.get_left_info()[0]
-        self._start_right_distance = wheel_info.get_right_info()[0]
+        self._start_left_distance = wheel_info.get_left_distance()
+        self._start_right_distance = wheel_info.get_right_distance()
+        self._last_wheel_info_time = rospy.get_time()
 
     def on_event(self, event: MovementControllerEvent) -> None:
-        pass
+        if event == MovementControllerEvent.WHEEL_MOVEMENT_INFO_UPDATED:
+            self.control_bot()
 
     def update(self) -> None:
         if self._timeout_timer.is_expired():
@@ -317,36 +332,47 @@ class OvertakingState(MovementControllerState):
             self.context.transition_to(IdleState())
             return
         
+    def control_bot(self):
         wheel_info = self.context.get_wheel_movement_info()
-        left_distance = wheel_info.get_left_info()[0]
-        right_distance = wheel_info.get_right_info()[0]
+        left_distance = wheel_info.get_left_distance()
+        right_distance = wheel_info.get_right_distance()
+
         # Calculate the current distances from the starting point
         current_left_distance = left_distance - self._start_left_distance
         current_right_distance = right_distance - self._start_right_distance
 
         timer_elapsed = self._goal_timer.get_elapsed_time()
 
+        # The x-axis of the arc length integral is the forward axis of the bot.
+        # Adjust the timer to be a proportion of the total overtaking distance,
+        # relative to the elapsed time over the total overtaking maneuver duration.
+        adjusted_timer = OVERTAKING_FORWARD_DISTANCE * (timer_elapsed / OVERTAKING_MANEUVER_DURATION)
+
         target_left_distance = OvertakingTools.cumulative_track_distance(
-            0.0, timer_elapsed, A, K, B, X0, V,
+            0.0, adjusted_timer, A, K, B, X0, V,
                 OVERTAKING_MIDWAY_DISTANCE, OVERTAKING_WHEEL_OFFSET, True)
         
         target_right_distance = OvertakingTools.cumulative_track_distance(
-            0.0, timer_elapsed, A, K, B, X0, V,
+            0.0, adjusted_timer, A, K, B, X0, V,
                 OVERTAKING_MIDWAY_DISTANCE, OVERTAKING_WHEEL_OFFSET, False)
         
+        current_time = rospy.get_time()
+        elapsed_time = current_time - self._last_wheel_info_time
+        self._last_wheel_info_time = current_time
+
         # Calculate the velocities for the left and right wheels
         left_velocity = VelocityCalculator.calculate_velocity(
-            target_left_distance, current_left_distance, MOVEMENT_CONTROLLER_UPDATE_PERIOD)
+            target_left_distance, current_left_distance, elapsed_time)
         right_velocity = VelocityCalculator.calculate_velocity(
-            target_right_distance, current_right_distance, MOVEMENT_CONTROLLER_UPDATE_PERIOD)
+            target_right_distance, current_right_distance, elapsed_time)
 
         # Publish the velocities to the wheels
         self.context.publish_velocity(left_velocity, right_velocity)
         rospy.loginfo(f"Vel: L: {left_velocity:.2f} m/s, R: {right_velocity:.2f} m/s | "
-                      f"Curr Dist: L: {current_left_distance:.2f} m, R: {current_right_distance:.2f} m | "
+                    f"Curr Dist: L: {current_left_distance:.2f} m, R: {current_right_distance:.2f} m | "
                         f"Target Dist: L: {target_left_distance:.2f} m, R: {target_right_distance:.2f} m | "
                             f"Time: {timer_elapsed:.2f} s | ")
-
+        
 class TurningState(MovementControllerState):
     def __init__(self):
         self._timer = Timer(TURNING_TIMEOUT_DURATION)
