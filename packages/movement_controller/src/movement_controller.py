@@ -19,14 +19,14 @@ STOPPING_TIMEOUT_DURATION = 10.0  # seconds
 # Generalized logistic function parameters
 # These parameters can be tuned based on the desired behavior of the overtaking maneuver
 A = 0.0
-K = 1.5
-B = 3.0
+K = 1.0
+B = 1.55
 Q = 500.0
 V = 1.0
 C = 1.0
 
-LOGISTIC_DERIVATIVE_DURATION = 4.0  # seconds, duration for the logistic function derivative
-S_BEND_WHEEL_TIMER_OFFSET = 0.5  # seconds, offset for the wheel timers
+LOGISTIC_DERIVATIVE_DURATION = 8.0  # seconds, duration for the logistic function derivative
+S_BEND_WHEEL_TIMER_OFFSET = 1.0  # seconds, offset for the wheel timers
 S_BEND_TIMER_DURATION = LOGISTIC_DERIVATIVE_DURATION + S_BEND_WHEEL_TIMER_OFFSET  # seconds, total duration for the S-bend maneuver
 
 OVERTAKING_START_FSM_STATE = 'OVERTAKING_START'
