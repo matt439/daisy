@@ -320,10 +320,15 @@ class OvertakingState(MovementControllerState):
         current_left_distance = left_distance - self._start_left_distance
         current_right_distance = right_distance - self._start_right_distance
 
+        timer_elapsed = self._goal_timer.get_elapsed_time()
+
         target_left_distance = OvertakingTools.cumulative_track_distance(
-            self._goal_timer.get_elapsed_time(), A, K, B, X0, V, OVERTAKING_MIDWAY_DISTANCE, OVERTAKING_WHEEL_OFFSET, True)
+            0.0, timer_elapsed, timer_elapsed, A, K, B, X0, V,
+                OVERTAKING_MIDWAY_DISTANCE, OVERTAKING_WHEEL_OFFSET, True)
+        
         target_right_distance = OvertakingTools.cumulative_track_distance(
-            self._goal_timer.get_elapsed_time(), A, K, B, X0, V, OVERTAKING_MIDWAY_DISTANCE, OVERTAKING_WHEEL_OFFSET, False)
+            0.0, timer_elapsed, timer_elapsed, A, K, B, X0, V,
+                OVERTAKING_MIDWAY_DISTANCE, OVERTAKING_WHEEL_OFFSET, False)
         
         # Calculate the velocities for the left and right wheels
         left_velocity = VelocityCalculator.calculate_velocity(target_left_distance, current_left_distance)
