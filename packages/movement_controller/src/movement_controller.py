@@ -19,9 +19,10 @@ STOPPING_TIMEOUT_DURATION = 10.0  # seconds
 # Generalized logistic function parameters
 # These parameters can be tuned based on the desired behavior of the overtaking maneuver
 A = 0.0
-K = 1.0
-B = 1.55
+K = 0.3
+B = 3.0
 Q = 500.0
+M = 0.2
 V = 1.0
 C = 1.0
 
@@ -230,21 +231,16 @@ class OvertakingTools:
     @staticmethod
     def calculate_overtaking_velocity(first_s_bend: bool, timer: float) -> tuple:
         adjusted_times = OvertakingTools.calculate_adjusted_times(first_s_bend, timer)
-        left_velocity = OvertakingTools.derivative_generalized_logistic_function(
-                                                    adjusted_times[0], A, K, B, V, Q, C)
-        
-        right_velocity = OvertakingTools.derivative_generalized_logistic_function(
-                                                    adjusted_times[1], A, K, B, V, Q, C)
-            
+        left_velocity = OvertakingTools.derivative_generalized_logistic_function(adjusted_times[0])
+        right_velocity = OvertakingTools.derivative_generalized_logistic_function(adjusted_times[1])
         return left_velocity, right_velocity
 
     @staticmethod
-    def derivative_generalized_logistic_function(t: float, A: float, K: float, B: float,
-                                                v: float, Q: float, C: float=1.0) -> float:
+    def derivative_generalized_logistic_function(t: float) -> float:
         # Derivative of the generalized logistic function
         # This is used to calculate the rate of change of velocity
         exp_term = math.exp(-B * t)
-        return (K - A) * B * Q * exp_term / (C + Q * exp_term) ** (1 + 1 / v)
+        return M + (K - A) * B * Q * exp_term / (C + Q * exp_term) ** (1 + 1 / V)
     
     @staticmethod
     def calculate_adjusted_times(first_s_bend: bool, timer: float) -> tuple:
