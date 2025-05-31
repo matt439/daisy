@@ -12,7 +12,7 @@ MOVEMENT_CONTROLLER_UPDATE_FREQUENCY = 20.0  # Hz
 WHEEL_VELOCITY_STOPPED_THRESHOLD = 0.01  # m/s, threshold to consider the wheel stopped
 
 OVERTAKING_FORWARD_DISTANCE = 0.6  # meters
-OVERTAKING_TIMEOUT_DURATION = 10.0  # seconds
+OVERTAKING_TIMEOUT_DURATION = 15.0  # seconds
 TURNING_TIMEOUT_DURATION = 10.0  # seconds
 STOPPING_TIMEOUT_DURATION = 10.0  # seconds
 
@@ -26,7 +26,7 @@ V = 1.0
 C = 1.0
 
 LOGISTIC_DERIVATIVE_DURATION = 8.0  # seconds, duration for the logistic function derivative
-S_BEND_WHEEL_TIMER_OFFSET = 1.0  # seconds, offset for the wheel timers
+S_BEND_WHEEL_TIMER_OFFSET = 3.0  # seconds, offset for the wheel timers
 S_BEND_TIMER_DURATION = LOGISTIC_DERIVATIVE_DURATION + S_BEND_WHEEL_TIMER_OFFSET  # seconds, total duration for the S-bend maneuver
 
 OVERTAKING_START_FSM_STATE = 'OVERTAKING_START'
