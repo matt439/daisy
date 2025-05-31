@@ -6,29 +6,33 @@ from std_msgs.msg import Float64MultiArray, Int8
 from duckietown_msgs.msg import WheelsCmdStamped, FSMState
 from abc import ABC, abstractmethod
 from enum import Enum
+import scipy.integrate as spi
 
 MOVEMENT_CONTROLLER_UPDATE_FREQUENCY = 20.0  # Hz
+MOVEMENT_CONTROLLER_UPDATE_PERIOD = 1.0 / MOVEMENT_CONTROLLER_UPDATE_FREQUENCY  # seconds
 
 WHEEL_VELOCITY_STOPPED_THRESHOLD = 0.01  # m/s, threshold to consider the wheel stopped
 
-OVERTAKING_FORWARD_DISTANCE = 0.6  # meters
-OVERTAKING_TIMEOUT_DURATION = 15.0  # seconds
+OVERTAKING_FORWARD_DISTANCE = 0.8  # meters
+OVERTAKING_MIDWAY_DISTANCE = OVERTAKING_FORWARD_DISTANCE / 2.0  # meters
+AXLE_LENGTH = 0.1
+OVERTAKING_WHEEL_OFFSET = 0.09  # meters
+OVERTAKING_MANEUVER_DURATION = 6.0  # seconds, duration of the overtaking maneuver
+OVERTAKING_TIMEOUT_DURATION = 10.0  # seconds
 TURNING_TIMEOUT_DURATION = 10.0  # seconds
 STOPPING_TIMEOUT_DURATION = 10.0  # seconds
+
+MAX_VELOCITY = 0.5  # m/s, maximum velocity for the overtaking maneuver
+MIN_VELOCITY = 0.1  # m/s, minimum velocity for the overtaking maneuver
+OVERTAKING_VELOCITY = 0.3  # m/s
 
 # Generalized logistic function parameters
 # These parameters can be tuned based on the desired behavior of the overtaking maneuver
 A = 0.0
 K = 0.3
-B = 3.0
-Q = 500.0
-M = 0.2
+B = 40.0
+X0 = 0.15
 V = 1.0
-C = 1.0
-
-LOGISTIC_DERIVATIVE_DURATION = 8.0  # seconds, duration for the logistic function derivative
-S_BEND_WHEEL_TIMER_OFFSET = 3.0  # seconds, offset for the wheel timers
-S_BEND_TIMER_DURATION = LOGISTIC_DERIVATIVE_DURATION + S_BEND_WHEEL_TIMER_OFFSET  # seconds, total duration for the S-bend maneuver
 
 OVERTAKING_START_FSM_STATE = 'OVERTAKING_START'
 OVERTAKING_SUCCESS_FSM_STATE = 'OVERTAKING_SUCCESS'
@@ -218,7 +222,7 @@ class IdleState(MovementControllerState):
 
     def on_event(self, event: MovementControllerEvent) -> None:
         if event == MovementControllerEvent.START_OVERTAKING:
-            self.context.transition_to(OvertakingFirstSBendState())
+            self.context.transition_to(OvertakingState())
         elif event == MovementControllerEvent.START_TURNING:
             self.context.transition_to(TurningState())
         elif event == MovementControllerEvent.START_STOPPING:
@@ -229,78 +233,58 @@ class IdleState(MovementControllerState):
 
 class OvertakingTools:
     @staticmethod
-    def calculate_overtaking_velocity(first_s_bend: bool, timer: float) -> tuple:
-        adjusted_times = OvertakingTools.calculate_adjusted_times(first_s_bend, timer)
-        left_velocity = OvertakingTools.derivative_generalized_logistic_function(adjusted_times[0])
-        right_velocity = OvertakingTools.derivative_generalized_logistic_function(adjusted_times[1])
-        return left_velocity, right_velocity
+    def logistic_derivative(x: float, A: float, K: float,
+                            B: float, x0: float, V: float) -> float:
+        exp_term = math.exp(-B * (x - x0))
+        return B * V * (K - A) * exp_term / ((1 + exp_term)**(V + 1))
 
     @staticmethod
-    def derivative_generalized_logistic_function(t: float) -> float:
-        # Derivative of the generalized logistic function
-        # This is used to calculate the rate of change of velocity
-        exp_term = math.exp(-B * t)
-        return M + (K - A) * B * Q * exp_term / (C + Q * exp_term) ** (1 + 1 / V)
+    def track_derivative(t: float, A: float, K: float, B: float, x0: float, V: float,
+                         midway: float, wheel_offset: float, is_left: bool) -> float:
+        if is_left:
+            if t < midway:
+                return OvertakingTools.logistic_derivative(t, A, K, B, x0, V)
+            else:
+                return -OvertakingTools.logistic_derivative(t - midway - wheel_offset, A, K, B, x0, V)
+        else:
+            if t < midway:
+                return OvertakingTools.logistic_derivative(t - wheel_offset, A, K, B, x0, V)
+            else:
+                return -OvertakingTools.logistic_derivative(t - midway, A, K, B, x0, V)
+
+    @staticmethod
+    def track_arc_length_integrand(t: float, A: float, K: float, B: float, x0: float, V: float,
+                                    midway: float, wheel_offset: float, is_left: bool) -> float:
+        derivative = OvertakingTools.track_derivative(t, A, K, B, x0, V, midway, wheel_offset, is_left)
+        return math.sqrt(1 + derivative ** 2)
     
     @staticmethod
-    def calculate_adjusted_times(first_s_bend: bool, timer: float) -> tuple:
-        if first_s_bend:
-            return (timer - S_BEND_WHEEL_TIMER_OFFSET, timer)
-        else: # second S-bend
-            return (timer, timer - S_BEND_WHEEL_TIMER_OFFSET)
-    
-    # def generalized_logistic_function(self, t: float, A: float, K: float, B: float,
-    #                                     v: float, Q: float, C: float=1.0) -> float:
-    #     # Generalized logistic function:
-    #     # t = time (independent variable)
-    #     # A = lower asymptote (value as t -> -inf)
-    #     # K = upper asymptote (value as t -> inf)
-    #     # B = growth rate (steepness of the curve)
-    #     # v = exponent (controls the shape of the curve)
-    #     # Q = inflection point (where the curve changes direction)
-    #     # C = horizontal shift (default is 1.0, can be adjusted)
-    #     return A + (K - A) / (C + Q * math.exp(-B * t)) ** (1 / v)
+    def cumulative_track_distance(a: float, b: float, t: float, A: float, K: float, B: float, x0: float,
+                                  V: float, midway: float, wheel_offset: float, is_left: bool) -> float:
+        return spi.quad(OvertakingTools.track_arc_length_integrand, a, b, args=(
+                                                t, A, K, B, x0, V, midway, wheel_offset, is_left))[0]
 
-class OvertakingFirstSBendState(MovementControllerState):
+class VelocityCalculator:
+    @staticmethod
+    def calculate_velocity(target_distance: float, current_distance: float) -> float:
+        velocity = (target_distance - current_distance) / MOVEMENT_CONTROLLER_UPDATE_PERIOD
+        # clamp the velocity to a maximum and minimum value
+        return max(MIN_VELOCITY, min(MAX_VELOCITY, velocity))
+
+class OvertakingState(MovementControllerState):
     def __init__(self):
         self._timeout_timer = Timer(OVERTAKING_TIMEOUT_DURATION)
-        self._goal_timer = Timer(S_BEND_TIMER_DURATION)
+        self._goal_timer = Timer(OVERTAKING_MANEUVER_DURATION)
+        self._start_left_distance = 0.0
+        self._start_right_distance = 0.0
 
     def on_enter(self) -> None:
         self.context.publish_fsm_state(OVERTAKING_START_FSM_STATE)
         self._timeout_timer.start()
         self._goal_timer.start()
-
-    def on_event(self, event: MovementControllerEvent) -> None:
-        pass
-
-    def update(self) -> None:
-        if self._timeout_timer.is_expired():
-            rospy.logwarn("Overtaking timed out, transitioning to IdleState")
-            self.context.publish_fsm_state(OVERTAKING_FAILURE_FSM_STATE)
-            self.context.transition_to(IdleState())
-            return
-
-        if self._goal_timer.is_expired():
-            self.context.transition_to(OvertakingSecondSBendState())
-            return
-        
-        # Calculate the velocities for overtaking
-        left_velocity, right_velocity = OvertakingTools.calculate_overtaking_velocity(
-            first_s_bend=True, timer=self._goal_timer.get_elapsed_time())
-        # Publish the velocities to the wheels
-        self.context.publish_velocity(left_velocity, right_velocity)
-        rospy.loginfo(f"Overtaking velocities - Left: {left_velocity}, Right: {right_velocity}")
-
-class OvertakingSecondSBendState(MovementControllerState):
-    def __init__(self):
-        self._timeout_timer = Timer(OVERTAKING_TIMEOUT_DURATION)
-        self._goal_timer = Timer(S_BEND_TIMER_DURATION)
-
-    def on_enter(self) -> None:
-        self._timeout_timer.start()
-        self._goal_timer.start()
-        rospy.loginfo("Entering second S-bend of overtaking maneuver")
+        wheel_info = self.context.get_wheel_movement_info()
+        self._start_left_distance = wheel_info.get_left_info()[0]
+        self._start_right_distance = wheel_info.get_right_info()[0]
 
     def on_event(self, event: MovementControllerEvent) -> None:
         pass
@@ -317,9 +301,22 @@ class OvertakingSecondSBendState(MovementControllerState):
             self.context.transition_to(IdleState())
             return
         
-        # Calculate the velocities for overtaking
-        left_velocity, right_velocity = OvertakingTools.calculate_overtaking_velocity(
-            first_s_bend=False, timer=self._goal_timer.get_elapsed_time())
+        wheel_info = self.context.get_wheel_movement_info()
+        left_distance = wheel_info.get_left_info()[0]
+        right_distance = wheel_info.get_right_info()[0]
+        # Calculate the current distances from the starting point
+        current_left_distance = left_distance - self._start_left_distance
+        current_right_distance = right_distance - self._start_right_distance
+
+        target_left_distance = OvertakingTools.cumulative_track_distance(
+            self._goal_timer.get_elapsed_time(), A, K, B, X0, V, OVERTAKING_MIDWAY_DISTANCE, OVERTAKING_WHEEL_OFFSET, True)
+        target_right_distance = OvertakingTools.cumulative_track_distance(
+            self._goal_timer.get_elapsed_time(), A, K, B, X0, V, OVERTAKING_MIDWAY_DISTANCE, OVERTAKING_WHEEL_OFFSET, False)
+        
+        # Calculate the velocities for the left and right wheels
+        left_velocity = VelocityCalculator.calculate_velocity(target_left_distance, current_left_distance)
+        right_velocity = VelocityCalculator.calculate_velocity(target_right_distance, current_right_distance)
+
         # Publish the velocities to the wheels
         self.context.publish_velocity(left_velocity, right_velocity)
         rospy.loginfo(f"Overtaking velocities - Left: {left_velocity}, Right: {right_velocity}")
