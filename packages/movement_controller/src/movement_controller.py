@@ -19,7 +19,7 @@ STOPPING_TIMEOUT_DURATION = 10.0  # seconds
 # Generalized logistic function parameters
 # These parameters can be tuned based on the desired behavior of the overtaking maneuver
 A = 0.0
-K = 5.0
+K = 1.5
 B = 3.0
 Q = 500.0
 V = 1.0
