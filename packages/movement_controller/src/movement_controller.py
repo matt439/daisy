@@ -260,7 +260,7 @@ class OvertakingTools:
         return math.sqrt(1 + derivative ** 2)
     
     @staticmethod
-    def trapezoidal_rule(f, a: float, b: float, n: int, *args) -> float:
+    def trapezoidal_rule(f, a: float, b: float, n: int, args=()) -> float:
         h = (b - a) / n
         total = (f(a, *args) + f(b, *args)) / 2.0
         for i in range(1, n):
@@ -270,11 +270,9 @@ class OvertakingTools:
     @staticmethod
     def cumulative_track_distance(a: float, b: float, t: float, A: float, K: float, B: float, x0: float,
                                   V: float, midway: float, wheel_offset: float, is_left: bool) -> float:
-        # return spi.quad(OvertakingTools.track_arc_length_integrand, a, b, args=(
-        #                                            t, A, K, B, x0, V, midway, wheel_offset, is_left))[0]
         return OvertakingTools.trapezoidal_rule(
             OvertakingTools.track_arc_length_integrand, a, b, TRAPEZOIDAL_RULE_N,
-                args=(t, A, K, B, x0, V, midway, wheel_offset, is_left))
+            args=(t, A, K, B, x0, V, midway, wheel_offset, is_left))
 
 class VelocityCalculator:
     @staticmethod
