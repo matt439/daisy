@@ -32,7 +32,7 @@ LANE_FOLLOWING_STOP_SIGN_TIME = 3.0  # seconds
 STOP_SIGN_IDS = [1, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38]
 
 # Overtaking constants
-OVERTAKING_TIMEOUT_DURATION = 10.0  # seconds
+OVERTAKING_TIMEOUT_DURATION = 20.0  # seconds
 CAR_WAITING_TIME = 5.0  # seconds
 
 # Intersection constants
