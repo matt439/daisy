@@ -15,7 +15,7 @@ OVERTAKING_FORWARD_DISTANCE = 0.8  # meters
 OVERTAKING_MIDWAY_DISTANCE = OVERTAKING_FORWARD_DISTANCE / 2.0  # meters
 AXLE_LENGTH = 0.1
 OVERTAKING_WHEEL_OFFSET = 0.09  # meters
-OVERTAKING_MANEUVER_DURATION = 12.0  # seconds, duration of the overtaking maneuver
+OVERTAKING_MANEUVER_DURATION = 10.0  # seconds, duration of the overtaking maneuver
 OVERTAKING_TIMEOUT_DURATION = 15.0  # seconds
 TURNING_TIMEOUT_DURATION = 10.0  # seconds
 STOPPING_TIMEOUT_DURATION = 10.0  # seconds
@@ -164,7 +164,8 @@ class MovementController:
 
     def wheel_movement_info_callback(self, msg):
         self._wheel_movement_info.update(msg)
-        self._state.on_event(MovementControllerEvent.WHEEL_MOVEMENT_INFO_UPDATED)
+        if self._state is not None:
+            self._state.on_event(MovementControllerEvent.WHEEL_MOVEMENT_INFO_UPDATED)
 
     def goal_overtaking_callback(self, msg):
         if msg.data == 1:
@@ -294,13 +295,11 @@ class OvertakingTools:
 class VelocityCalculator:
     @staticmethod
     def calculate_velocity(target_distance: float, current_distance: float, time: float) -> float:
-        # target_distance is the distance we want to reach
-        # current_distance is the distance we are currently at
         if target_distance <= current_distance:
-            rospy.logwarn("Target distance is less than or equal to current distance, returning 0.0 velocity.")
-            return 0.0
-        # Calculate the velocity needed to reach the target distance in the given time
-        velocity = (target_distance - current_distance) / time
+            velocity = 0.0  # No need to move if we are already at or beyond the target distance
+        else: # Calculate the velocity needed to reach the target distance in the given time
+            velocity = (target_distance - current_distance) / time
+
         # Clamp the velocity to the maximum and minimum values
         return max(min(velocity, MAX_VELOCITY), MIN_VELOCITY)
 
