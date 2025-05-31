@@ -268,18 +268,22 @@ class OvertakingTools:
         return total * h
 
     @staticmethod
-    def cumulative_track_distance(a: float, b: float, t: float, A: float, K: float, B: float, x0: float,
+    def cumulative_track_distance(a: float, b: float, A: float, K: float, B: float, x0: float,
                                   V: float, midway: float, wheel_offset: float, is_left: bool) -> float:
         return OvertakingTools.trapezoidal_rule(
             OvertakingTools.track_arc_length_integrand, a, b, TRAPEZOIDAL_RULE_N,
-            args=(A, K, B, x0, V, midway, wheel_offset, is_left))
+                args=(A, K, B, x0, V, midway, wheel_offset, is_left))
 
 class VelocityCalculator:
     @staticmethod
     def calculate_velocity(target_distance: float, current_distance: float) -> float:
-        velocity = (target_distance - current_distance) / MOVEMENT_CONTROLLER_UPDATE_PERIOD
-        # clamp the velocity to a maximum and minimum value
-        return max(MIN_VELOCITY, min(MAX_VELOCITY, velocity))
+        # target_distance is the distance we want to reach
+        # current_distance is the distance we are currently at
+        if target_distance <= current_distance:
+            rospy.logwarn("Target distance is less than or equal to current distance, returning 0.0 velocity.")
+            return 0.0
+        # Calculate the velocity needed to reach the target distance
+        velocity = (target_distance - current_distance) / OVERTAKING_MANEUVER_DURATION
 
 class OvertakingState(MovementControllerState):
     def __init__(self):
