@@ -276,14 +276,16 @@ class OvertakingTools:
 
 class VelocityCalculator:
     @staticmethod
-    def calculate_velocity(target_distance: float, current_distance: float) -> float:
+    def calculate_velocity(target_distance: float, current_distance: float, time: float) -> float:
         # target_distance is the distance we want to reach
         # current_distance is the distance we are currently at
         if target_distance <= current_distance:
             rospy.logwarn("Target distance is less than or equal to current distance, returning 0.0 velocity.")
             return 0.0
-        # Calculate the velocity needed to reach the target distance
-        velocity = (target_distance - current_distance) / OVERTAKING_MANEUVER_DURATION
+        # Calculate the velocity needed to reach the target distance in the given time
+        velocity = (target_distance - current_distance) / time
+        # Clamp the velocity to the maximum and minimum values
+        return max(min(velocity, MAX_VELOCITY), MIN_VELOCITY)
 
 class OvertakingState(MovementControllerState):
     def __init__(self):
@@ -325,20 +327,25 @@ class OvertakingState(MovementControllerState):
         timer_elapsed = self._goal_timer.get_elapsed_time()
 
         target_left_distance = OvertakingTools.cumulative_track_distance(
-            0.0, timer_elapsed, timer_elapsed, A, K, B, X0, V,
+            0.0, timer_elapsed, A, K, B, X0, V,
                 OVERTAKING_MIDWAY_DISTANCE, OVERTAKING_WHEEL_OFFSET, True)
         
         target_right_distance = OvertakingTools.cumulative_track_distance(
-            0.0, timer_elapsed, timer_elapsed, A, K, B, X0, V,
+            0.0, timer_elapsed, A, K, B, X0, V,
                 OVERTAKING_MIDWAY_DISTANCE, OVERTAKING_WHEEL_OFFSET, False)
         
         # Calculate the velocities for the left and right wheels
-        left_velocity = VelocityCalculator.calculate_velocity(target_left_distance, current_left_distance)
-        right_velocity = VelocityCalculator.calculate_velocity(target_right_distance, current_right_distance)
+        left_velocity = VelocityCalculator.calculate_velocity(
+            target_left_distance, current_left_distance, MOVEMENT_CONTROLLER_UPDATE_PERIOD)
+        right_velocity = VelocityCalculator.calculate_velocity(
+            target_right_distance, current_right_distance, MOVEMENT_CONTROLLER_UPDATE_PERIOD)
 
         # Publish the velocities to the wheels
         self.context.publish_velocity(left_velocity, right_velocity)
-        rospy.loginfo(f"Overtaking velocities - Left: {left_velocity}, Right: {right_velocity}")
+        rospy.loginfo(f"Vel: L: {left_velocity:.2f} m/s, R: {right_velocity:.2f} m/s | "
+                      f"Curr Dist: L: {current_left_distance:.2f} m, R: {current_right_distance:.2f} m | "
+                        f"Target Dist: L: {target_left_distance:.2f} m, R: {target_right_distance:.2f} m | "
+                            f"Time: {timer_elapsed:.2f} s | ")
 
 class TurningState(MovementControllerState):
     def __init__(self):
