@@ -16,9 +16,18 @@ OVERTAKING_TIMEOUT_DURATION = 10.0  # seconds
 TURNING_TIMEOUT_DURATION = 10.0  # seconds
 STOPPING_TIMEOUT_DURATION = 10.0  # seconds
 
-S_BEND_TIMER_DURATION = 5.0  # seconds
-S_BEND_WHEEL_TIMER_OFFSET = 1.0  # seconds, offset for the wheel timers
-S_BEND_FUNCTION_DURATION = S_BEND_TIMER_DURATION - S_BEND_WHEEL_TIMER_OFFSET
+# Generalized logistic function parameters
+# These parameters can be tuned based on the desired behavior of the overtaking maneuver
+A = 0.0
+K = 5.0
+B = 3.0
+Q = 500.0
+V = 1.0
+C = 1.0
+
+LOGISTIC_DERIVATIVE_DURATION = 4.0  # seconds, duration for the logistic function derivative
+S_BEND_WHEEL_TIMER_OFFSET = 0.5  # seconds, offset for the wheel timers
+S_BEND_TIMER_DURATION = LOGISTIC_DERIVATIVE_DURATION + S_BEND_WHEEL_TIMER_OFFSET  # seconds, total duration for the S-bend maneuver
 
 OVERTAKING_START_FSM_STATE = 'OVERTAKING_START'
 OVERTAKING_SUCCESS_FSM_STATE = 'OVERTAKING_SUCCESS'
@@ -31,15 +40,6 @@ TURNING_FAILURE_FSM_STATE = 'TURNING_FAILURE'
 STOPPING_START_FSM_STATE = 'STOPPING_START'
 STOPPING_SUCCESS_FSM_STATE = 'STOPPING_SUCCESS'
 STOPPING_FAILURE_FSM_STATE = 'STOPPING_FAILURE'
-
-# Generalized logistic function parameters
-# These parameters can be tuned based on the desired behavior of the overtaking maneuver
-A = 0.0
-K = 0.8
-B = 3.0
-Q = 500.0
-V = 1.0
-C = 1.0
 
 class MovementControllerEvent(Enum):
     START_OVERTAKING = 0
