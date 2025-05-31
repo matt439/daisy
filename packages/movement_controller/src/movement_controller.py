@@ -11,7 +11,7 @@ MOVEMENT_CONTROLLER_UPDATE_FREQUENCY = 20.0  # Hz
 
 WHEEL_VELOCITY_STOPPED_THRESHOLD = 0.01  # m/s, threshold to consider the wheel stopped
 
-OVERTAKING_MANEUVER_DURATION = 10.0  # seconds, duration of the overtaking maneuver
+OVERTAKING_MANEUVER_DURATION = 13.0  # seconds, duration of the overtaking maneuver
 OVERTAKING_TIMEOUT_DURATION = 15.0  # seconds
 OVERTAKING_FORWARD_DISTANCE = 0.8  # meters
 OVERTAKING_MIDWAY_DISTANCE = 0.58 # meters, where the piecewise function is split into two parts 
@@ -320,7 +320,8 @@ class OvertakingState(MovementControllerState):
 
     def on_event(self, event: MovementControllerEvent) -> None:
         if event == MovementControllerEvent.WHEEL_MOVEMENT_INFO_UPDATED:
-            self.control_bot()
+            if self._last_wheel_info_time is not None: # If on_enter has been called
+                self.control_bot()
 
     def update(self) -> None:
         if self._timeout_timer.is_expired():
