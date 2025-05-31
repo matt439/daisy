@@ -15,14 +15,13 @@ OVERTAKING_FORWARD_DISTANCE = 0.8  # meters
 OVERTAKING_MIDWAY_DISTANCE = OVERTAKING_FORWARD_DISTANCE / 2.0  # meters
 AXLE_LENGTH = 0.1
 OVERTAKING_WHEEL_OFFSET = 0.09  # meters
-OVERTAKING_MANEUVER_DURATION = 6.0  # seconds, duration of the overtaking maneuver
-OVERTAKING_TIMEOUT_DURATION = 10.0  # seconds
+OVERTAKING_MANEUVER_DURATION = 12.0  # seconds, duration of the overtaking maneuver
+OVERTAKING_TIMEOUT_DURATION = 15.0  # seconds
 TURNING_TIMEOUT_DURATION = 10.0  # seconds
 STOPPING_TIMEOUT_DURATION = 10.0  # seconds
 
 MAX_VELOCITY = 2.0  # m/s, maximum velocity for the overtaking maneuver
 MIN_VELOCITY = 0.1  # m/s, minimum velocity for the overtaking maneuver
-OVERTAKING_VELOCITY = 0.3  # m/s
 
 # Generalized logistic function parameters
 # These parameters can be tuned based on the desired behavior of the overtaking maneuver
