@@ -268,6 +268,12 @@ class OvertakingTools:
     @staticmethod
     def track_arc_length_integrand(t: float, A: float, K: float, B: float, x0: float, V: float,
                                     midway: float, wheel_offset: float, is_left: bool) -> float:
+        # invert is_left as the arc length required is opposite as the bot turns right
+        # when the left wheel moves forward and vice versa
+        if is_left:
+            is_left = False
+        else:
+            is_left = True
         derivative = OvertakingTools.track_derivative(t, A, K, B, x0, V, midway, wheel_offset, is_left)
         return math.sqrt(1 + derivative ** 2)
     
