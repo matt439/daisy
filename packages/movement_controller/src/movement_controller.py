@@ -20,7 +20,7 @@ OVERTAKING_TIMEOUT_DURATION = 10.0  # seconds
 TURNING_TIMEOUT_DURATION = 10.0  # seconds
 STOPPING_TIMEOUT_DURATION = 10.0  # seconds
 
-MAX_VELOCITY = 0.5  # m/s, maximum velocity for the overtaking maneuver
+MAX_VELOCITY = 2.0  # m/s, maximum velocity for the overtaking maneuver
 MIN_VELOCITY = 0.1  # m/s, minimum velocity for the overtaking maneuver
 OVERTAKING_VELOCITY = 0.3  # m/s
 
