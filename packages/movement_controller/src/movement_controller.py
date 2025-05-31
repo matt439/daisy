@@ -272,7 +272,7 @@ class OvertakingTools:
                                   V: float, midway: float, wheel_offset: float, is_left: bool) -> float:
         return OvertakingTools.trapezoidal_rule(
             OvertakingTools.track_arc_length_integrand, a, b, TRAPEZOIDAL_RULE_N,
-            args=(t, A, K, B, x0, V, midway, wheel_offset, is_left))
+            args=(A, K, B, x0, V, midway, wheel_offset, is_left))
 
 class VelocityCalculator:
     @staticmethod
