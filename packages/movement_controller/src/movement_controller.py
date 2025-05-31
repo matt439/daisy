@@ -11,27 +11,25 @@ MOVEMENT_CONTROLLER_UPDATE_FREQUENCY = 20.0  # Hz
 
 WHEEL_VELOCITY_STOPPED_THRESHOLD = 0.01  # m/s, threshold to consider the wheel stopped
 
-OVERTAKING_FORWARD_DISTANCE = 0.8  # meters
-OVERTAKING_MIDWAY_DISTANCE = OVERTAKING_FORWARD_DISTANCE / 2.0  # meters
-AXLE_LENGTH = 0.1
-OVERTAKING_WHEEL_OFFSET = 0.09  # meters
 OVERTAKING_MANEUVER_DURATION = 10.0  # seconds, duration of the overtaking maneuver
 OVERTAKING_TIMEOUT_DURATION = 15.0  # seconds
+OVERTAKING_FORWARD_DISTANCE = 0.8  # meters
+OVERTAKING_MIDWAY_DISTANCE = 0.58 # meters, where the piecewise function is split into two parts 
+AXLE_LENGTH = 0.1
+OVERTAKING_WHEEL_OFFSET = 0.09  # meters
+# Generalized logistic function parameters
+A = 0.0
+K = 0.3
+B = 100.0
+X0 = 0.07
+V = 1.0
+TRAPEZOIDAL_RULE_N = 100  # Number of intervals for trapezoidal rule integration
+
 TURNING_TIMEOUT_DURATION = 10.0  # seconds
 STOPPING_TIMEOUT_DURATION = 10.0  # seconds
 
-MAX_VELOCITY = 0.6  # m/s, maximum velocity for the overtaking maneuver
+MAX_VELOCITY = 0.8  # m/s, maximum velocity for the overtaking maneuver
 MIN_VELOCITY = 0.0  # m/s, minimum velocity for the overtaking maneuver
-
-# Generalized logistic function parameters
-# These parameters can be tuned based on the desired behavior of the overtaking maneuver
-A = 0.0
-K = 0.3
-B = 40.0
-X0 = 0.15
-V = 1.0
-
-TRAPEZOIDAL_RULE_N = 100  # Number of intervals for trapezoidal rule integration
 
 OVERTAKING_START_FSM_STATE = 'OVERTAKING_START'
 OVERTAKING_SUCCESS_FSM_STATE = 'OVERTAKING_SUCCESS'
