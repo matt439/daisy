@@ -6,7 +6,6 @@ from std_msgs.msg import Float64MultiArray, Int8
 from duckietown_msgs.msg import WheelsCmdStamped, FSMState
 from abc import ABC, abstractmethod
 from enum import Enum
-import scipy.integrate as spi
 
 MOVEMENT_CONTROLLER_UPDATE_FREQUENCY = 20.0  # Hz
 MOVEMENT_CONTROLLER_UPDATE_PERIOD = 1.0 / MOVEMENT_CONTROLLER_UPDATE_FREQUENCY  # seconds
@@ -33,6 +32,8 @@ K = 0.3
 B = 40.0
 X0 = 0.15
 V = 1.0
+
+TRAPEZOIDAL_RULE_N = 100  # Number of intervals for trapezoidal rule integration
 
 OVERTAKING_START_FSM_STATE = 'OVERTAKING_START'
 OVERTAKING_SUCCESS_FSM_STATE = 'OVERTAKING_SUCCESS'
@@ -259,10 +260,21 @@ class OvertakingTools:
         return math.sqrt(1 + derivative ** 2)
     
     @staticmethod
+    def trapezoidal_rule(f, a: float, b: float, n: int, *args) -> float:
+        h = (b - a) / n
+        total = (f(a, *args) + f(b, *args)) / 2.0
+        for i in range(1, n):
+            total += f(a + i * h, *args)
+        return total * h
+
+    @staticmethod
     def cumulative_track_distance(a: float, b: float, t: float, A: float, K: float, B: float, x0: float,
                                   V: float, midway: float, wheel_offset: float, is_left: bool) -> float:
-        return spi.quad(OvertakingTools.track_arc_length_integrand, a, b, args=(
-                                                t, A, K, B, x0, V, midway, wheel_offset, is_left))[0]
+        # return spi.quad(OvertakingTools.track_arc_length_integrand, a, b, args=(
+        #                                            t, A, K, B, x0, V, midway, wheel_offset, is_left))[0]
+        return OvertakingTools.trapezoidal_rule(
+            OvertakingTools.track_arc_length_integrand, a, b, TRAPEZOIDAL_RULE_N,
+                args=(t, A, K, B, x0, V, midway, wheel_offset, is_left))
 
 class VelocityCalculator:
     @staticmethod
