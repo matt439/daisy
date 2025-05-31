@@ -13,15 +13,15 @@ WHEEL_VELOCITY_STOPPED_THRESHOLD = 0.01  # m/s, threshold to consider the wheel 
 
 OVERTAKING_MANEUVER_DURATION = 9.0  # seconds, duration of the overtaking maneuver
 OVERTAKING_TIMEOUT_DURATION = 15.0  # seconds
-OVERTAKING_FORWARD_DISTANCE = 0.5  # meters
-OVERTAKING_MIDWAY_DISTANCE = 0.28 # meters, where the piecewise function is split into two parts 
+OVERTAKING_FORWARD_DISTANCE = 0.9  # meters
+OVERTAKING_MIDWAY_DISTANCE = 0.45 # meters, where the piecewise function is split into two parts 
 AXLE_LENGTH = 0.1
 OVERTAKING_WHEEL_OFFSET = 0.09  # meters
 # Generalized logistic function parameters
 A = 0.0
 K = 0.3
-B = 100.0
-X0 = 0.07
+B = 30.0
+X0 = 0.18
 V = 1.0
 TRAPEZOIDAL_RULE_N = 100  # Number of intervals for trapezoidal rule integration
 
