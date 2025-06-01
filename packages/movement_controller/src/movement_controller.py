@@ -11,11 +11,11 @@ MOVEMENT_CONTROLLER_UPDATE_FREQUENCY = 20.0  # Hz
 
 WHEEL_VELOCITY_STOPPED_THRESHOLD = 0.01  # m/s, threshold to consider the wheel stopped
 
-OVERTAKING_MANEUVER_DURATION = 9.0  # seconds, duration of the overtaking maneuver
+OVERTAKING_MANEUVER_DURATION = 5.0  # seconds, duration of the overtaking maneuver
 OVERTAKING_TIMEOUT_DURATION = 15.0  # seconds
 OVERTAKING_FORWARD_DISTANCE = 0.9  # meters
 OVERTAKING_MIDWAY_DISTANCE = 0.45 # meters, where the piecewise function is split into two parts 
-AXLE_LENGTH = 0.1
+# AXLE_LENGTH = 0.1
 OVERTAKING_WHEEL_OFFSET = 0.09  # meters
 # Generalized logistic function parameters
 A = 0.0
