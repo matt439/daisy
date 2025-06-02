@@ -19,7 +19,7 @@ OVERTAKING_MIDWAY_DISTANCE = 0.43 # meters, where the piecewise function is spli
 OVERTAKING_WHEEL_OFFSET = 0.09  # meters
 # Generalized logistic function parameters
 A = 0.0
-K = 0.3
+K = 0.25
 B = 40.0
 X0 = 0.14
 V = 1.0
