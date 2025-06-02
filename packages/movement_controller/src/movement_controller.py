@@ -27,6 +27,7 @@ TRAPEZOIDAL_RULE_N = 100  # Number of intervals for trapezoidal rule integration
 
 TURNING_TIMEOUT_DURATION = 10.0  # seconds
 STOPPING_TIMEOUT_DURATION = 10.0  # seconds
+APPROACHING_SIGN_TIMEOUT_DURATION = 10.0  # seconds
 
 MAX_VELOCITY = 0.8  # m/s, maximum velocity for the overtaking maneuver
 MIN_VELOCITY = 0.0  # m/s, minimum velocity for the overtaking maneuver
@@ -43,11 +44,16 @@ STOPPING_START_FSM_STATE = 'STOPPING_START'
 STOPPING_SUCCESS_FSM_STATE = 'STOPPING_SUCCESS'
 STOPPING_FAILURE_FSM_STATE = 'STOPPING_FAILURE'
 
+APPROACHING_SIGN_START_FSM_STATE = 'APPROACHING_SIGN_START'
+APPROACHING_SIGN_SUCCESS_FSM_STATE = 'APPROACHING_SIGN_SUCCESS'
+APPROACHING_SIGN_FAILURE_FSM_STATE = 'APPROACHING_SIGN_FAILURE'
+
 class MovementControllerEvent(Enum):
     START_OVERTAKING = 0
-    START_TURNING = 1
-    START_STOPPING = 2
-    WHEEL_MOVEMENT_INFO_UPDATED = 3
+    START_APPROACHING_SIGN = 1
+    START_TURNING = 2
+    START_STOPPING = 3
+    WHEEL_MOVEMENT_INFO_UPDATED = 4
 
 class Timer:
     def __init__(self, duration: float):
@@ -61,16 +67,6 @@ class Timer:
         return (rospy.get_time() - self._start_time) >= self._duration
     def reset(self):
         self._start_time = None
-    def get_remaining_time(self) -> float:
-        if self._start_time is None:
-            return self._duration
-        remaining_time = self._duration - (rospy.get_time() - self._start_time)
-        return max(0.0, remaining_time)
-    def is_timer_less_than_half_expired(self) -> bool:
-        if self._start_time is None:
-            return False
-        elapsed_time = rospy.get_time() - self._start_time
-        return elapsed_time < (self._duration / 2.0)
     def get_elapsed_time(self) -> float:
         if self._start_time is None:
             return 0.0
@@ -128,12 +124,15 @@ class MovementController:
         self._last_displacement_right = 0.0
         self._last_velocity_right = 0.0
 
+        self._sign_tag_id = None
+
         self._state = None
 
         rospy.Subscriber('/vader/wheel_movement_info', Float64MultiArray, self.wheel_movement_info_callback)
         rospy.Subscriber('/vader/movement_controller_node/goal_overtaking', Int8, self.goal_overtaking_callback)
         rospy.Subscriber('/vader/movement_controller_node/goal_stopping', Int8, self.goal_stopping_callback)
         rospy.Subscriber('/vader/movement_controller_node/goal_turning', Int8, self.goal_turning_callback)
+        rospy.Subscriber('/vader/movement_controller_node/goal_approaching_sign', Int8, self.goal_approaching_sign_callback)
         self._velocity_publisher = rospy.Publisher("/vader/wheels_driver_node/wheels_cmd", WheelsCmdStamped, queue_size=1)
         self._state_publisher = rospy.Publisher('/vader/fsm_node/mode', FSMState, queue_size=1)
 
@@ -165,6 +164,10 @@ class MovementController:
         if self._state is not None:
             self._state.on_event(MovementControllerEvent.WHEEL_MOVEMENT_INFO_UPDATED)
 
+    def goal_approaching_sign_callback(self, msg):
+        self._sign_tag_id = msg.data
+        self.on_event(MovementControllerEvent.START_APPROACHING_SIGN)
+
     def goal_overtaking_callback(self, msg):
         if msg.data == 1:
             rospy.loginfo("Received goal to overtake")
@@ -189,6 +192,9 @@ class MovementController:
     
     def get_wheel_movement_info(self) -> WheelMovementInfo:
         return self._wheel_movement_info
+    
+    def get_sign_tag_id(self) -> int:
+        return self._sign_tag_id
     
     def publish_velocity(self, left_velocity: float, right_velocity: float):
         wheels_cmd = WheelsCmdStamped()
@@ -375,7 +381,30 @@ class OvertakingState(MovementControllerState):
                     f"Curr Dist: L: {current_left_distance:.2f} m, R: {current_right_distance:.2f} m | "
                         f"Target Dist: L: {target_left_distance:.2f} m, R: {target_right_distance:.2f} m | "
                             f"Time: {timer_elapsed:.2f} s | ")
-        
+
+class ApproachingSignState(MovementControllerState):
+    def __init__(self):
+        self._tag_id = self.context.get_sign_tag_id()
+        self._timer = Timer(APPROACHING_SIGN_TIMEOUT_DURATION)
+
+    def on_enter(self) -> None:
+        self.context.publish_fsm_state(APPROACHING_SIGN_START_FSM_STATE)
+        self._timer.start()
+
+    def on_event(self, event: MovementControllerEvent) -> None:
+        pass
+
+    def update(self) -> None:
+        if self._timer.is_expired():
+            rospy.logwarn("Approaching sign timed out, transitioning to IdleState")
+            self.context.publish_fsm_state(APPROACHING_SIGN_FAILURE_FSM_STATE)
+            self.context.transition_to(IdleState())
+            return
+
+        if 1:  # Placeholder for actual condition to check if the sign is approached
+            self.context.publish_fsm_state(APPROACHING_SIGN_SUCCESS_FSM_STATE)
+            self.context.transition_to(IdleState())
+
 class TurningState(MovementControllerState):
     def __init__(self):
         self._timer = Timer(TURNING_TIMEOUT_DURATION)
