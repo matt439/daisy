@@ -35,10 +35,6 @@ STOP_SIGN_IDS = [1, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 
 OVERTAKING_TIMEOUT_DURATION = 20.0  # seconds
 CAR_WAITING_TIME = 5.0  # seconds
 
-# Intersection constants
-LEFT_INTERSECTION_SIGNS_IDS = [10, 61, 62, 63, 64]
-RIGHT_INTERSECTION_SIGNS_IDS = [9, 57, 58, 59, 60]
-
 # Lane controller node parameters constants
 LANE_CONTROLLER_NODE_V_BAR = "/vader/lane_controller_node/v_bar" # nominal velocity in m/s
 LANE_CONTROLLER_NODE_K_D = "/vader/lane_controller_node/k_d" # proportional term for lateral deviation
@@ -55,43 +51,21 @@ K_IPHI = 0.0 # clamped from -100 to 100, default 0.0
 THETA_THRES_MIN = -0.5 # clamped from -100 to 100, default -0.5
 THETA_THRES_MAX = 0.75 # clamped from -100 to 100, default 0.75
 
-# Lane controller node parameters which cannot be set dynamically:
-#
-# d_thres (:obj:`float`): Maximum value for lateral error
-# d_offset (:obj:`float`): Goal offset from center of the lane
-# integral_bounds (:obj:`dict`): Bounds for integral term
-# d_resolution (:obj:`float`): Resolution of lateral position estimate
-# phi_resolution (:obj:`float`): Resolution of heading estimate
-# omega_ff (:obj:`float`): Feedforward part of controller
-# verbose (:obj:`bool`): Verbosity level (0,1,2)
-# stop_line_slowdown (:obj:`dict`): Start and end distances for slowdown at stop lines
-
 class DuckieBotEvent(Enum):
     STOP_SIGN_DETECTED = 0
     BOT_BECOMES_STOPPED = 1
     CAR_DETECTED = 2
     CAR_REMOVED = 3
-    TURN_LEFT_SIGN_DETECTED = 4
-    TURN_RIGHT_SIGN_DETECTED = 5
     STOPPING_SUCCESS = 6
     STOPPING_FAILURE = 7
     OVERTAKING_SUCCESS = 8
     OVERTAKING_FAILURE = 9
-    TURNING_SUCCESS = 10
-    TURNING_FAILURE = 11
     PAUSE_COMMAND_RECEIVED = 12
     RESUME_COMMAND_RECEIVED = 13
-
-class TaskType(Enum):
-    TASK_7_2C = 0
-    TASK_7_3D = 1
-    TASK_7_4HD = 2
 
 class Direction (Enum):
     LEFT = 1
     RIGHT = 2
-
-TASK = TaskType.TASK_7_3D
 
 class Timer:
     def __init__(self, duration: float):
@@ -328,46 +302,6 @@ class OvertakingState(DuckiebotState):
             rospy.logwarn("Overtaking timer expired, transitioning to lane following state.")
             self.context.transition_to(LaneFollowingState())
 
-class TurningLeftState(DuckiebotState):
-    def __init__(self):
-        pass
-
-    def on_enter(self):
-        self._turner._context = self._context
-        self._turner.execute_turn(Direction.LEFT)
-
-    def on_event(self, event: DuckieBotEvent) -> None:
-        if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
-            self.context.transition_to(PauseState())
-        elif event == DuckieBotEvent.TURNING_SUCCESS:
-            self.context.transition_to(LaneFollowingState())
-        elif event == DuckieBotEvent.TURNING_FAILURE:
-            rospy.logerr("Turning left failed. Transitioning to lane following state.")
-            self.context.transition_to(LaneFollowingState())
-
-    def update(self) -> None:
-        pass
-
-class TurningRightState(DuckiebotState):
-    def __init__(self):
-        pass
-
-    def on_enter(self):
-        self._turner._context = self._context
-        self._turner.execute_turn(Direction.RIGHT)
-
-    def on_event(self, event: DuckieBotEvent) -> None:
-        if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
-            self.context.transition_to(PauseState())
-        elif event == DuckieBotEvent.TURNING_SUCCESS:
-            self.context.transition_to(LaneFollowingState())
-        elif event == DuckieBotEvent.TURNING_FAILURE:
-            rospy.logerr("Turning right failed. Transitioning to lane following state.")
-            self.context.transition_to(LaneFollowingState())
-
-    def update(self) -> None:
-        pass
-
 class Autopilot:
     def __init__(self):
         #Initialize ROS node
@@ -380,7 +314,6 @@ class Autopilot:
         self._state_publisher = rospy.Publisher('/vader/fsm_node/mode', FSMState, queue_size=1)
         self._stopping_publisher = rospy.Publisher('/vader/movement_controller_node/goal_stopping', Int8, queue_size=1)
         self._overtaking_publisher = rospy.Publisher('/vader/movement_controller_node/goal_overtaking', Int8, queue_size=1)
-        self._turning_publisher = rospy.Publisher('/vader/movement_controller_node/goal_turning', Int8, queue_size=1)
         rospy.Subscriber('/vader/fsm_node/mode', FSMState, self.FSM_state_callback, queue_size=1)
         rospy.Subscriber('/vader/apriltag_detector_node/detections',
                          AprilTagDetectionArray, self.april_tag_callback, queue_size=1)
@@ -408,9 +341,6 @@ class Autopilot:
             self._duckiebot.on_event(DuckieBotEvent.PAUSE_COMMAND_RECEIVED)
 
     def obstacle_callback(self, msg: Int8):
-        if TASK == TaskType.TASK_7_2C:
-            return
-        
         if msg.data != 0 and msg.data != 1:
             rospy.logwarn("Unknown obstacle state received.")
             return
@@ -430,10 +360,6 @@ class Autopilot:
             self._duckiebot.on_event(DuckieBotEvent.OVERTAKING_SUCCESS)
         elif msg.state == OVERTAKING_FAILURE_FSM_STATE:
             self._duckiebot.on_event(DuckieBotEvent.OVERTAKING_FAILURE)
-        elif msg.state == TURNING_SUCCESS_FSM_STATE:
-            self._duckiebot.on_event(DuckieBotEvent.TURNING_SUCCESS)
-        elif msg.state == TURNING_FAILURE_FSM_STATE:
-            self._duckiebot.on_event(DuckieBotEvent.TURNING_FAILURE)
 
     def april_tag_callback(self, msg: AprilTagDetectionArray):
         # Process the AprilTag detections
@@ -441,11 +367,6 @@ class Autopilot:
             id = detection.tag_id
             if self.is_stop_sign_id(id):
                 self._duckiebot.on_event(DuckieBotEvent.STOP_SIGN_DETECTED)
-            elif TASK == TaskType.TASK_7_4HD:
-                if self.is_left_intersection_sign_id(id):
-                    self._duckiebot.on_event(DuckieBotEvent.TURN_LEFT_SIGN_DETECTED)
-                elif self.is_right_intersection_sign_id(id):
-                    self._duckiebot.on_event(DuckieBotEvent.TURN_RIGHT_SIGN_DETECTED)
             else:
                 rospy.loginfo(f"Unknown tag ID: {id}")
     
@@ -474,10 +395,6 @@ class Autopilot:
 
     def is_stop_sign_id(self, tag_id):
         return tag_id in STOP_SIGN_IDS
-    def is_left_intersection_sign_id(self, tag_id):
-        return tag_id in LEFT_INTERSECTION_SIGNS_IDS
-    def is_right_intersection_sign_id(self, tag_id):
-        return tag_id in RIGHT_INTERSECTION_SIGNS_IDS
     
     def run(self):
         rate = rospy.Rate(AUTOPILOT_UPDATE_FREQUENCY)
