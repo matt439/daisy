@@ -18,10 +18,6 @@ OVERTAKING_START_FSM_STATE = 'OVERTAKING_START'
 OVERTAKING_SUCCESS_FSM_STATE = 'OVERTAKING_SUCCESS'
 OVERTAKING_FAILURE_FSM_STATE = 'OVERTAKING_FAILURE'
 
-TURNING_START_FSM_STATE = 'TURNING_START'
-TURNING_SUCCESS_FSM_STATE = 'TURNING_SUCCESS'
-TURNING_FAILURE_FSM_STATE = 'TURNING_FAILURE'
-
 STOPPING_START_FSM_STATE = 'STOPPING_START'
 STOPPING_SUCCESS_FSM_STATE = 'STOPPING_SUCCESS'
 STOPPING_FAILURE_FSM_STATE = 'STOPPING_FAILURE'
@@ -82,11 +78,10 @@ class Timer:
 
 class Duckiebot():
     def __init__(self, state: 'DuckiebotState', state_pub, stopping_pub,
-                 overtaking_pub, turning_pub) -> None:
+                 overtaking_pub) -> None:
         self._state_publisher = state_pub
         self._stopping_publisher = stopping_pub
         self._overtaking_publisher = overtaking_pub
-        self._turning_publisher = turning_pub
         rospy.loginfo("Duckiebot class initialized!")
         self.transition_to(state)
 
@@ -121,17 +116,6 @@ class Duckiebot():
         overtaking_goal_msg = Int8()
         overtaking_goal_msg.data = 1  # 1 indicates the bot should start overtaking
         self._overtaking_publisher.publish(overtaking_goal_msg)
-
-    def publish_turning_goal(self, direction: Direction):
-        turning_goal_msg = Int8()
-        if direction == Direction.LEFT:
-            turning_goal_msg.data = 1  # 1 indicates the bot should turn left
-        elif direction == Direction.RIGHT:
-            turning_goal_msg.data = 2  # 2 indicates the bot should turn right
-        else:
-            rospy.logerr("Invalid direction for turning goal.")
-            return
-        self._turning_publisher.publish(turning_goal_msg)
 
 class DuckiebotState(ABC):
     @property
@@ -182,10 +166,6 @@ class LaneFollowingState(DuckiebotState):
             self.context.transition_to(StoppingForStopSignState())
         elif event == DuckieBotEvent.CAR_DETECTED:
             self.context.transition_to(StoppingForCarState())
-        elif event == DuckieBotEvent.TURN_LEFT_SIGN_DETECTED:
-            self.context.transition_to(TurningLeftState())
-        elif event == DuckieBotEvent.TURN_RIGHT_SIGN_DETECTED:
-            self.context.transition_to(TurningRightState())
 
     def update(self) -> None:
         pass
@@ -236,10 +216,6 @@ class LaneFollowingStopSignState(DuckiebotState):
             self.context.transition_to(PauseState())
         elif event == DuckieBotEvent.CAR_DETECTED:
             self.context.transition_to(StoppingForCarState())
-        elif event == DuckieBotEvent.TURN_LEFT_SIGN_DETECTED:
-            self.context.transition_to(TurningLeftState())
-        elif event == DuckieBotEvent.TURN_RIGHT_SIGN_DETECTED:
-            self.context.transition_to(TurningRightState())
 
     def update(self) -> None:
         if self._timer.is_expired():
@@ -325,8 +301,7 @@ class Autopilot:
         self._duckiebot = Duckiebot(LaneFollowingState(),
                                     self._state_publisher,
                                     self._stopping_publisher,
-                                    self._overtaking_publisher,
-                                    self._turning_publisher)
+                                    self._overtaking_publisher)
 
         rospy.loginfo("Initialized autopilot node!")
  

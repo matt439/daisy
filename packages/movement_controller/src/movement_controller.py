@@ -25,7 +25,6 @@ X0 = 0.14
 V = 1.0
 TRAPEZOIDAL_RULE_N = 100  # Number of intervals for trapezoidal rule integration
 
-TURNING_TIMEOUT_DURATION = 10.0  # seconds
 STOPPING_TIMEOUT_DURATION = 10.0  # seconds
 
 MAX_VELOCITY = 0.8  # m/s, maximum velocity for the overtaking maneuver
