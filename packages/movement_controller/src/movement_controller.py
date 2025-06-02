@@ -35,17 +35,12 @@ OVERTAKING_START_FSM_STATE = 'OVERTAKING_START'
 OVERTAKING_SUCCESS_FSM_STATE = 'OVERTAKING_SUCCESS'
 OVERTAKING_FAILURE_FSM_STATE = 'OVERTAKING_FAILURE'
 
-TURNING_START_FSM_STATE = 'TURNING_START'
-TURNING_SUCCESS_FSM_STATE = 'TURNING_SUCCESS'
-TURNING_FAILURE_FSM_STATE = 'TURNING_FAILURE'
-
 STOPPING_START_FSM_STATE = 'STOPPING_START'
 STOPPING_SUCCESS_FSM_STATE = 'STOPPING_SUCCESS'
 STOPPING_FAILURE_FSM_STATE = 'STOPPING_FAILURE'
 
 class MovementControllerEvent(Enum):
     START_OVERTAKING = 0
-    START_TURNING = 1
     START_STOPPING = 2
     WHEEL_MOVEMENT_INFO_UPDATED = 3
 
@@ -66,11 +61,6 @@ class Timer:
             return self._duration
         remaining_time = self._duration - (rospy.get_time() - self._start_time)
         return max(0.0, remaining_time)
-    def is_timer_less_than_half_expired(self) -> bool:
-        if self._start_time is None:
-            return False
-        elapsed_time = rospy.get_time() - self._start_time
-        return elapsed_time < (self._duration / 2.0)
     def get_elapsed_time(self) -> float:
         if self._start_time is None:
             return 0.0
@@ -133,7 +123,6 @@ class MovementController:
         rospy.Subscriber('/vader/wheel_movement_info', Float64MultiArray, self.wheel_movement_info_callback)
         rospy.Subscriber('/vader/movement_controller_node/goal_overtaking', Int8, self.goal_overtaking_callback)
         rospy.Subscriber('/vader/movement_controller_node/goal_stopping', Int8, self.goal_stopping_callback)
-        rospy.Subscriber('/vader/movement_controller_node/goal_turning', Int8, self.goal_turning_callback)
         self._velocity_publisher = rospy.Publisher("/vader/wheels_driver_node/wheels_cmd", WheelsCmdStamped, queue_size=1)
         self._state_publisher = rospy.Publisher('/vader/fsm_node/mode', FSMState, queue_size=1)
 
@@ -176,16 +165,6 @@ class MovementController:
         if msg.data == 1:
             rospy.loginfo("Received goal to stop")
             self.on_event(MovementControllerEvent.START_STOPPING)
-
-    def goal_turning_callback(self, msg):
-        if msg.data == 1:
-            rospy.loginfo("Received goal to turn left")
-            self.on_event(MovementControllerEvent.START_TURNING)
-        elif msg.data == 2:
-            rospy.loginfo("Received goal to turn right")
-            self.on_event(MovementControllerEvent.START_TURNING)
-        else:
-            rospy.logwarn("Invalid turning goal received, expected 1 for left turn or 2 for right turn.")
     
     def get_wheel_movement_info(self) -> WheelMovementInfo:
         return self._wheel_movement_info
@@ -234,8 +213,6 @@ class IdleState(MovementControllerState):
     def on_event(self, event: MovementControllerEvent) -> None:
         if event == MovementControllerEvent.START_OVERTAKING:
             self.context.transition_to(OvertakingState())
-        elif event == MovementControllerEvent.START_TURNING:
-            self.context.transition_to(TurningState())
         elif event == MovementControllerEvent.START_STOPPING:
             self.context.transition_to(StoppingState())
 
@@ -375,28 +352,6 @@ class OvertakingState(MovementControllerState):
                     f"Curr Dist: L: {current_left_distance:.2f} m, R: {current_right_distance:.2f} m | "
                         f"Target Dist: L: {target_left_distance:.2f} m, R: {target_right_distance:.2f} m | "
                             f"Time: {timer_elapsed:.2f} s | ")
-        
-class TurningState(MovementControllerState):
-    def __init__(self):
-        self._timer = Timer(TURNING_TIMEOUT_DURATION)
-
-    def on_enter(self) -> None:
-        self.context.publish_fsm_state(TURNING_START_FSM_STATE)
-        self._timer.start()
-
-    def on_event(self, event: MovementControllerEvent) -> None:
-        pass
-
-    def update(self) -> None:
-        if self._timer.is_expired():
-            rospy.logwarn("Turning timed out, transitioning to IdleState")
-            self.context.publish_fsm_state(TURNING_FAILURE_FSM_STATE)
-            self.context.transition_to(IdleState())
-            return
-
-        if 1:
-            self.context.publish_fsm_state(TURNING_SUCCESS_FSM_STATE)
-            self.context.transition_to(IdleState())
 
 class StoppingState(MovementControllerState):
     def __init__(self):
