@@ -367,8 +367,7 @@ class TurningRightState(DuckiebotState):
     pass
 
 class WaitingAtTurnLeftSignState(DuckiebotState):
-    def __init__(self, tag_id: int):
-        self._tag_id = tag_id
+    def __init__(self):
         self._timer = Timer(SIGN_WAITING_DURATION)
     
     def on_enter(self):
