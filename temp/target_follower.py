@@ -9,7 +9,7 @@ SEEK_ANGULAR_VELOCITY = -0.3 # rad/s
 FOLLOW_ANGULAR_VELOCITY = 0.35 # rad/s
 FOLLOW_ANGULAR_VELOCITY_MAX = 0.4 # rad/s
 FOLLOW_ANGULAR_VELOCITY_MIN = 0.3 # rad/s
-FOLLOW_ANGULAR_VELOCITY_AVG_DISTANCE = 0.3 # meter
+# FOLLOW_ANGULAR_VELOCITY_AVG_DISTANCE = 0.3 # meter
 FOLLOW_X_DISTANCE_THRESHOLD = 0.05 # meter
 SEARCH_DELAY = 200.0 # seconds # set to 200 for 5.2C testing
 FOLLOW_Z_DISTANCE_TARGET = 0.2 # meter
@@ -59,10 +59,8 @@ class Target_Follower:
         return cmd_msg
     
     def calculate_abs_proportional_follow_angular_velocity(self, x):
-        # If the object is closer than the average distance, decrease the velocity
-        # If the object is further than the average distance, increase the velocity
-        # The velocity is proportional to the distance
-        vel = FOLLOW_ANGULAR_VELOCITY * abs(x) / FOLLOW_ANGULAR_VELOCITY_AVG_DISTANCE
+        # The angular velocity is proportional to the distance from the center of the image
+        vel = FOLLOW_ANGULAR_VELOCITY * abs(x) / FOLLOW_X_DISTANCE_THRESHOLD
         # Clamp the velocity to a maximum value
         if vel > FOLLOW_ANGULAR_VELOCITY_MAX:
             vel = FOLLOW_ANGULAR_VELOCITY_MAX
