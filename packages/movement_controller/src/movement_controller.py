@@ -311,6 +311,8 @@ class IdleState(MovementControllerState):
             self.context.transition_to(TurningState())
         elif event == MovementControllerEvent.START_STOPPING:
             self.context.transition_to(StoppingState())
+        elif event == MovementControllerEvent.START_APPROACHING_SIGN:
+            self.context.transition_to(ApproachingSignState())
 
     def update(self) -> None:
         pass
