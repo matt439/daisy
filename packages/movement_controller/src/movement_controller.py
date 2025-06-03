@@ -14,16 +14,16 @@ MIN_VELOCITY = 0.0  # m/s, minimum velocity for the overtaking maneuver
 
 # Overtaking parameters
 OVERTAKING_TIMEOUT_DURATION = 15.0  # seconds
-OVERTAKING_MANEUVER_DURATION = 8.0  # seconds, duration of the overtaking maneuver
-OVERTAKING_FORWARD_DISTANCE = 0.8  # meters
-OVERTAKING_MIDWAY_DISTANCE = 0.43 # meters, where the piecewise function is split into two parts 
+OVERTAKING_MANEUVER_DURATION = 5.0  # seconds, duration of the overtaking maneuver
+OVERTAKING_FORWARD_DISTANCE = 0.5  # meters
+OVERTAKING_MIDWAY_DISTANCE = 0.25 # meters, where the piecewise function is split into two parts 
 # AXLE_LENGTH = 0.1
 OVERTAKING_WHEEL_OFFSET = 0.09  # meters
 # Generalized logistic function parameters for overtaking
 A = 0.0
 K = 0.25
-B = 40.0
-X0 = 0.14
+B = 70.0
+X0 = 0.08
 V = 1.0
 TRAPEZOIDAL_RULE_N = 100  # Number of intervals for trapezoidal rule integration
 OVERTAKING_START_FSM_STATE = 'OVERTAKING_START'
