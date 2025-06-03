@@ -204,12 +204,8 @@ class MovementController:
         fsm_state_msg.state = state
         self._state_publisher.publish(fsm_state_msg)
 
-    def publish_cmd_vel(self, v: float, omega: float):
-        cmd_msg = Twist2DStamped()
-        cmd_msg.header.stamp = rospy.Time.now()
-        cmd_msg.v = v
-        cmd_msg.omega = omega
-        self.cmd_vel_pub.publish(cmd_msg)
+    def publish_cmd_vel(self, twist: Twist2DStamped):
+        self.cmd_vel_pub.publish(twist)
 
     def wheel_movement_info_callback(self, msg):
         self._wheel_movement_info.update(msg)
@@ -516,8 +512,9 @@ class ApproachingSignTools:
         return vel
 
     @staticmethod
-    def follow_object(x, z):
+    def follow_object(x, z) -> Twist2DStamped:
         cmd_msg = Twist2DStamped()
+        cmd_msg.header.stamp = rospy.Time.now()
         cmd_msg.v = ApproachingSignTools.calculate_follow_linear_velocity(z)
         cmd_msg.omega = ApproachingSignTools.calculate_follow_angular_velocity(x)
         return cmd_msg
