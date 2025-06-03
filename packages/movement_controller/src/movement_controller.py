@@ -32,20 +32,29 @@ OVERTAKING_FAILURE_FSM_STATE = 'OVERTAKING_FAILURE'
 
 # Turning parameters
 TURNING_TIMEOUT_DURATION = 10.0  # seconds
-TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR = 1.2
-TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR = 0.8
+TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR = 1.5
+TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR = 0.75
+AXLE_LENGTH = 0.1  # meters, distance between the two wheels
 
+TURN_LEFT_RIGHT_WHEEL_RADIUS = 0.39  # meters, radius of the right wheel during left turn
+TURN_LEFT_LEFT_WHEEL_RADIUS = TURN_LEFT_RIGHT_WHEEL_RADIUS - AXLE_LENGTH  # meters, radius of the left wheel during left turn
+TURN_LEFT_LEFT_WHEEL_DISTANCE = math.pi * TURN_LEFT_LEFT_WHEEL_RADIUS / 2.0  # meters, distance traveled by the left wheel during left turn
+TURN_LEFT_RIGHT_WHEEL_DISTANCE = math.pi * TURN_LEFT_RIGHT_WHEEL_RADIUS / 2.0  # meters, distance traveled by the right wheel during left turn
 TURN_LEFT_MANEUVER_DURATION = 3.0  # seconds
-TURN_LEFT_VELOCITY_LEFT = 0.2  # m/s for left wheel
+TURN_LEFT_VELOCITY_LEFT = TURN_LEFT_LEFT_WHEEL_DISTANCE / TURN_LEFT_MANEUVER_DURATION  # m/s for left wheel
 TURN_LEFT_VELOCITY_LEFT_MAX = TURN_LEFT_VELOCITY_LEFT * TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel max
 TURN_LEFT_VELOCITY_LEFT_MIN = TURN_LEFT_VELOCITY_LEFT * TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel min
-TURN_LEFT_VELOCITY_RIGHT = 0.4  # m/s for right wheel
+TURN_LEFT_VELOCITY_RIGHT = TURN_LEFT_RIGHT_WHEEL_DISTANCE / TURN_LEFT_MANEUVER_DURATION  # m/s for right wheel
 TURN_LEFT_VELOCITY_RIGHT_MAX = TURN_LEFT_VELOCITY_RIGHT * TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR  # m/s for right wheel max
 TURN_LEFT_VELOCITY_RIGHT_MIN = TURN_LEFT_VELOCITY_RIGHT * TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR  # m/s for right wheel min
 
-TURN_RIGHT_MANEUVER_DURATION = 3.0  # seconds
-TURN_RIGHT_VELOCITY_LEFT = 0.2  # m/s for left wheel
-TURN_RIGHT_VELOCITY_RIGHT = 0.1  # m/s for right wheel
+TURN_RIGHT_LEFT_WHEEL_RADIUS = 0.17  # meters, radius of the left wheel during right turn
+TURN_RIGHT_RIGHT_WHEEL_RADIUS = TURN_RIGHT_LEFT_WHEEL_RADIUS - AXLE_LENGTH  # meters, radius of the right wheel during right turn
+TURN_RIGHT_LEFT_WHEEL_DISTANCE = math.pi * TURN_RIGHT_LEFT_WHEEL_RADIUS / 2.0  # meters, distance traveled by the left wheel during right turn
+TURN_RIGHT_RIGHT_WHEEL_DISTANCE = math.pi * TURN_RIGHT_RIGHT_WHEEL_RADIUS / 2.0  # meters, distance traveled by the right wheel during right turn
+TURN_RIGHT_MANEUVER_DURATION = 1.5  # seconds
+TURN_RIGHT_VELOCITY_LEFT = TURN_RIGHT_LEFT_WHEEL_DISTANCE / TURN_RIGHT_MANEUVER_DURATION  # m/s for left wheel
+TURN_RIGHT_VELOCITY_RIGHT = TURN_RIGHT_RIGHT_WHEEL_DISTANCE / TURN_RIGHT_MANEUVER_DURATION  # m/s for right wheel
 TURN_RIGHT_VELOCITY_LEFT_MAX = TURN_RIGHT_VELOCITY_LEFT * TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel max
 TURN_RIGHT_VELOCITY_LEFT_MIN = TURN_RIGHT_VELOCITY_LEFT * TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel min
 TURN_RIGHT_VELOCITY_RIGHT_MAX = TURN_RIGHT_VELOCITY_RIGHT * TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR  # m/s for right wheel max
@@ -571,7 +580,8 @@ class ApproachingSignState(MovementControllerState):
 
 class TurningTools:
     @staticmethod
-    def calculate_turning_velocity(is_left_turn: bool, current_vel: float, target_vel: float) -> float:
+    def calculate_turning_velocity(is_left_turn: bool,
+                                   current_vel: float, target_vel: float) -> float:
         if target_vel == 0.0:
             rospy.logwarn("Target velocity is zero, cannot adjust current velocity.")
             return 0.0
@@ -595,7 +605,8 @@ class TurningState(MovementControllerState):
     def __init__(self, is_left_turn: bool):
         self._timeout_timer = Timer(TURNING_TIMEOUT_DURATION)
         self._is_left_turn = is_left_turn
-        self._goal_timer = Timer(TURN_LEFT_MANEUVER_DURATION if is_left_turn else TURN_RIGHT_MANEUVER_DURATION)
+        self._goal_timer = Timer(TURN_LEFT_MANEUVER_DURATION if is_left_turn \
+                                                else TURN_RIGHT_MANEUVER_DURATION)
 
     def on_enter(self) -> None:
         self.context.publish_fsm_state(TURNING_START_FSM_STATE)
