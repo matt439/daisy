@@ -35,8 +35,8 @@ TURNING_TIMEOUT_DURATION = 10.0  # seconds
 TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR = 1.2
 TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR = 0.8
 
-TURN_LEFT_MANEUVER_DURATION = 5.0  # seconds
-TURN_LEFT_VELOCITY_LEFT = 0.3  # m/s for left wheel
+TURN_LEFT_MANEUVER_DURATION = 3.0  # seconds
+TURN_LEFT_VELOCITY_LEFT = 0.2  # m/s for left wheel
 TURN_LEFT_VELOCITY_LEFT_MAX = TURN_LEFT_VELOCITY_LEFT * TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel max
 TURN_LEFT_VELOCITY_LEFT_MIN = TURN_LEFT_VELOCITY_LEFT * TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel min
 TURN_LEFT_VELOCITY_RIGHT = 0.4  # m/s for right wheel
@@ -63,6 +63,20 @@ STOPPING_FAILURE_FSM_STATE = 'STOPPING_FAILURE'
 
 # Approaching sign parameters
 APPROACHING_SIGN_TIMEOUT_DURATION = 10.0  # seconds
+
+FOLLOW_ANGULAR_VELOCITY = 0.35 # rad/s
+FOLLOW_ANGULAR_VELOCITY_MAX = 0.4 # rad/s
+FOLLOW_ANGULAR_VELOCITY_MIN = 0.3 # rad/s
+FOLLOW_ANGULAR_VELOCITY_AVG_DISTANCE = 0.3 # meter
+FOLLOW_X_DISTANCE_TARGET = 0.2 # meter, the sign should be to the right of the bot
+FOLLOW_X_DISTANCE_THRESHOLD = 0.05 # meter
+
+FOLLOW_Z_DISTANCE_TARGET = 0.3 # meter
+FOLLOW_Z_DISTANCE_THRESHOLD = 0.05 # meter
+FOLLOW_LINEAR_VELOCITY = 0.15 # m/s
+FOLLOW_LINEAR_VELOCITY_MAX = 0.2 # m/s
+FOLLOW_LINEAR_VELOCITY_MIN = 0.1 # m/s
+
 APPROACHING_SIGN_START_FSM_STATE = 'APPROACHING_SIGN_START'
 APPROACHING_SIGN_SUCCESS_FSM_STATE = 'APPROACHING_SIGN_SUCCESS'
 APPROACHING_SIGN_FAILURE_FSM_STATE = 'APPROACHING_SIGN_FAILURE'
@@ -452,19 +466,6 @@ class OvertakingState(MovementControllerState):
                     f"Curr Dist: L: {current_left_distance:.2f} m, R: {current_right_distance:.2f} m | "
                         f"Target Dist: L: {target_left_distance:.2f} m, R: {target_right_distance:.2f} m | "
                             f"Time: {timer_elapsed:.2f} s | ")
-        
-FOLLOW_ANGULAR_VELOCITY = 0.35 # rad/s
-FOLLOW_ANGULAR_VELOCITY_MAX = 0.4 # rad/s
-FOLLOW_ANGULAR_VELOCITY_MIN = 0.3 # rad/s
-FOLLOW_ANGULAR_VELOCITY_AVG_DISTANCE = 0.3 # meter
-FOLLOW_X_DISTANCE_TARGET = 0.2 # meter, the sign should be to the right of the bot
-FOLLOW_X_DISTANCE_THRESHOLD = 0.05 # meter
-
-FOLLOW_Z_DISTANCE_TARGET = 0.2 # meter
-FOLLOW_Z_DISTANCE_THRESHOLD = 0.05 # meter
-FOLLOW_LINEAR_VELOCITY = 0.1 # m/s
-FOLLOW_LINEAR_VELOCITY_MAX = 0.15 # m/s
-FOLLOW_LINEAR_VELOCITY_MIN = 0.05 # m/s
 
 class ApproachingSignTools:
     @staticmethod
