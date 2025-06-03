@@ -193,7 +193,10 @@ class MovementController:
         self._state.on_enter()
 
     def on_event(self, event: MovementControllerEvent) -> None:
-        rospy.loginfo(f"MovementController event received: {event}")
+        if event is not MovementControllerEvent.APRIL_TAG_DETECTION_UPDATED:
+            # Log all events except APRIL_TAG_DETECTION_UPDATED
+            # as it clogs the log with too many messages
+            rospy.loginfo(f"MovementController event received: {event}")
         self._state.on_event(event)
 
     def update(self):

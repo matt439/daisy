@@ -127,7 +127,11 @@ class Duckiebot():
         self._state.on_enter()  # Call on_enter after context is set
 
     def on_event(self, event: DuckieBotEvent) -> None:
-        rospy.loginfo(f"Duckiebot event received: {event}")
+        if event is not DuckieBotEvent.TURN_LEFT_SIGN_DETECTED and \
+            event is not DuckieBotEvent.TURN_RIGHT_SIGN_DETECTED:
+            # Log all events except for turn left/right sign detection
+            # to avoid cluttering the logs with frequent detections
+            rospy.loginfo(f"Duckiebot event received: {event}")
         self._state.on_event(event)
 
     def update(self):
