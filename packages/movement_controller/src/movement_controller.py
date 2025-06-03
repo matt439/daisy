@@ -600,6 +600,7 @@ class TurningState(MovementControllerState):
     def on_enter(self) -> None:
         self.context.publish_fsm_state(TURNING_START_FSM_STATE)
         self._timeout_timer.start()
+        self._goal_timer.start()
 
     def on_event(self, event: MovementControllerEvent) -> None:
         if event == MovementControllerEvent.WHEEL_MOVEMENT_INFO_UPDATED:
