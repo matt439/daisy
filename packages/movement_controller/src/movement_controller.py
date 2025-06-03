@@ -76,14 +76,14 @@ APPROACHING_SIGN_TIMEOUT_DURATION = 10.0  # seconds
 FOLLOW_ANGULAR_VELOCITY = 0.35 # rad/s
 FOLLOW_ANGULAR_VELOCITY_MAX = 0.4 # rad/s
 FOLLOW_ANGULAR_VELOCITY_MIN = 0.3 # rad/s
-FOLLOW_ANGULAR_VELOCITY_AVG_DISTANCE = 0.3 # meter
+# FOLLOW_ANGULAR_VELOCITY_AVG_DISTANCE = 0.3
 FOLLOW_X_DISTANCE_TARGET = 0.25 # meter, the sign should be to the right of the bot
 FOLLOW_X_DISTANCE_THRESHOLD = 0.05 # meter
 
 FOLLOW_Z_DISTANCE_TARGET = 0.6 # meter, sign is this distance in front of the stop line
 FOLLOW_Z_DISTANCE_THRESHOLD = 0.05 # meter
-FOLLOW_LINEAR_VELOCITY = 0.15 # m/s
-FOLLOW_LINEAR_VELOCITY_MAX = 0.2 # m/s
+FOLLOW_LINEAR_VELOCITY = 0.3 # m/s
+FOLLOW_LINEAR_VELOCITY_MAX = 0.35 # m/s
 FOLLOW_LINEAR_VELOCITY_MIN = 0.1 # m/s
 
 APPROACHING_SIGN_START_FSM_STATE = 'APPROACHING_SIGN_START'
@@ -479,10 +479,8 @@ class OvertakingState(MovementControllerState):
 class ApproachingSignTools:
     @staticmethod
     def calculate_abs_proportional_follow_angular_velocity(x):
-        # If the object is closer than the average distance, decrease the velocity
-        # If the object is further than the average distance, increase the velocity
-        # The velocity is proportional to the distance
-        vel = FOLLOW_ANGULAR_VELOCITY * abs(x) / FOLLOW_ANGULAR_VELOCITY_AVG_DISTANCE
+        # Scale the angular velocity based on the distance from the target x position
+        vel = FOLLOW_ANGULAR_VELOCITY * abs(x) / FOLLOW_X_DISTANCE_THRESHOLD
         # Clamp the velocity to a maximum value
         if vel > FOLLOW_ANGULAR_VELOCITY_MAX:
             vel = FOLLOW_ANGULAR_VELOCITY_MAX
