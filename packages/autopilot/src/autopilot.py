@@ -44,6 +44,7 @@ RIGHT_INTERSECTION_SIGNS_IDS = [9, 57, 58, 59, 60]
 T_INTERSECTION_SIGNS_IDS = [11, 65, 66, 67, 68]
 SIGN_WAITING_DURATION = 5.0  # seconds
 TURNING_TIMEOUT_DURATION = 10.0  # seconds
+APPROACHING_SIGN_TIMEOUT_DURATION = 10.0  # seconds
 
 # Lane controller node parameters constants
 LANE_CONTROLLER_NODE_V_BAR = "/vader/lane_controller_node/v_bar" # nominal velocity in m/s
@@ -387,9 +388,11 @@ class WaitingAtTurnRightSignState(DuckiebotState):
 class ApproachingTurnLeftSignState(DuckiebotState):
     def __init__(self, tag_id: int):
         self._tag_id = tag_id
+        self._timer = Timer(APPROACHING_SIGN_TIMEOUT_DURATION)
 
     def on_enter(self):
         self._context.publish_approaching_sign_goal(self._tag_id)
+        self._timer.start()
 
     def on_event(self, event: DuckieBotEvent) -> None:
         if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
@@ -398,6 +401,11 @@ class ApproachingTurnLeftSignState(DuckiebotState):
             self.context.transition_to(WaitingAtTurnLeftSignState())
         elif event == DuckieBotEvent.APPROACHING_SIGN_FAILURE:
             rospy.logerr("Approaching left turn sign failed. Transitioning to lane following state.")
+            self.context.transition_to(LaneFollowingState())
+
+    def update(self) -> None:
+        if self._timer.is_expired():
+            rospy.logwarn("Approaching left turn sign timer expired, transitioning to lane following state.")
             self.context.transition_to(LaneFollowingState())
 
 class ApproachingTurnRightSignState(DuckiebotState):
