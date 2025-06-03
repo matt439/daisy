@@ -187,7 +187,7 @@ class MovementController:
 
     def transition_to(self, state: 'MovementControllerState'):
         self._state = state
-        self._state.context = self
+        self._state._context = self
         rospy.loginfo(f"Transitioning to state: {type(state).__name__}")
         self._state.on_enter()
 
