@@ -216,11 +216,7 @@ class MovementController:
         if self._state is not None:
             self._state.on_event(MovementControllerEvent.WHEEL_MOVEMENT_INFO_UPDATED)
 
-    def tag_callback(self, msg):
-        if not msg.detections:
-            rospy.logwarn("No AprilTag detections received.")
-            return
-        
+    def tag_callback(self, msg):        
         for detection in msg.detections:
             id = detection.tag_id
             x = detection.transform.translation.x
@@ -232,8 +228,8 @@ class MovementController:
             
             self._april_tag_detections_map[id].update(id, x, y, z)
         
-        if self._state is not None:
-            self._state.on_event(MovementControllerEvent.APRIL_TAG_DETECTION_UPDATED)
+            if self._state is not None:
+                self._state.on_event(MovementControllerEvent.APRIL_TAG_DETECTION_UPDATED)
 
     def goal_approaching_sign_callback(self, msg):
         self._sign_tag_id = msg.data
