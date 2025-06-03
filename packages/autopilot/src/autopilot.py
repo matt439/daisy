@@ -300,6 +300,8 @@ class StoppingForCarState(DuckiebotState):
             self.context.transition_to(PauseState())
         elif event == DuckieBotEvent.BOT_BECOMES_STOPPED:
             self.context.transition_to(WaitingForCarState())
+        elif event == DuckieBotEvent.CAR_REMOVED:
+            self.context.transition_to(LaneFollowingState())
 
     def update(self) -> None:
         pass
