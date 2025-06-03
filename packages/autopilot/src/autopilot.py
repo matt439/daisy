@@ -519,10 +519,13 @@ class Autopilot:
 
     def is_stop_sign_id(self, tag_id):
         return tag_id in STOP_SIGN_IDS
+    
     def is_left_intersection_sign_id(self, tag_id):
         return tag_id in LEFT_INTERSECTION_SIGNS_IDS
+    
     def is_right_intersection_sign_id(self, tag_id):
         return tag_id in RIGHT_INTERSECTION_SIGNS_IDS
+    
     def is_t_intersection_sign_id(self, tag_id):
         return tag_id in T_INTERSECTION_SIGNS_IDS
     

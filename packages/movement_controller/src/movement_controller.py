@@ -3,47 +3,66 @@
 import rospy
 import math
 from std_msgs.msg import Float64MultiArray, Int8
-from duckietown_msgs.msg import WheelsCmdStamped, FSMState
+from duckietown_msgs.msg import WheelsCmdStamped, FSMState, Twist2DStamped, AprilTagDetectionArray
 from abc import ABC, abstractmethod
 from enum import Enum
 
 MOVEMENT_CONTROLLER_UPDATE_FREQUENCY = 20.0  # Hz
 
-WHEEL_VELOCITY_STOPPED_THRESHOLD = 0.01  # m/s, threshold to consider the wheel stopped
+MAX_VELOCITY = 0.8  # m/s, maximum velocity for the overtaking maneuver
+MIN_VELOCITY = 0.0  # m/s, minimum velocity for the overtaking maneuver
 
+# Overtaking parameters
 OVERTAKING_TIMEOUT_DURATION = 15.0  # seconds
 OVERTAKING_MANEUVER_DURATION = 8.0  # seconds, duration of the overtaking maneuver
 OVERTAKING_FORWARD_DISTANCE = 0.8  # meters
 OVERTAKING_MIDWAY_DISTANCE = 0.43 # meters, where the piecewise function is split into two parts 
 # AXLE_LENGTH = 0.1
 OVERTAKING_WHEEL_OFFSET = 0.09  # meters
-# Generalized logistic function parameters
+# Generalized logistic function parameters for overtaking
 A = 0.0
 K = 0.25
 B = 40.0
 X0 = 0.14
 V = 1.0
 TRAPEZOIDAL_RULE_N = 100  # Number of intervals for trapezoidal rule integration
-
-TURNING_TIMEOUT_DURATION = 10.0  # seconds
-STOPPING_TIMEOUT_DURATION = 10.0  # seconds
-APPROACHING_SIGN_TIMEOUT_DURATION = 10.0  # seconds
-
-MAX_VELOCITY = 0.8  # m/s, maximum velocity for the overtaking maneuver
-MIN_VELOCITY = 0.0  # m/s, minimum velocity for the overtaking maneuver
-
 OVERTAKING_START_FSM_STATE = 'OVERTAKING_START'
 OVERTAKING_SUCCESS_FSM_STATE = 'OVERTAKING_SUCCESS'
 OVERTAKING_FAILURE_FSM_STATE = 'OVERTAKING_FAILURE'
 
+# Turning parameters
+TURNING_TIMEOUT_DURATION = 10.0  # seconds
+TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR = 1.2
+TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR = 0.8
+
+TURN_LEFT_MANEUVER_DURATION = 5.0  # seconds
+TURN_LEFT_VELOCITY_LEFT = 0.3  # m/s for left wheel
+TURN_LEFT_VELOCITY_LEFT_MAX = TURN_LEFT_VELOCITY_LEFT * TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel max
+TURN_LEFT_VELOCITY_LEFT_MIN = TURN_LEFT_VELOCITY_LEFT * TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel min
+TURN_LEFT_VELOCITY_RIGHT = 0.4  # m/s for right wheel
+TURN_LEFT_VELOCITY_RIGHT_MAX = TURN_LEFT_VELOCITY_RIGHT * TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR  # m/s for right wheel max
+TURN_LEFT_VELOCITY_RIGHT_MIN = TURN_LEFT_VELOCITY_RIGHT * TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR  # m/s for right wheel min
+
+TURN_RIGHT_MANEUVER_DURATION = 3.0  # seconds
+TURN_RIGHT_VELOCITY_LEFT = 0.2  # m/s for left wheel
+TURN_RIGHT_VELOCITY_RIGHT = 0.1  # m/s for right wheel
+TURN_RIGHT_VELOCITY_LEFT_MAX = TURN_RIGHT_VELOCITY_LEFT * TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel max
+TURN_RIGHT_VELOCITY_LEFT_MIN = TURN_RIGHT_VELOCITY_LEFT * TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel min
+TURN_RIGHT_VELOCITY_RIGHT_MAX = TURN_RIGHT_VELOCITY_RIGHT * TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR  # m/s for right wheel max
+TURN_RIGHT_VELOCITY_RIGHT_MIN = TURN_RIGHT_VELOCITY_RIGHT * TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR  # m/s for right wheel min
 TURNING_START_FSM_STATE = 'TURNING_START'
 TURNING_SUCCESS_FSM_STATE = 'TURNING_SUCCESS'
 TURNING_FAILURE_FSM_STATE = 'TURNING_FAILURE'
 
+# Stopping parameters
+STOPPING_TIMEOUT_DURATION = 10.0  # seconds
+WHEEL_VELOCITY_STOPPED_THRESHOLD = 0.01  # m/s, threshold to consider the wheel stopped
 STOPPING_START_FSM_STATE = 'STOPPING_START'
 STOPPING_SUCCESS_FSM_STATE = 'STOPPING_SUCCESS'
 STOPPING_FAILURE_FSM_STATE = 'STOPPING_FAILURE'
 
+# Approaching sign parameters
+APPROACHING_SIGN_TIMEOUT_DURATION = 10.0  # seconds
 APPROACHING_SIGN_START_FSM_STATE = 'APPROACHING_SIGN_START'
 APPROACHING_SIGN_SUCCESS_FSM_STATE = 'APPROACHING_SIGN_SUCCESS'
 APPROACHING_SIGN_FAILURE_FSM_STATE = 'APPROACHING_SIGN_FAILURE'
@@ -54,6 +73,7 @@ class MovementControllerEvent(Enum):
     START_TURNING = 2
     START_STOPPING = 3
     WHEEL_MOVEMENT_INFO_UPDATED = 4
+    APRIL_TAG_DETECTION_UPDATED = 5
 
 class Timer:
     def __init__(self, duration: float):
@@ -108,6 +128,28 @@ class WheelMovementInfo:
         return self._right_displacement
     def get_right_velocity(self):
         return self._right_velocity
+    
+class AprilTagDetection:
+    def __init__(self):
+        self._tag_id = 0.0
+        self._x = 0.0
+        self._y = 0.0
+        self._z = 0.0
+
+    def update(self, tag_id: int, x: float, y: float, z: float):
+        self._tag_id = tag_id
+        self._x = x
+        self._y = y
+        self._z = z
+
+    def get_tag_id(self) -> int:
+        return self._tag_id
+    def get_x(self) -> float:
+        return self._x
+    def get_y(self) -> float:
+        return self._y
+    def get_z(self) -> float:
+        return self._z
 
 class MovementController:
     def __init__(self, state: 'MovementControllerState'):
@@ -115,6 +157,7 @@ class MovementController:
         rospy.init_node('movement_controller_node', anonymous=True)
 
         self._wheel_movement_info = WheelMovementInfo()
+        self._april_tag_detections_map = {}  # Map to hold tag_id to AprilTagDetection object
 
         # Initialize class variables
         self._last_distance_left = 0.0
@@ -133,8 +176,10 @@ class MovementController:
         rospy.Subscriber('/vader/movement_controller_node/goal_stopping', Int8, self.goal_stopping_callback)
         rospy.Subscriber('/vader/movement_controller_node/goal_turning', Int8, self.goal_turning_callback)
         rospy.Subscriber('/vader/movement_controller_node/goal_approaching_sign', Int8, self.goal_approaching_sign_callback)
+        rospy.Subscriber('/vader/apriltag_detector_node/detections', AprilTagDetectionArray, self.tag_callback)
         self._velocity_publisher = rospy.Publisher("/vader/wheels_driver_node/wheels_cmd", WheelsCmdStamped, queue_size=1)
         self._state_publisher = rospy.Publisher('/vader/fsm_node/mode', FSMState, queue_size=1)
+        self.cmd_vel_pub = rospy.Publisher('/vader/car_cmd_switch_node/cmd', Twist2DStamped, queue_size=1)
 
         # Printing to the terminal, ROS style
         rospy.loginfo("Initialized movement_controller node!")
@@ -159,10 +204,36 @@ class MovementController:
         fsm_state_msg.state = state
         self._state_publisher.publish(fsm_state_msg)
 
+    def publish_cmd_vel(self, v: float, omega: float):
+        cmd_msg = Twist2DStamped()
+        cmd_msg.header.stamp = rospy.Time.now()
+        cmd_msg.v = v
+        cmd_msg.omega = omega
+        self.cmd_vel_pub.publish(cmd_msg)
+
     def wheel_movement_info_callback(self, msg):
         self._wheel_movement_info.update(msg)
         if self._state is not None:
             self._state.on_event(MovementControllerEvent.WHEEL_MOVEMENT_INFO_UPDATED)
+
+    def tag_callback(self, msg):
+        if not msg.detections:
+            rospy.logwarn("No AprilTag detections received.")
+            return
+        
+        for detection in msg.detections:
+            id = detection.tag_id
+            x = detection.transform.translation.x
+            y = detection.transform.translation.y
+            z = detection.transform.translation.z
+            
+            if id not in self._april_tag_detections_map:
+                self._april_tag_detections_map[id] = AprilTagDetection()
+            
+            self._april_tag_detections_map[id].update(id, x, y, z)
+        
+        if self._state is not None:
+            self._state.on_event(MovementControllerEvent.APRIL_TAG_DETECTION_UPDATED)
 
     def goal_approaching_sign_callback(self, msg):
         self._sign_tag_id = msg.data
@@ -382,6 +453,75 @@ class OvertakingState(MovementControllerState):
                         f"Target Dist: L: {target_left_distance:.2f} m, R: {target_right_distance:.2f} m | "
                             f"Time: {timer_elapsed:.2f} s | ")
 
+SEEK_ANGULAR_VELOCITY = -0.3 # rad/s
+FOLLOW_ANGULAR_VELOCITY = 0.35 # rad/s
+FOLLOW_ANGULAR_VELOCITY_MAX = 0.4 # rad/s
+FOLLOW_ANGULAR_VELOCITY_MIN = 0.3 # rad/s
+FOLLOW_ANGULAR_VELOCITY_AVG_DISTANCE = 0.3 # meter
+FOLLOW_X_DISTANCE_THRESHOLD = 0.05 # meter
+FOLLOW_Z_DISTANCE_TARGET = 0.2 # meter
+FOLLOW_Z_DISTANCE_THRESHOLD = 0.05 # meter
+FOLLOW_LINEAR_VELOCITY = 0.1 # m/s
+FOLLOW_LINEAR_VELOCITY_MAX = 0.15 # m/s
+FOLLOW_LINEAR_VELOCITY_MIN = 0.05 # m/s
+
+class ApproachingSignTools:
+    @staticmethod
+    def calculate_abs_proportional_follow_angular_velocity(x):
+        # If the object is closer than the average distance, decrease the velocity
+        # If the object is further than the average distance, increase the velocity
+        # The velocity is proportional to the distance
+        vel = FOLLOW_ANGULAR_VELOCITY * abs(x) / FOLLOW_ANGULAR_VELOCITY_AVG_DISTANCE
+        # Clamp the velocity to a maximum value
+        if vel > FOLLOW_ANGULAR_VELOCITY_MAX:
+            vel = FOLLOW_ANGULAR_VELOCITY_MAX
+        elif vel < FOLLOW_ANGULAR_VELOCITY_MIN:
+            vel = FOLLOW_ANGULAR_VELOCITY_MIN
+        return vel
+
+    @staticmethod
+    def calculate_follow_angular_velocity(x):
+        # If the object is too close, stop moving
+        if abs(x) < FOLLOW_X_DISTANCE_THRESHOLD:
+            rospy.loginfo("Object is within angular threshold distance.")
+            return 0.0
+        
+        vel = ApproachingSignTools.calculate_abs_proportional_follow_angular_velocity(x)
+        if x > 0.0:
+            vel = -vel
+        return vel
+    
+    @staticmethod
+    def calculate_abs_proportional_follow_linear_velocity(z):
+        # If the object is closer than the target distance, decrease the velocity
+        # If the object is further than the target distance, increase the velocity
+        # The velocity is proportional to the distance
+        vel = FOLLOW_LINEAR_VELOCITY * abs(z) / FOLLOW_Z_DISTANCE_TARGET
+        # Clamp the velocity to a maximum value
+        if vel > FOLLOW_LINEAR_VELOCITY_MAX:
+            vel = FOLLOW_LINEAR_VELOCITY_MAX
+        elif vel < FOLLOW_LINEAR_VELOCITY_MIN:
+            vel = FOLLOW_LINEAR_VELOCITY_MIN
+        return vel
+
+    @staticmethod
+    def calculate_follow_linear_velocity(z):
+        # check if the object is within the threshold distance
+        if abs(z - FOLLOW_Z_DISTANCE_TARGET) < FOLLOW_Z_DISTANCE_THRESHOLD:
+            rospy.loginfo("Object is within linear threshold distance.")
+            return 0.0
+        vel = ApproachingSignTools.calculate_abs_proportional_follow_linear_velocity(z)
+        if z < FOLLOW_Z_DISTANCE_TARGET:
+            vel = -vel
+        return vel
+
+    @staticmethod
+    def follow_object(x, z):
+        cmd_msg = Twist2DStamped()
+        cmd_msg.v = ApproachingSignTools.calculate_follow_linear_velocity(z)
+        cmd_msg.omega = ApproachingSignTools.calculate_follow_angular_velocity(x)
+        return cmd_msg
+
 class ApproachingSignState(MovementControllerState):
     def __init__(self):
         self._tag_id = self.context.get_sign_tag_id()
@@ -392,7 +532,8 @@ class ApproachingSignState(MovementControllerState):
         self._timer.start()
 
     def on_event(self, event: MovementControllerEvent) -> None:
-        pass
+        if event == MovementControllerEvent.APRIL_TAG_DETECTION_UPDATED:
+            self.control_bot()
 
     def update(self) -> None:
         if self._timer.is_expired():
@@ -401,31 +542,95 @@ class ApproachingSignState(MovementControllerState):
             self.context.transition_to(IdleState())
             return
 
-        if 1:  # Placeholder for actual condition to check if the sign is approached
+        if self.is_at_sign():
             self.context.publish_fsm_state(APPROACHING_SIGN_SUCCESS_FSM_STATE)
             self.context.transition_to(IdleState())
 
+    def control_bot(self):
+        tag_detection = self.context._april_tag_detections_map.get(self._tag_id)
+        if tag_detection:
+            x = tag_detection.get_x()
+            z = tag_detection.get_z()
+            self.context.publish_cmd_vel(ApproachingSignTools.follow_object(x, z))
+        else:
+            rospy.logwarn(f"Tag ID {self._tag_id} not found in detections.")
+
+    def is_at_sign(self) -> bool:
+        tag_detection = self.context._april_tag_detections_map.get(self._tag_id)
+        if tag_detection:
+            z = tag_detection.get_z()
+            return abs(z - FOLLOW_Z_DISTANCE_TARGET) < FOLLOW_Z_DISTANCE_THRESHOLD
+        else:
+            rospy.logwarn(f"Tag ID {self._tag_id} not found in detections.")
+            return False
+
+class TurningTools:
+    @staticmethod
+    def calculate_turning_velocity(is_left_turn: bool, current_vel: float, target_vel: float) -> float:
+        if target_vel == 0.0:
+            rospy.logwarn("Target velocity is zero, cannot adjust current velocity.")
+            return 0.0
+        
+        accuracy = current_vel / target_vel
+        new_vel = current_vel * accuracy
+
+        if is_left_turn:
+            if new_vel > TURN_LEFT_VELOCITY_LEFT_MAX:
+                return TURN_LEFT_VELOCITY_LEFT_MAX
+            elif new_vel < TURN_LEFT_VELOCITY_LEFT_MIN:
+                return TURN_LEFT_VELOCITY_LEFT_MIN
+        else:
+            if new_vel > TURN_RIGHT_VELOCITY_LEFT_MAX:
+                return TURN_RIGHT_VELOCITY_LEFT_MAX
+            elif new_vel < TURN_RIGHT_VELOCITY_LEFT_MIN:
+                return TURN_RIGHT_VELOCITY_LEFT_MIN
+        return new_vel
+
 class TurningState(MovementControllerState):
-    def __init__(self):
-        self._timer = Timer(TURNING_TIMEOUT_DURATION)
+    def __init__(self, is_left_turn: bool):
+        self._timeout_timer = Timer(TURNING_TIMEOUT_DURATION)
+        self._is_left_turn = is_left_turn
+        self._goal_timer = Timer(TURN_LEFT_MANEUVER_DURATION if is_left_turn else TURN_RIGHT_MANEUVER_DURATION)
 
     def on_enter(self) -> None:
         self.context.publish_fsm_state(TURNING_START_FSM_STATE)
-        self._timer.start()
+        self._timeout_timer.start()
 
     def on_event(self, event: MovementControllerEvent) -> None:
-        pass
+        if event == MovementControllerEvent.WHEEL_MOVEMENT_INFO_UPDATED:
+            self.control_bot()
 
     def update(self) -> None:
-        if self._timer.is_expired():
+        if self._timeout_timer.is_expired():
             rospy.logwarn("Turning timed out, transitioning to IdleState")
             self.context.publish_fsm_state(TURNING_FAILURE_FSM_STATE)
             self.context.transition_to(IdleState())
             return
 
-        if 1:
+        if self._goal_timer.is_expired():
             self.context.publish_fsm_state(TURNING_SUCCESS_FSM_STATE)
             self.context.transition_to(IdleState())
+
+    def control_bot(self):
+        wheel_info = self.context.get_wheel_movement_info()
+        left_velocity = wheel_info.get_left_velocity()
+        right_velocity = wheel_info.get_right_velocity()
+
+        if self._is_left_turn:
+            left_velocity = TurningTools.calculate_turning_velocity(
+                True, left_velocity, TURN_LEFT_VELOCITY_LEFT)
+            right_velocity = TurningTools.calculate_turning_velocity(
+                True, right_velocity, TURN_LEFT_VELOCITY_RIGHT)
+        else:
+            left_velocity = TurningTools.calculate_turning_velocity(
+                False, left_velocity, TURN_RIGHT_VELOCITY_LEFT)
+            right_velocity = TurningTools.calculate_turning_velocity(
+                False, right_velocity, TURN_RIGHT_VELOCITY_RIGHT)
+
+        self.context.publish_velocity(left_velocity, right_velocity)
+        rospy.loginfo(f"Turning {'left' if self._is_left_turn else 'right'}: "
+                      f"Left Vel: {left_velocity:.2f} m/s, Right Vel: {right_velocity:.2f} m/s")
+        
 
 class StoppingState(MovementControllerState):
     def __init__(self):
