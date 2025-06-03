@@ -70,10 +70,11 @@ APPROACHING_SIGN_FAILURE_FSM_STATE = 'APPROACHING_SIGN_FAILURE'
 class MovementControllerEvent(Enum):
     START_OVERTAKING = 0
     START_APPROACHING_SIGN = 1
-    START_TURNING = 2
-    START_STOPPING = 3
-    WHEEL_MOVEMENT_INFO_UPDATED = 4
-    APRIL_TAG_DETECTION_UPDATED = 5
+    START_TURNING_LEFT = 2
+    START_TURNING_RIGHT = 3
+    START_STOPPING = 4
+    WHEEL_MOVEMENT_INFO_UPDATED = 5
+    APRIL_TAG_DETECTION_UPDATED = 6
 
 class Timer:
     def __init__(self, duration: float):
@@ -246,10 +247,10 @@ class MovementController:
     def goal_turning_callback(self, msg):
         if msg.data == 1:
             rospy.loginfo("MovementController received goal to turn left")
-            self.on_event(MovementControllerEvent.START_TURNING)
+            self.on_event(MovementControllerEvent.START_TURNING_LEFT)
         elif msg.data == 2:
             rospy.loginfo("MovementController received goal to turn right")
-            self.on_event(MovementControllerEvent.START_TURNING)
+            self.on_event(MovementControllerEvent.START_TURNING_RIGHT)
         else:
             rospy.logwarn("Invalid turning goal received, expected 1 for left turn or 2 for right turn.")
     
@@ -303,8 +304,10 @@ class IdleState(MovementControllerState):
     def on_event(self, event: MovementControllerEvent) -> None:
         if event == MovementControllerEvent.START_OVERTAKING:
             self.context.transition_to(OvertakingState())
-        elif event == MovementControllerEvent.START_TURNING:
-            self.context.transition_to(TurningState())
+        elif event == MovementControllerEvent.START_TURNING_LEFT:
+            self.context.transition_to(TurningState(is_left_turn=True))
+        elif event == MovementControllerEvent.START_TURNING_RIGHT:
+            self.context.transition_to(TurningState(is_left_turn=False))
         elif event == MovementControllerEvent.START_STOPPING:
             self.context.transition_to(StoppingState())
         elif event == MovementControllerEvent.START_APPROACHING_SIGN:
