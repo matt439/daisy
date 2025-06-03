@@ -453,13 +453,13 @@ class OvertakingState(MovementControllerState):
                         f"Target Dist: L: {target_left_distance:.2f} m, R: {target_right_distance:.2f} m | "
                             f"Time: {timer_elapsed:.2f} s | ")
         
-SEEK_ANGULAR_VELOCITY = -0.3 # rad/s
 FOLLOW_ANGULAR_VELOCITY = 0.35 # rad/s
 FOLLOW_ANGULAR_VELOCITY_MAX = 0.4 # rad/s
 FOLLOW_ANGULAR_VELOCITY_MIN = 0.3 # rad/s
 FOLLOW_ANGULAR_VELOCITY_AVG_DISTANCE = 0.3 # meter
 FOLLOW_X_DISTANCE_TARGET = 0.2 # meter, the sign should be to the right of the bot
 FOLLOW_X_DISTANCE_THRESHOLD = 0.05 # meter
+
 FOLLOW_Z_DISTANCE_TARGET = 0.2 # meter
 FOLLOW_Z_DISTANCE_THRESHOLD = 0.05 # meter
 FOLLOW_LINEAR_VELOCITY = 0.1 # m/s
@@ -483,12 +483,11 @@ class ApproachingSignTools:
     @staticmethod
     def calculate_follow_angular_velocity(x):
         # If the object is too close, stop moving
-        if abs(x) < FOLLOW_X_DISTANCE_TARGET + FOLLOW_X_DISTANCE_THRESHOLD and \
-                abs(x) > FOLLOW_X_DISTANCE_TARGET - FOLLOW_X_DISTANCE_THRESHOLD:
+        if abs(x) < FOLLOW_X_DISTANCE_THRESHOLD:
             rospy.loginfo("Object is within angular target threshold distance.")
             return 0.0
         
-        vel = ApproachingSignTools.calculate_abs_proportional_follow_angular_velocity(x - FOLLOW_X_DISTANCE_TARGET)
+        vel = ApproachingSignTools.calculate_abs_proportional_follow_angular_velocity(x)
         if x > 0.0:
             vel = -vel
         return vel
@@ -554,7 +553,9 @@ class ApproachingSignState(MovementControllerState):
         if tag_detection:
             x = tag_detection.get_x()
             z = tag_detection.get_z()
-            self.context.publish_cmd_vel(ApproachingSignTools.follow_object(x, z))
+            rospy.loginfo(f"Tag ID {self._tag_id} detected at x: {x}, z: {z}")
+            self.context.publish_cmd_vel(
+                ApproachingSignTools.follow_object(x - FOLLOW_X_DISTANCE_TARGET, z))
         else:
             rospy.logwarn(f"Tag ID {self._tag_id} not found in detections.")
 
