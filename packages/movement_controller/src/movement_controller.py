@@ -312,7 +312,7 @@ class IdleState(MovementControllerState):
         elif event == MovementControllerEvent.START_STOPPING:
             self.context.transition_to(StoppingState())
         elif event == MovementControllerEvent.START_APPROACHING_SIGN:
-            self.context.transition_to(ApproachingSignState())
+            self.context.transition_to(ApproachingSignState(self.context.get_sign_tag_id()))
 
     def update(self) -> None:
         pass
@@ -523,8 +523,8 @@ class ApproachingSignTools:
         return cmd_msg
 
 class ApproachingSignState(MovementControllerState):
-    def __init__(self):
-        self._tag_id = self.context.get_sign_tag_id()
+    def __init__(self, tag_id: int):
+        self._tag_id = tag_id
         self._timer = Timer(APPROACHING_SIGN_TIMEOUT_DURATION)
 
     def on_enter(self) -> None:
