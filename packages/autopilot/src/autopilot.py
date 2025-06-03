@@ -123,11 +123,11 @@ class Duckiebot():
     def transition_to(self, state: 'DuckiebotState'):
         self._state = state
         self._state._context = self
-        rospy.loginfo(f"Transitioning to state: {type(state).__name__}")
+        rospy.loginfo(f"Duckiebot transitioning to state: {type(state).__name__}")
         self._state.on_enter()  # Call on_enter after context is set
 
     def on_event(self, event: DuckieBotEvent) -> None:
-        rospy.loginfo(f"Event received: {event}")
+        rospy.loginfo(f"Duckiebot event received: {event}")
         self._state.on_event(event)
 
     def update(self):
@@ -367,8 +367,9 @@ class TurningRightState(DuckiebotState):
     pass
 
 class WaitingAtTurnLeftSignState(DuckiebotState):
-    def __init__(self):
+    def __init__(self, tag_id: int):
         self._timer = Timer(SIGN_WAITING_DURATION)
+        self._tag_id = tag_id
     
     def on_enter(self):
         self._timer.start()
@@ -397,7 +398,7 @@ class ApproachingTurnLeftSignState(DuckiebotState):
         if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
             self.context.transition_to(PauseState())
         elif event == DuckieBotEvent.APPROACHING_SIGN_SUCCESS:
-            self.context.transition_to(WaitingAtTurnLeftSignState())
+            self.context.transition_to(WaitingAtTurnLeftSignState(self._tag_id))
         elif event == DuckieBotEvent.APPROACHING_SIGN_FAILURE:
             rospy.logerr("Approaching left turn sign failed. Transitioning to lane following state.")
             self.context.transition_to(LaneFollowingState())

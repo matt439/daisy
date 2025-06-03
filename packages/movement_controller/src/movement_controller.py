@@ -188,11 +188,11 @@ class MovementController:
     def transition_to(self, state: 'MovementControllerState'):
         self._state = state
         self._state._context = self
-        rospy.loginfo(f"Transitioning to state: {type(state).__name__}")
+        rospy.loginfo(f"MovementController transitioning to state: {type(state).__name__}")
         self._state.on_enter()
 
     def on_event(self, event: MovementControllerEvent) -> None:
-        rospy.loginfo(f"Event received: {event}")
+        rospy.loginfo(f"MovementController event received: {event}")
         self._state.on_event(event)
 
     def update(self):
@@ -233,22 +233,22 @@ class MovementController:
 
     def goal_overtaking_callback(self, msg):
         if msg.data == 1:
-            rospy.loginfo("Received goal to overtake")
+            rospy.loginfo("MovementController received goal to overtake")
             self.on_event(MovementControllerEvent.START_OVERTAKING)
         else:
             rospy.logwarn("Invalid overtaking goal received, expected 1 to start overtaking.")
 
     def goal_stopping_callback(self, msg):
         if msg.data == 1:
-            rospy.loginfo("Received goal to stop")
+            rospy.loginfo("MovementController received goal to stop")
             self.on_event(MovementControllerEvent.START_STOPPING)
 
     def goal_turning_callback(self, msg):
         if msg.data == 1:
-            rospy.loginfo("Received goal to turn left")
+            rospy.loginfo("MovementController received goal to turn left")
             self.on_event(MovementControllerEvent.START_TURNING)
         elif msg.data == 2:
-            rospy.loginfo("Received goal to turn right")
+            rospy.loginfo("MovementController received goal to turn right")
             self.on_event(MovementControllerEvent.START_TURNING)
         else:
             rospy.logwarn("Invalid turning goal received, expected 1 for left turn or 2 for right turn.")
