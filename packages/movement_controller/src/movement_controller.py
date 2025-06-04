@@ -72,14 +72,14 @@ APPROACHING_SIGN_TIMEOUT_DURATION = 6.0  # seconds
 FOLLOW_ANGULAR_VELOCITY = 0.1 # rad/s
 FOLLOW_ANGULAR_VELOCITY_MAX = 0.2 # rad/s
 FOLLOW_ANGULAR_VELOCITY_MIN = 0.0 # rad/s
-FOLLOW_X_DISTANCE_TARGET = 0.25 # meter, the sign should be to the right of the bot
+FOLLOW_X_DISTANCE_TARGET = 0.2 # meter, the sign should be to the right of the bot
 FOLLOW_X_DISTANCE_THRESHOLD = 0.02 # meter
 FOLLOW_ANGULAR_SLOWDOWN_RADIANS = math.pi / 8.0 # radians, distance at which the bot starts slowing down
 
-FOLLOW_Z_DISTANCE_TARGET = 0.6 # meter, sign is this distance in front of the stop line
+FOLLOW_Z_DISTANCE_TARGET = 0.51 # meter, sign is this distance in front of the stop line
 FOLLOW_Z_DISTANCE_THRESHOLD = 0.02 # meter
 FOLLOW_LINEAR_SLOWDOWN_DISTANCE = 0.2 # meter, distance at which the bot starts slowing down
-FOLLOW_LINEAR_VELOCITY = 0.3 # m/s
+FOLLOW_LINEAR_VELOCITY = 0.25 # m/s
 FOLLOW_LINEAR_VELOCITY_MAX = 0.35 # m/s
 FOLLOW_LINEAR_VELOCITY_MIN = 0.1 # m/s
 
