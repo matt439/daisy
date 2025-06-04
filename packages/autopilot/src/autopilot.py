@@ -598,11 +598,29 @@ class Autopilot:
     #     elif msg.state == APPROACHING_SIGN_FAILURE_FSM_STATE:
     #         self._duckiebot.on_event(DuckieBotEvent.APPROACHING_SIGN_FAILURE)
 
+    def is_april_tag_in_valid_position(self, detection):
+        # Check if the tag is to the right of the robot
+        if detection.transform.translation.x < 0:
+            return False
+        
+        # Check if the tag is not at an extreme angle using the x, y, z, and w components of the quaternion
+        if detection.transform.rotation.x < -0.5 or detection.transform.rotation.x > 0.5:
+            return False
+        if detection.transform.rotation.y < -0.5 or detection.transform.rotation.y > 0.5:
+            return False
+        if detection.transform.rotation.z < -0.5 or detection.transform.rotation.z > 0.5:
+            return False
+        if detection.transform.rotation.w < 0.5:
+            return False
+        
+        # If all checks passed, the tag is in a valid position
+        return True
+
     def april_tag_callback(self, msg: AprilTagDetectionArray):
         # Process the AprilTag detections
         for detection in msg.detections:
             # ignore the tag if it is to the left of the robot
-            if detection.transform.translation.x < 0.0:
+            if self.is_april_tag_in_valid_position(detection) is False:
                 continue
             
             id = detection.tag_id
