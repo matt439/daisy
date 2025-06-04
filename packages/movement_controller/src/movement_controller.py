@@ -73,17 +73,17 @@ STOPPING_FAILURE_FSM_STATE = 'STOPPING_FAILURE'
 # Approaching sign parameters
 APPROACHING_SIGN_TIMEOUT_DURATION = 10.0  # seconds
 
-FOLLOW_ANGULAR_VELOCITY = 0.35 # rad/s
-FOLLOW_ANGULAR_VELOCITY_MAX = 0.4 # rad/s
-FOLLOW_ANGULAR_VELOCITY_MIN = 0.3 # rad/s
+FOLLOW_ANGULAR_VELOCITY = 0.1 # rad/s
+FOLLOW_ANGULAR_VELOCITY_MAX = 0.2 # rad/s
+FOLLOW_ANGULAR_VELOCITY_MIN = 0.0 # rad/s
 # FOLLOW_ANGULAR_VELOCITY_AVG_DISTANCE = 0.3
 FOLLOW_X_DISTANCE_TARGET = 0.25 # meter, the sign should be to the right of the bot
-FOLLOW_X_DISTANCE_THRESHOLD = 0.05 # meter
+FOLLOW_X_DISTANCE_THRESHOLD = 0.03 # meter
 
 FOLLOW_Z_DISTANCE_TARGET = 0.6 # meter, sign is this distance in front of the stop line
 FOLLOW_Z_DISTANCE_THRESHOLD = 0.05 # meter
-FOLLOW_LINEAR_VELOCITY = 0.3 # m/s
-FOLLOW_LINEAR_VELOCITY_MAX = 0.35 # m/s
+FOLLOW_LINEAR_VELOCITY = 0.2 # m/s
+FOLLOW_LINEAR_VELOCITY_MAX = 0.3 # m/s
 FOLLOW_LINEAR_VELOCITY_MIN = 0.1 # m/s
 
 APPROACHING_SIGN_START_FSM_STATE = 'APPROACHING_SIGN_START'
@@ -643,8 +643,12 @@ class TurningState(MovementControllerState):
                 False, right_velocity, TURN_RIGHT_VELOCITY_RIGHT)
 
         self.context.publish_velocity(left_velocity, right_velocity)
-        rospy.loginfo(f"Turning {'left' if self._is_left_turn else 'right'}: "
-                      f"Left Vel: {left_velocity:.2f} m/s, Right Vel: {right_velocity:.2f} m/s")
+        # Log the velocities for debugging
+        rospy.loginfo(f"Turning Velocities - Left: {left_velocity:.2f} m/s, Right: {right_velocity:.2f} m/s | "
+                      f"Is Left Turn: {self._is_left_turn} | "
+                      f"Goal Timer: {self._goal_timer.get_elapsed_time():.2f} s"
+                      f"Target Velocities left turn - Left: {TURN_LEFT_VELOCITY_LEFT:.2f} m/s, Right: {TURN_LEFT_VELOCITY_RIGHT:.2f} m/s | "
+                      f"Target Velocities right turn - Left: {TURN_RIGHT_VELOCITY_LEFT:.2f} m/s, Right: {TURN_RIGHT_VELOCITY_RIGHT:.2f} m/s")
         
 
 class StoppingState(MovementControllerState):
