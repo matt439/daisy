@@ -25,9 +25,9 @@ B = 70.0
 X0 = 0.08
 V = 1.0
 TRAPEZOIDAL_RULE_N = 100  # Number of intervals for trapezoidal rule integration
-OVERTAKING_START_FSM_STATE = 'OVERTAKING_START'
-OVERTAKING_SUCCESS_FSM_STATE = 'OVERTAKING_SUCCESS'
-OVERTAKING_FAILURE_FSM_STATE = 'OVERTAKING_FAILURE'
+OVERTAKING_START_COMMAND = 10
+OVERTAKING_SUCCESS_COMMAND = 11
+OVERTAKING_FAILURE_COMMAND = 12
 
 # Turning parameters
 TURNING_TIMEOUT_DURATION = 4.0  # seconds
@@ -55,16 +55,16 @@ TURN_RIGHT_RIGHT_WHEEL_DISTANCE = math.pi * TURN_RIGHT_RIGHT_WHEEL_RADIUS * \
     TURN_RIGHT_RIGHT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the right wheel during right turn
 TURN_RIGHT_MANEUVER_DURATION = 1.2  # seconds
 
-TURNING_START_FSM_STATE = 'TURNING_START'
-TURNING_SUCCESS_FSM_STATE = 'TURNING_SUCCESS'
-TURNING_FAILURE_FSM_STATE = 'TURNING_FAILURE'
+TURNING_START_COMMAND = 20
+TURNING_SUCCESS_COMMAND = 21
+TURNING_FAILURE_COMMAND = 22
 
 # Stopping parameters
 STOPPING_TIMEOUT_DURATION = 2.0  # seconds
 WHEEL_VELOCITY_STOPPED_THRESHOLD = 0.01  # m/s, threshold to consider the wheel stopped
-STOPPING_START_FSM_STATE = 'STOPPING_START'
-STOPPING_SUCCESS_FSM_STATE = 'STOPPING_SUCCESS'
-STOPPING_FAILURE_FSM_STATE = 'STOPPING_FAILURE'
+STOPPING_START_COMMAND = 30
+STOPPING_SUCCESS_COMMAND = 31
+STOPPING_FAILURE_COMMAND = 32
 
 # Approaching sign parameters
 APPROACHING_SIGN_TIMEOUT_DURATION = 6.0  # seconds
@@ -83,9 +83,9 @@ FOLLOW_LINEAR_VELOCITY = 0.3 # m/s
 FOLLOW_LINEAR_VELOCITY_MAX = 0.35 # m/s
 FOLLOW_LINEAR_VELOCITY_MIN = 0.0 # m/s
 
-APPROACHING_SIGN_START_FSM_STATE = 'APPROACHING_SIGN_START'
-APPROACHING_SIGN_SUCCESS_FSM_STATE = 'APPROACHING_SIGN_SUCCESS'
-APPROACHING_SIGN_FAILURE_FSM_STATE = 'APPROACHING_SIGN_FAILURE'
+APPROACHING_SIGN_START_COMMAND = 40
+APPROACHING_SIGN_SUCCESS_COMMAND = 41
+APPROACHING_SIGN_FAILURE_COMMAND = 42
 
 class MovementControllerEvent(Enum):
     START_OVERTAKING = 0
@@ -190,8 +190,9 @@ class MovementController:
         rospy.Subscriber('/vader/movement_controller_node/goal_approaching_sign', Int8, self.goal_approaching_sign_callback)
         rospy.Subscriber('/vader/apriltag_detector_node/detections', AprilTagDetectionArray, self.tag_callback)
         self._velocity_publisher = rospy.Publisher("/vader/wheels_driver_node/wheels_cmd", WheelsCmdStamped, queue_size=1)
-        self._state_publisher = rospy.Publisher('/vader/fsm_node/mode', FSMState, queue_size=1)
+        # self._state_publisher = rospy.Publisher('/vader/fsm_node/mode', FSMState, queue_size=1)
         self.cmd_vel_pub = rospy.Publisher('/vader/car_cmd_switch_node/cmd', Twist2DStamped, queue_size=1)
+        self._status_pub = rospy.Publisher('/vader/movement_controller_node/status', Int8, queue_size=1)
 
         # Printing to the terminal, ROS style
         rospy.loginfo("Initialized movement_controller node!")
@@ -213,11 +214,16 @@ class MovementController:
     def update(self):
         self._state.update()
 
-    def publish_fsm_state(self, state: str):
-        fsm_state_msg = FSMState()
-        fsm_state_msg.header.stamp = rospy.Time.now()
-        fsm_state_msg.state = state
-        self._state_publisher.publish(fsm_state_msg)
+    def publish_status(self, status: int):
+        status_msg = Int8()
+        status_msg.data = status
+        self._status_pub.publish(status_msg)
+
+    # def publish_fsm_state(self, state: str):
+    #     fsm_state_msg = FSMState()
+    #     fsm_state_msg.header.stamp = rospy.Time.now()
+    #     fsm_state_msg.state = state
+    #     self._state_publisher.publish(fsm_state_msg)
 
     def publish_cmd_vel(self, twist: Twist2DStamped):
         self.cmd_vel_pub.publish(twist)
@@ -405,7 +411,7 @@ class OvertakingState(MovementControllerState):
         self._last_wheel_info_time = None
 
     def on_enter(self) -> None:
-        self.context.publish_fsm_state(OVERTAKING_START_FSM_STATE)
+        self.context.publish_status(OVERTAKING_START_COMMAND)
         self._timeout_timer.start()
         self._goal_timer.start()
         wheel_info = self.context.get_wheel_movement_info()
@@ -421,12 +427,12 @@ class OvertakingState(MovementControllerState):
     def update(self) -> None:
         if self._timeout_timer.is_expired():
             rospy.logwarn("Overtaking timed out, transitioning to IdleState")
-            self.context.publish_fsm_state(OVERTAKING_FAILURE_FSM_STATE)
+            self.context.publish_status(OVERTAKING_FAILURE_COMMAND)
             self.context.transition_to(IdleState())
             return
 
         if self._goal_timer.is_expired():
-            self.context.publish_fsm_state(OVERTAKING_SUCCESS_FSM_STATE)
+            self.context.publish_status(OVERTAKING_SUCCESS_COMMAND)
             self.context.transition_to(IdleState())
             return
         
@@ -540,7 +546,7 @@ class ApproachingSignState(MovementControllerState):
         self._timer = Timer(APPROACHING_SIGN_TIMEOUT_DURATION)
 
     def on_enter(self) -> None:
-        self.context.publish_fsm_state(APPROACHING_SIGN_START_FSM_STATE)
+        self.context.publish_status(APPROACHING_SIGN_START_COMMAND)
         self._timer.start()
 
     def on_event(self, event: MovementControllerEvent) -> None:
@@ -550,13 +556,13 @@ class ApproachingSignState(MovementControllerState):
     def update(self) -> None:
         if self._timer.is_expired():
             rospy.logwarn("Approaching sign timed out, transitioning to IdleState")
-            self.context.publish_fsm_state(APPROACHING_SIGN_FAILURE_FSM_STATE)
+            self.context.publish_status(APPROACHING_SIGN_FAILURE_COMMAND)
             self.context.stop_robot()
             self.context.transition_to(IdleState())
             return
 
         if self.is_at_sign():
-            self.context.publish_fsm_state(APPROACHING_SIGN_SUCCESS_FSM_STATE)
+            self.context.publish_status(APPROACHING_SIGN_SUCCESS_COMMAND)
             self.context.stop_robot()
             self.context.transition_to(IdleState())
 
@@ -606,7 +612,7 @@ class TurningState(MovementControllerState):
         self._last_wheel_info_time = None
 
     def on_enter(self) -> None:
-        self.context.publish_fsm_state(TURNING_START_FSM_STATE)
+        self.context.publish_status(TURNING_START_COMMAND)
         self._timeout_timer.start()
         self._goal_timer.start()
         wheel_info = self.context.get_wheel_movement_info()
@@ -622,12 +628,12 @@ class TurningState(MovementControllerState):
     def update(self) -> None:
         if self._timeout_timer.is_expired():
             rospy.logwarn("Turning timed out, transitioning to IdleState")
-            self.context.publish_fsm_state(TURNING_FAILURE_FSM_STATE)
+            self.context.publish_status(TURNING_FAILURE_COMMAND)
             self.context.transition_to(IdleState())
             return
 
         if self._goal_timer.is_expired():
-            self.context.publish_fsm_state(TURNING_SUCCESS_FSM_STATE)
+            self.context.publish_status(TURNING_SUCCESS_COMMAND)
             self.context.transition_to(IdleState())
 
     def control_bot(self):
@@ -669,7 +675,7 @@ class StoppingState(MovementControllerState):
         self._timer = Timer(STOPPING_TIMEOUT_DURATION)
 
     def on_enter(self) -> None:
-        self.context.publish_fsm_state(STOPPING_START_FSM_STATE)
+        self.context.publish_status(STOPPING_START_COMMAND)
         self._timer.start()
         self.context.stop_robot()
 
@@ -679,12 +685,12 @@ class StoppingState(MovementControllerState):
     def update(self) -> None:
         if self._timer.is_expired():
             rospy.logwarn("Stopping timed out, transitioning to IdleState")
-            self.context.publish_fsm_state(STOPPING_FAILURE_FSM_STATE)
+            self.context.publish_status(STOPPING_FAILURE_COMMAND)
             self.context.transition_to(IdleState())
             return
 
         if self.is_wheels_stopped():
-            self.context.publish_fsm_state(STOPPING_SUCCESS_FSM_STATE)
+            self.context.publish_status(STOPPING_SUCCESS_COMMAND)
             self.context.transition_to(IdleState())
             return
 

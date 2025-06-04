@@ -14,21 +14,21 @@ AUTOPILOT_UPDATE_FREQUENCY = 20  # Hz
 LANE_FOLLOWING_FSM_STATE = "LANE_FOLLOWING"
 NORMAL_JOYSTICK_CONTROL_FSM_STATE = "NORMAL_JOYSTICK_CONTROL"
 
-OVERTAKING_START_FSM_STATE = 'OVERTAKING_START'
-OVERTAKING_SUCCESS_FSM_STATE = 'OVERTAKING_SUCCESS'
-OVERTAKING_FAILURE_FSM_STATE = 'OVERTAKING_FAILURE'
+OVERTAKING_START_COMMAND = 10
+OVERTAKING_SUCCESS_COMMAND = 11
+OVERTAKING_FAILURE_COMMAND = 12
 
-TURNING_START_FSM_STATE = 'TURNING_START'
-TURNING_SUCCESS_FSM_STATE = 'TURNING_SUCCESS'
-TURNING_FAILURE_FSM_STATE = 'TURNING_FAILURE'
+TURNING_START_COMMAND = 20
+TURNING_SUCCESS_COMMAND = 21
+TURNING_FAILURE_COMMAND = 22
 
-STOPPING_START_FSM_STATE = 'STOPPING_START'
-STOPPING_SUCCESS_FSM_STATE = 'STOPPING_SUCCESS'
-STOPPING_FAILURE_FSM_STATE = 'STOPPING_FAILURE'
+STOPPING_START_COMMAND = 30
+STOPPING_SUCCESS_COMMAND = 31
+STOPPING_FAILURE_COMMAND = 32
 
-APPROACHING_SIGN_START_FSM_STATE = 'APPROACHING_SIGN_START'
-APPROACHING_SIGN_SUCCESS_FSM_STATE = 'APPROACHING_SIGN_SUCCESS'
-APPROACHING_SIGN_FAILURE_FSM_STATE = 'APPROACHING_SIGN_FAILURE'
+APPROACHING_SIGN_START_COMMAND = 40
+APPROACHING_SIGN_SUCCESS_COMMAND = 41
+APPROACHING_SIGN_FAILURE_COMMAND = 42
 
 # Stop sign constants
 STOP_SIGN_WAITING_TIME = 5.0  # seconds
@@ -518,10 +518,11 @@ class Autopilot:
         self._overtaking_publisher = rospy.Publisher('/vader/movement_controller_node/goal_overtaking', Int8, queue_size=1)
         self._turning_publisher = rospy.Publisher('/vader/movement_controller_node/goal_turning', Int8, queue_size=1)
         self._approaching_sign_publisher = rospy.Publisher('/vader/movement_controller_node/goal_approaching_sign', Int8, queue_size=1)
-        rospy.Subscriber('/vader/fsm_node/mode', FSMState, self.FSM_state_callback, queue_size=1)
+        # rospy.Subscriber('/vader/fsm_node/mode', FSMState, self.FSM_state_callback, queue_size=1)
         rospy.Subscriber('/vader/apriltag_detector_node/detections', AprilTagDetectionArray, self.april_tag_callback, queue_size=1)
         rospy.Subscriber('/vader/obstacle_detector', Int8, self.obstacle_callback, queue_size=1)
         rospy.Subscriber('/vader/autopilot_node/mode', Int8, self.autopilot_control_callback, queue_size=1)
+        rospy.Subscriber('/vader/movement_controller_node/status', Int8, self.movement_controller_status_callback, queue_size=1)
 
         self.set_lane_following_parameters()
 
@@ -530,6 +531,24 @@ class Autopilot:
 
         rospy.loginfo("Initialized autopilot node!")
  
+    def movement_controller_status_callback(self, msg: Int8):
+        if msg.data == OVERTAKING_SUCCESS_COMMAND:
+            self._duckiebot.on_event(DuckieBotEvent.OVERTAKING_SUCCESS)
+        elif msg.data == OVERTAKING_FAILURE_COMMAND:
+            self._duckiebot.on_event(DuckieBotEvent.OVERTAKING_FAILURE)
+        elif msg.data == TURNING_SUCCESS_COMMAND:
+            self._duckiebot.on_event(DuckieBotEvent.TURNING_SUCCESS)
+        elif msg.data == TURNING_FAILURE_COMMAND:
+            self._duckiebot.on_event(DuckieBotEvent.TURNING_FAILURE)
+        elif msg.data == STOPPING_SUCCESS_COMMAND:
+            self._duckiebot.on_event(DuckieBotEvent.STOPPING_SUCCESS)
+        elif msg.data == STOPPING_FAILURE_COMMAND:
+            self._duckiebot.on_event(DuckieBotEvent.STOPPING_FAILURE)
+        elif msg.data == APPROACHING_SIGN_SUCCESS_COMMAND:
+            self._duckiebot.on_event(DuckieBotEvent.APPROACHING_SIGN_SUCCESS)
+        elif msg.data == APPROACHING_SIGN_FAILURE_COMMAND:
+            self._duckiebot.on_event(DuckieBotEvent.APPROACHING_SIGN_FAILURE)
+
     def autopilot_control_callback(self, msg: Int8):
         if msg.data != 0 and msg.data != 1:
             rospy.logwarn("Unknown autopilot control state received.")
@@ -550,24 +569,24 @@ class Autopilot:
         elif msg.data == 0:
             self._duckiebot.on_event(DuckieBotEvent.CAR_REMOVED)
 
-    def FSM_state_callback(self, msg: FSMState):
-        rospy.loginfo(f"FSM state changed to: {msg.state}")
-        if msg.state == STOPPING_SUCCESS_FSM_STATE:
-            self._duckiebot.on_event(DuckieBotEvent.BOT_BECOMES_STOPPED)
-        elif msg.state == STOPPING_FAILURE_FSM_STATE:
-            self._duckiebot.on_event(DuckieBotEvent.STOPPING_FAILURE)
-        elif msg.state == OVERTAKING_SUCCESS_FSM_STATE:
-            self._duckiebot.on_event(DuckieBotEvent.OVERTAKING_SUCCESS)
-        elif msg.state == OVERTAKING_FAILURE_FSM_STATE:
-            self._duckiebot.on_event(DuckieBotEvent.OVERTAKING_FAILURE)
-        elif msg.state == TURNING_SUCCESS_FSM_STATE:
-            self._duckiebot.on_event(DuckieBotEvent.TURNING_SUCCESS)
-        elif msg.state == TURNING_FAILURE_FSM_STATE:
-            self._duckiebot.on_event(DuckieBotEvent.TURNING_FAILURE)
-        elif msg.state == APPROACHING_SIGN_SUCCESS_FSM_STATE:
-            self._duckiebot.on_event(DuckieBotEvent.APPROACHING_SIGN_SUCCESS)
-        elif msg.state == APPROACHING_SIGN_FAILURE_FSM_STATE:
-            self._duckiebot.on_event(DuckieBotEvent.APPROACHING_SIGN_FAILURE)
+    # def FSM_state_callback(self, msg: FSMState):
+    #     rospy.loginfo(f"FSM state changed to: {msg.state}")
+    #     if msg.state == STOPPING_SUCCESS_FSM_STATE:
+    #         self._duckiebot.on_event(DuckieBotEvent.BOT_BECOMES_STOPPED)
+    #     elif msg.state == STOPPING_FAILURE_FSM_STATE:
+    #         self._duckiebot.on_event(DuckieBotEvent.STOPPING_FAILURE)
+    #     elif msg.state == OVERTAKING_SUCCESS_FSM_STATE:
+    #         self._duckiebot.on_event(DuckieBotEvent.OVERTAKING_SUCCESS)
+    #     elif msg.state == OVERTAKING_FAILURE_FSM_STATE:
+    #         self._duckiebot.on_event(DuckieBotEvent.OVERTAKING_FAILURE)
+    #     elif msg.state == TURNING_SUCCESS_FSM_STATE:
+    #         self._duckiebot.on_event(DuckieBotEvent.TURNING_SUCCESS)
+    #     elif msg.state == TURNING_FAILURE_FSM_STATE:
+    #         self._duckiebot.on_event(DuckieBotEvent.TURNING_FAILURE)
+    #     elif msg.state == APPROACHING_SIGN_SUCCESS_FSM_STATE:
+    #         self._duckiebot.on_event(DuckieBotEvent.APPROACHING_SIGN_SUCCESS)
+    #     elif msg.state == APPROACHING_SIGN_FAILURE_FSM_STATE:
+    #         self._duckiebot.on_event(DuckieBotEvent.APPROACHING_SIGN_FAILURE)
 
     def april_tag_callback(self, msg: AprilTagDetectionArray):
         # Process the AprilTag detections
