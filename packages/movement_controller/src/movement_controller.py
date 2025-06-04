@@ -183,15 +183,6 @@ class MovementController:
 
         self._wheel_movement_info = WheelMovementInfo()
         self._april_tag_detections_map = {}  # Map to hold tag_id to AprilTagDetection object
-
-        # Initialize class variables
-        self._last_distance_left = 0.0
-        self._last_displacement_left = 0.0
-        self._last_velocity_left = 0.0
-        self._last_distance_right = 0.0
-        self._last_displacement_right = 0.0
-        self._last_velocity_right = 0.0
-
         self._sign_tag_id = None
 
         self._state = None
@@ -645,28 +636,33 @@ class TurningState(MovementControllerState):
             self.context.transition_to(IdleState())
 
     def control_bot(self):
-        wheel_info = self.context.get_wheel_movement_info()
-        measured_left_velocity = wheel_info.get_left_velocity()
-        measured_right_velocity = wheel_info.get_right_velocity()
+        # wheel_info = self.context.get_wheel_movement_info()
+        # measured_left_velocity = wheel_info.get_left_velocity()
+        # measured_right_velocity = wheel_info.get_right_velocity()
 
-        if self._is_left_turn:
-            left_velocity = TurningTools.calculate_turning_velocity(
-                True, True, measured_left_velocity, TURN_LEFT_VELOCITY_LEFT)
-            right_velocity = TurningTools.calculate_turning_velocity(
-                True, False, measured_right_velocity, TURN_LEFT_VELOCITY_RIGHT)
-        else:
-            left_velocity = TurningTools.calculate_turning_velocity(
-                False, True, measured_left_velocity, TURN_RIGHT_VELOCITY_LEFT)
-            right_velocity = TurningTools.calculate_turning_velocity(
-                False, False, measured_right_velocity, TURN_RIGHT_VELOCITY_RIGHT)
+        # if self._is_left_turn:
+        #     left_velocity = TurningTools.calculate_turning_velocity(
+        #         True, True, measured_left_velocity, TURN_LEFT_VELOCITY_LEFT)
+        #     right_velocity = TurningTools.calculate_turning_velocity(
+        #         True, False, measured_right_velocity, TURN_LEFT_VELOCITY_RIGHT)
+        # else:
+        #     left_velocity = TurningTools.calculate_turning_velocity(
+        #         False, True, measured_left_velocity, TURN_RIGHT_VELOCITY_LEFT)
+        #     right_velocity = TurningTools.calculate_turning_velocity(
+        #         False, False, measured_right_velocity, TURN_RIGHT_VELOCITY_RIGHT)
             
-        self.context.publish_velocity(left_velocity, right_velocity)
-        # Log the velocities for debugging
-        rospy.loginfo(f"Turning Vel - L: {left_velocity:.2f} m/s, R: {right_velocity:.2f} m/s | "
-                      f"Measured Vel - L: {measured_left_velocity:.2f} m/s, R: {measured_right_velocity:.2f} m/s | "
-                      f"Is Left Turn: {self._is_left_turn} | "
-                      f"Goal Timer: {self._goal_timer.get_elapsed_time():.2f} s | "
-                      f"Target vel L turn: L: {TURN_LEFT_VELOCITY_LEFT:.2f} m/s, R: {TURN_LEFT_VELOCITY_RIGHT:.2f} m/s")
+        # self.context.publish_velocity(left_velocity, right_velocity)
+        # # Log the velocities for debugging
+        # rospy.loginfo(f"Turning Vel - L: {left_velocity:.2f} m/s, R: {right_velocity:.2f} m/s | "
+        #               f"Measured Vel - L: {measured_left_velocity:.2f} m/s, R: {measured_right_velocity:.2f} m/s | "
+        #               f"Is Left Turn: {self._is_left_turn} | "
+        #               f"Goal Timer: {self._goal_timer.get_elapsed_time():.2f} s | "
+        #               f"Target vel L turn: L: {TURN_LEFT_VELOCITY_LEFT:.2f} m/s, R: {TURN_LEFT_VELOCITY_RIGHT:.2f} m/s")
+
+        self.context.publish_velocity(
+            TURN_LEFT_VELOCITY_LEFT if self._is_left_turn else TURN_RIGHT_VELOCITY_LEFT,
+            TURN_LEFT_VELOCITY_RIGHT if self._is_left_turn else TURN_RIGHT_VELOCITY_RIGHT
+        )
         
 
 class StoppingState(MovementControllerState):

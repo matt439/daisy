@@ -105,8 +105,6 @@ class Timer:
         if self._start_time is None:
             return False
         return (rospy.get_time() - self._start_time) >= self._duration
-    def reset(self):
-        self._start_time = None
 
 class Duckiebot():
     def __init__(self, state: 'DuckiebotState', state_pub, stopping_pub,
@@ -200,7 +198,7 @@ class PauseState(DuckiebotState):
     def __init__(self):
         pass
 
-    def on_enter(self):
+    def on_enter(self) -> None:
         self._context.publish_FSM_state('PAUSED')
 
     def on_event(self, event: DuckieBotEvent) -> None:
@@ -214,7 +212,7 @@ class LaneFollowingState(DuckiebotState):
     def __init__(self):
         pass
 
-    def on_enter(self):
+    def on_enter(self) -> None:
         self._context.publish_FSM_state(LANE_FOLLOWING_FSM_STATE)
 
     def on_event(self, event: DuckieBotEvent) -> None:
@@ -236,7 +234,7 @@ class StoppingForStopSignState(DuckiebotState):
     def __init__(self):
         pass
 
-    def on_enter(self):
+    def on_enter(self) -> None:
         self._context.publish_FSM_state(NORMAL_JOYSTICK_CONTROL_FSM_STATE) # Stop lane following
         self._context.stop_bot() # Stop the robot
 
@@ -253,7 +251,7 @@ class WaitingAtStopSignState(DuckiebotState):
     def __init__(self):
         self._timer = Timer(STOP_SIGN_WAITING_TIME)
 
-    def on_enter(self):
+    def on_enter(self) -> None:
         self._timer.start()
 
     def on_event(self, event: DuckieBotEvent) -> None:
@@ -268,7 +266,7 @@ class LaneFollowingStopSignState(DuckiebotState):
     def __init__(self):
         self._timer = Timer(LANE_FOLLOWING_STOP_SIGN_TIME)
 
-    def on_enter(self):
+    def on_enter(self) -> None:
         self._context.publish_FSM_state(LANE_FOLLOWING_FSM_STATE)
         self._timer.start()
 
@@ -291,7 +289,7 @@ class StoppingForCarState(DuckiebotState):
     def __init__(self):
         pass
 
-    def on_enter(self):
+    def on_enter(self) -> None:
         self._context.publish_FSM_state(NORMAL_JOYSTICK_CONTROL_FSM_STATE) # Stop lane following
         self._context.stop_bot() # Stop the robot
 
@@ -310,7 +308,7 @@ class WaitingForCarState(DuckiebotState):
     def __init__(self):
         self._timer = Timer(CAR_WAITING_TIME)
 
-    def on_enter(self):
+    def on_enter(self) -> None:
         self._timer.start()
 
     def on_event(self, event: DuckieBotEvent) -> None:
@@ -327,7 +325,7 @@ class OvertakingState(DuckiebotState):
     def __init__(self):
         self._timer = Timer(OVERTAKING_TIMEOUT_DURATION)
     
-    def on_enter(self):
+    def on_enter(self) -> None:
         self._timer.start()
         # Send command to the overtaker node to start overtaking
         self._context.publish_overtaking_goal()
@@ -351,7 +349,7 @@ class TurningLeftState(DuckiebotState):
         self._tag_id = tag_id
         self._timer = Timer(TURNING_TIMEOUT_DURATION)
 
-    def on_enter(self):
+    def on_enter(self) -> None:
         self._timer.start()
         self._context.publish_turning_goal(Direction.LEFT)
 
@@ -377,7 +375,7 @@ class WaitingAtTurnLeftSignState(DuckiebotState):
         self._timer = Timer(SIGN_WAITING_DURATION)
         self._tag_id = tag_id
     
-    def on_enter(self):
+    def on_enter(self) -> None:
         self._timer.start()
 
     def on_event(self, event: DuckieBotEvent) -> None:
@@ -396,7 +394,7 @@ class ApproachingTurnLeftSignState(DuckiebotState):
         self._tag_id = tag_id
         self._timer = Timer(APPROACHING_SIGN_TIMEOUT_DURATION)
 
-    def on_enter(self):
+    def on_enter(self) -> None:
         self._context.publish_approaching_sign_goal(self._tag_id)
         self._timer.start()
 
