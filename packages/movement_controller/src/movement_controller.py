@@ -523,8 +523,7 @@ class ApproachingSignTools:
             vel = FOLLOW_LINEAR_VELOCITY_MAX
         elif vel < FOLLOW_LINEAR_VELOCITY_MIN:
             vel = FOLLOW_LINEAR_VELOCITY_MIN
-        if z < 0.0:
-            vel = -vel
+
         return vel
 
     @staticmethod
@@ -577,42 +576,12 @@ class ApproachingSignState(MovementControllerState):
         tag_detection = self.context._april_tag_detections_map.get(self._tag_id)
         if tag_detection:
             z = tag_detection.get_z()
-            return abs(z - FOLLOW_Z_DISTANCE_TARGET) < FOLLOW_Z_DISTANCE_THRESHOLD
+            return z <= FOLLOW_Z_DISTANCE_TARGET
         else:
             rospy.logwarn(f"Tag ID {self._tag_id} not found in detections.")
             return False
 
 class TurningTools:
-    # @staticmethod
-    # def calculate_turning_velocity(is_left_turn: bool, is_left_wheel: bool,
-    #                                current_vel: float, target_vel: float) -> float:
-
-    #     new_vel = (1 - TURN_VELOCITY_ADJUSTMENT_SCALAR) * \
-    #         current_vel + TURN_VELOCITY_ADJUSTMENT_SCALAR * target_vel
-
-    #     if is_left_turn:
-    #         if is_left_wheel:
-    #             if new_vel > TURN_LEFT_VELOCITY_LEFT_MAX:
-    #                 return TURN_LEFT_VELOCITY_LEFT_MAX
-    #             elif new_vel < TURN_LEFT_VELOCITY_LEFT_MIN:
-    #                 return TURN_LEFT_VELOCITY_LEFT_MIN
-    #         else: # right wheel
-    #             if new_vel > TURN_LEFT_VELOCITY_RIGHT_MAX:
-    #                 return TURN_LEFT_VELOCITY_RIGHT_MAX
-    #             elif new_vel < TURN_LEFT_VELOCITY_RIGHT_MIN:
-    #                 return TURN_LEFT_VELOCITY_RIGHT_MIN
-    #     else: # right turn
-    #         if is_left_wheel:
-    #             if new_vel > TURN_RIGHT_VELOCITY_LEFT_MAX:
-    #                 return TURN_RIGHT_VELOCITY_LEFT_MAX
-    #             elif new_vel < TURN_RIGHT_VELOCITY_LEFT_MIN:
-    #                 return TURN_RIGHT_VELOCITY_LEFT_MIN
-    #         else: # right wheel
-    #             if new_vel > TURN_RIGHT_VELOCITY_RIGHT_MAX:
-    #                 return TURN_RIGHT_VELOCITY_RIGHT_MAX
-    #             elif new_vel < TURN_RIGHT_VELOCITY_RIGHT_MIN:
-    #                 return TURN_RIGHT_VELOCITY_RIGHT_MIN
-    #     return new_vel
     @staticmethod
     def calculate_turning_track_distance(is_left_turn: bool, is_left_wheel: float, timer_elapsed: float) -> float:
         if is_left_turn:
@@ -694,29 +663,6 @@ class TurningState(MovementControllerState):
                     f"Curr Dist: L: {current_left_distance:.2f} m, R: {current_right_distance:.2f} m | "
                         f"Target Dist: L: {target_left_distance:.2f} m, R: {target_right_distance:.2f} m | "
                             f"Time: {timer_elapsed:.2f} s | ")
-        
-        # wheel_info = self.context.get_wheel_movement_info()
-        # measured_left_velocity = wheel_info.get_left_velocity()
-        # measured_right_velocity = wheel_info.get_right_velocity()
-
-        # if self._is_left_turn:
-        #     left_velocity = TurningTools.calculate_turning_velocity(
-        #         True, True, measured_left_velocity, TURN_LEFT_VELOCITY_LEFT)
-        #     right_velocity = TurningTools.calculate_turning_velocity(
-        #         True, False, measured_right_velocity, TURN_LEFT_VELOCITY_RIGHT)
-        # else:
-        #     left_velocity = TurningTools.calculate_turning_velocity(
-        #         False, True, measured_left_velocity, TURN_RIGHT_VELOCITY_LEFT)
-        #     right_velocity = TurningTools.calculate_turning_velocity(
-        #         False, False, measured_right_velocity, TURN_RIGHT_VELOCITY_RIGHT)
-            
-        # self.context.publish_velocity(left_velocity, right_velocity)
-        # # Log the velocities for debugging
-        # rospy.loginfo(f"Turning Vel - L: {left_velocity:.2f} m/s, R: {right_velocity:.2f} m/s | "
-        #               f"Measured Vel - L: {measured_left_velocity:.2f} m/s, R: {measured_right_velocity:.2f} m/s | "
-        #               f"Is Left Turn: {self._is_left_turn} | "
-        #               f"Goal Timer: {self._goal_timer.get_elapsed_time():.2f} s | "
-        #               f"Target vel L turn: L: {TURN_LEFT_VELOCITY_LEFT:.2f} m/s, R: {TURN_LEFT_VELOCITY_RIGHT:.2f} m/s")
 
 class StoppingState(MovementControllerState):
     def __init__(self):
