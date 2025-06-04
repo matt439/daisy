@@ -35,7 +35,7 @@ LANE_FOLLOWING_STOP_SIGN_TIME = 3.0  # seconds
 STOP_SIGN_IDS = [1, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38]
 
 # Overtaking constants
-OVERTAKING_TIMEOUT_DURATION = 20.0  # seconds
+OVERTAKING_TIMEOUT_DURATION = 7.0  # seconds
 CAR_WAITING_TIME = 5.0  # seconds
 
 # Intersection constants
@@ -43,8 +43,8 @@ LEFT_INTERSECTION_SIGNS_IDS = [10, 61, 62, 63, 64]
 RIGHT_INTERSECTION_SIGNS_IDS = [9, 57, 58, 59, 60]
 T_INTERSECTION_SIGNS_IDS = [11, 65, 66, 67, 68]
 SIGN_WAITING_DURATION = 5.0  # seconds
-TURNING_TIMEOUT_DURATION = 10.0  # seconds
-APPROACHING_SIGN_TIMEOUT_DURATION = 10.0  # seconds
+TURNING_TIMEOUT_DURATION = 5.0  # seconds
+APPROACHING_SIGN_TIMEOUT_DURATION = 7.0  # seconds
 
 # Lane controller node parameters constants
 LANE_CONTROLLER_NODE_V_BAR = "/vader/lane_controller_node/v_bar" # nominal velocity in m/s
