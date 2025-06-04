@@ -13,11 +13,10 @@ MAX_VELOCITY = 0.8  # m/s, maximum velocity for the overtaking maneuver
 MIN_VELOCITY = 0.0  # m/s, minimum velocity for the overtaking maneuver
 
 # Overtaking parameters
-OVERTAKING_TIMEOUT_DURATION = 15.0  # seconds
+OVERTAKING_TIMEOUT_DURATION = 6.0  # seconds
 OVERTAKING_MANEUVER_DURATION = 5.0  # seconds, duration of the overtaking maneuver
 OVERTAKING_FORWARD_DISTANCE = 0.5  # meters
 OVERTAKING_MIDWAY_DISTANCE = 0.25 # meters, where the piecewise function is split into two parts 
-# AXLE_LENGTH = 0.1
 OVERTAKING_WHEEL_OFFSET = 0.09  # meters
 # Generalized logistic function parameters for overtaking
 A = 0.0
@@ -31,7 +30,7 @@ OVERTAKING_SUCCESS_FSM_STATE = 'OVERTAKING_SUCCESS'
 OVERTAKING_FAILURE_FSM_STATE = 'OVERTAKING_FAILURE'
 
 # Turning parameters
-TURNING_TIMEOUT_DURATION = 10.0  # seconds
+TURNING_TIMEOUT_DURATION = 4.0  # seconds
 TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR = 1.5
 TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR = 0.75
 AXLE_LENGTH = 0.1  # meters, distance between the two wheels
@@ -45,12 +44,6 @@ TURN_LEFT_LEFT_WHEEL_DISTANCE = math.pi * TURN_LEFT_LEFT_WHEEL_RADIUS * \
 TURN_LEFT_RIGHT_WHEEL_DISTANCE = math.pi * TURN_LEFT_RIGHT_WHEEL_RADIUS * \
     TURN_LEFT_RIGHT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the right wheel during left turn
 TURN_LEFT_MANEUVER_DURATION = 3.0  # seconds
-# TURN_LEFT_VELOCITY_LEFT = TURN_LEFT_LEFT_WHEEL_DISTANCE / TURN_LEFT_MANEUVER_DURATION  # m/s for left wheel
-# TURN_LEFT_VELOCITY_LEFT_MAX = TURN_LEFT_VELOCITY_LEFT * TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel max
-# TURN_LEFT_VELOCITY_LEFT_MIN = TURN_LEFT_VELOCITY_LEFT * TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel min
-# TURN_LEFT_VELOCITY_RIGHT = TURN_LEFT_RIGHT_WHEEL_DISTANCE / TURN_LEFT_MANEUVER_DURATION  # m/s for right wheel
-# TURN_LEFT_VELOCITY_RIGHT_MAX = TURN_LEFT_VELOCITY_RIGHT * TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR  # m/s for right wheel max
-# TURN_LEFT_VELOCITY_RIGHT_MIN = TURN_LEFT_VELOCITY_RIGHT * TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR  # m/s for right wheel min
 
 TURN_RIGHT_LEFT_WHEEL_RADIUS = 0.17  # meters, radius of the left wheel during right turn
 TURN_RIGHT_RIGHT_WHEEL_RADIUS = TURN_RIGHT_LEFT_WHEEL_RADIUS - AXLE_LENGTH  # meters, radius of the right wheel during right turn
@@ -60,39 +53,33 @@ TURN_RIGHT_LEFT_WHEEL_DISTANCE = math.pi * TURN_RIGHT_LEFT_WHEEL_RADIUS * \
     TURN_RIGHT_LEFT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the left wheel during right turn
 TURN_RIGHT_RIGHT_WHEEL_DISTANCE = math.pi * TURN_RIGHT_RIGHT_WHEEL_RADIUS * \
     TURN_RIGHT_RIGHT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the right wheel during right turn
-TURN_RIGHT_MANEUVER_DURATION = 1.0  # seconds
-# TURN_RIGHT_VELOCITY_LEFT = TURN_RIGHT_LEFT_WHEEL_DISTANCE / TURN_RIGHT_MANEUVER_DURATION  # m/s for left wheel
-# TURN_RIGHT_VELOCITY_RIGHT = TURN_RIGHT_RIGHT_WHEEL_DISTANCE / TURN_RIGHT_MANEUVER_DURATION  # m/s for right wheel
-# TURN_RIGHT_VELOCITY_LEFT_MAX = TURN_RIGHT_VELOCITY_LEFT * TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel max
-# TURN_RIGHT_VELOCITY_LEFT_MIN = TURN_RIGHT_VELOCITY_LEFT * TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel min
-# TURN_RIGHT_VELOCITY_RIGHT_MAX = TURN_RIGHT_VELOCITY_RIGHT * TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR  # m/s for right wheel max
-# TURN_RIGHT_VELOCITY_RIGHT_MIN = TURN_RIGHT_VELOCITY_RIGHT * TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR  # m/s for right wheel min
+TURN_RIGHT_MANEUVER_DURATION = 1.2  # seconds
+
 TURNING_START_FSM_STATE = 'TURNING_START'
 TURNING_SUCCESS_FSM_STATE = 'TURNING_SUCCESS'
 TURNING_FAILURE_FSM_STATE = 'TURNING_FAILURE'
 
 # Stopping parameters
-STOPPING_TIMEOUT_DURATION = 10.0  # seconds
+STOPPING_TIMEOUT_DURATION = 2.0  # seconds
 WHEEL_VELOCITY_STOPPED_THRESHOLD = 0.01  # m/s, threshold to consider the wheel stopped
 STOPPING_START_FSM_STATE = 'STOPPING_START'
 STOPPING_SUCCESS_FSM_STATE = 'STOPPING_SUCCESS'
 STOPPING_FAILURE_FSM_STATE = 'STOPPING_FAILURE'
 
 # Approaching sign parameters
-APPROACHING_SIGN_TIMEOUT_DURATION = 10.0  # seconds
+APPROACHING_SIGN_TIMEOUT_DURATION = 6.0  # seconds
 
 FOLLOW_ANGULAR_VELOCITY = 0.1 # rad/s
 FOLLOW_ANGULAR_VELOCITY_MAX = 0.2 # rad/s
 FOLLOW_ANGULAR_VELOCITY_MIN = 0.0 # rad/s
-# FOLLOW_ANGULAR_VELOCITY_AVG_DISTANCE = 0.3
 FOLLOW_X_DISTANCE_TARGET = 0.25 # meter, the sign should be to the right of the bot
 FOLLOW_X_DISTANCE_THRESHOLD = 0.03 # meter
 
 FOLLOW_Z_DISTANCE_TARGET = 0.6 # meter, sign is this distance in front of the stop line
 FOLLOW_Z_DISTANCE_THRESHOLD = 0.05 # meter
-FOLLOW_LINEAR_VELOCITY = 0.2 # m/s
+FOLLOW_LINEAR_VELOCITY = 0.15 # m/s
 FOLLOW_LINEAR_VELOCITY_MAX = 0.3 # m/s
-FOLLOW_LINEAR_VELOCITY_MIN = 0.1 # m/s
+FOLLOW_LINEAR_VELOCITY_MIN = 0.0 # m/s
 
 APPROACHING_SIGN_START_FSM_STATE = 'APPROACHING_SIGN_START'
 APPROACHING_SIGN_SUCCESS_FSM_STATE = 'APPROACHING_SIGN_SUCCESS'
@@ -511,7 +498,8 @@ class ApproachingSignTools:
         # If the object is closer than the target distance, decrease the velocity
         # If the object is further than the target distance, increase the velocity
         # The velocity is proportional to the distance
-        vel = FOLLOW_LINEAR_VELOCITY * abs(z) / FOLLOW_Z_DISTANCE_TARGET
+        distance_from_target = abs(z - FOLLOW_Z_DISTANCE_TARGET)
+        vel = FOLLOW_LINEAR_VELOCITY * distance_from_target / FOLLOW_Z_DISTANCE_TARGET
         # Clamp the velocity to a maximum value
         if vel > FOLLOW_LINEAR_VELOCITY_MAX:
             vel = FOLLOW_LINEAR_VELOCITY_MAX
@@ -727,7 +715,7 @@ class StoppingState(MovementControllerState):
     def on_enter(self) -> None:
         self.context.publish_fsm_state(STOPPING_START_FSM_STATE)
         self._timer.start()
-        self.send_stop_command()
+        self.context.stop_robot()
 
     def on_event(self, event: MovementControllerEvent) -> None:
         pass
@@ -744,10 +732,7 @@ class StoppingState(MovementControllerState):
             self.context.transition_to(IdleState())
             return
 
-        self.send_stop_command()
-
-    def send_stop_command(self):
-        self.context.publish_velocity(0.0, 0.0)
+        self.context.stop_robot()
 
     def is_wheels_stopped(self) -> bool:
         wheel_info = self.context.get_wheel_movement_info()
