@@ -637,23 +637,24 @@ class TurningState(MovementControllerState):
 
     def control_bot(self):
         wheel_info = self.context.get_wheel_movement_info()
-        left_velocity = wheel_info.get_left_velocity()
-        right_velocity = wheel_info.get_right_velocity()
+        measured_left_velocity = wheel_info.get_left_velocity()
+        measured_right_velocity = wheel_info.get_right_velocity()
 
         if self._is_left_turn:
             left_velocity = TurningTools.calculate_turning_velocity(
-                True, left_velocity, TURN_LEFT_VELOCITY_LEFT)
+                True, measured_left_velocity, TURN_LEFT_VELOCITY_LEFT)
             right_velocity = TurningTools.calculate_turning_velocity(
-                True, right_velocity, TURN_LEFT_VELOCITY_RIGHT)
+                True, measured_right_velocity, TURN_LEFT_VELOCITY_RIGHT)
         else:
             left_velocity = TurningTools.calculate_turning_velocity(
-                False, left_velocity, TURN_RIGHT_VELOCITY_LEFT)
+                False, measured_left_velocity, TURN_RIGHT_VELOCITY_LEFT)
             right_velocity = TurningTools.calculate_turning_velocity(
-                False, right_velocity, TURN_RIGHT_VELOCITY_RIGHT)
-
+                False, measured_right_velocity, TURN_RIGHT_VELOCITY_RIGHT)
+            
         self.context.publish_velocity(left_velocity, right_velocity)
         # Log the velocities for debugging
-        rospy.loginfo(f"Turning Velocities - Left: {left_velocity:.2f} m/s, Right: {right_velocity:.2f} m/s | "
+        rospy.loginfo(f"Turning Vel - L: {left_velocity:.2f} m/s, R: {right_velocity:.2f} m/s | "
+                      f"Measured Vel - L: {measured_left_velocity:.2f} m/s, R: {measured_right_velocity:.2f} m/s | "
                       f"Is Left Turn: {self._is_left_turn} | "
                       f"Goal Timer: {self._goal_timer.get_elapsed_time():.2f} s | "
                       f"Target vel L turn: L: {TURN_LEFT_VELOCITY_LEFT:.2f} m/s, R: {TURN_LEFT_VELOCITY_RIGHT:.2f} m/s")
