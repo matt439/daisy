@@ -33,10 +33,12 @@ APPROACHING_SIGN_FAILURE_COMMAND = 42
 # Stop sign constants
 STOP_SIGN_WAITING_TIME = 5.0  # seconds
 LANE_FOLLOWING_STOP_SIGN_TIME = 3.0  # seconds
+STOPPING_FOR_STOP_SIGN_TIMEOUT_DURATION = 3.0  # seconds
 STOP_SIGN_IDS = [1, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38]
 
 # Overtaking constants
 OVERTAKING_TIMEOUT_DURATION = 7.0  # seconds
+STOPPING_FOR_CAR_TIMEOUT_DURATION = 3.0  # seconds
 CAR_WAITING_TIME = 5.0  # seconds
 
 # Intersection constants
@@ -241,11 +243,12 @@ class LaneFollowingState(DuckiebotState):
 
 class StoppingForStopSignState(DuckiebotState):
     def __init__(self):
-        pass
+        self._timer = Timer(STOPPING_FOR_STOP_SIGN_TIMEOUT_DURATION)
 
     def on_enter(self) -> None:
         self._context.publish_FSM_state(NORMAL_JOYSTICK_CONTROL_FSM_STATE) # Stop lane following
         self._context.stop_bot() # Stop the robot
+        self._timer.start()
 
     def on_event(self, event: DuckieBotEvent) -> None:
         if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
@@ -254,6 +257,10 @@ class StoppingForStopSignState(DuckiebotState):
             self.context.transition_to(WaitingAtStopSignState())
 
     def update(self) -> None:
+        if self._timer.is_expired():
+            rospy.logwarn("Stopping for stop sign timer expired, transitioning to lane following state.")
+            self.context.transition_to(LaneFollowingState())
+
         self._context.publish_FSM_state(NORMAL_JOYSTICK_CONTROL_FSM_STATE)  # Keep publishing normal joystick control state
 
 class WaitingAtStopSignState(DuckiebotState):
@@ -307,11 +314,12 @@ class LaneFollowingStopSignState(DuckiebotState):
     
 class StoppingForCarState(DuckiebotState):
     def __init__(self):
-        pass
+        self._timer = Timer(STOPPING_FOR_CAR_TIMEOUT_DURATION)
 
     def on_enter(self) -> None:
         self._context.publish_FSM_state(NORMAL_JOYSTICK_CONTROL_FSM_STATE) # Stop lane following
         self._context.stop_bot() # Stop the robot
+        self._timer.start()
 
     def on_event(self, event: DuckieBotEvent) -> None:
         if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
@@ -322,6 +330,10 @@ class StoppingForCarState(DuckiebotState):
             self.context.transition_to(LaneFollowingState())
 
     def update(self) -> None:
+        if self._timer.is_expired():
+            rospy.logwarn("Stopping for car timer expired, transitioning to lane following state.")
+            self.context.transition_to(LaneFollowingState())
+
         self._context.publish_FSM_state(NORMAL_JOYSTICK_CONTROL_FSM_STATE)  # Keep publishing normal joystick control state
 
 class WaitingForCarState(DuckiebotState):
