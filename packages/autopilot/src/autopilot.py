@@ -615,6 +615,8 @@ class Autopilot:
         if detection.transform.translation.x < 0:
             return False
         
+        rospy.loginfo(f"ID: {detection.tag_id}, Trans: {detection.transform.translation.x}, {detection.transform.translation.y}, {detection.transform.translation.z}, Rot: {detection.transform.rotation.x}, {detection.transform.rotation.y}, {detection.transform.rotation.z}, {detection.transform.rotation.w}")
+
         # Check if the tag is not at an extreme angle using the x, y, z, and w components of the quaternion
         if detection.transform.rotation.x < -0.5 or detection.transform.rotation.x > 0.5:
             return False
