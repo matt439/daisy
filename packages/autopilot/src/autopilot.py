@@ -48,6 +48,7 @@ T_INTERSECTION_SIGNS_IDS = [11, 65, 66, 67, 68]
 SIGN_WAITING_DURATION = 5.0  # seconds
 TURNING_TIMEOUT_DURATION = 5.0  # seconds
 APPROACHING_SIGN_TIMEOUT_DURATION = 7.0  # seconds
+APRIL_TAG_DETCTION_ROTATION_THRESHOLD = 0.5  # Threshold for quaternion components to determine valid tag orientation
 
 # Lane controller node parameters constants
 LANE_CONTROLLER_NODE_V_BAR = "/vader/lane_controller_node/v_bar" # nominal velocity in m/s
@@ -614,17 +615,12 @@ class Autopilot:
         # Check if the tag is to the right of the robot
         if detection.transform.translation.x < 0:
             return False
-        
-        rospy.loginfo(f"ID: {detection.tag_id}, Trans: {detection.transform.translation.x}, {detection.transform.translation.y}, {detection.transform.translation.z}, Rot: {detection.transform.rotation.x}, {detection.transform.rotation.y}, {detection.transform.rotation.z}, {detection.transform.rotation.w}")
 
-        # Check if the tag is not at an extreme angle using the x, y, z, and w components of the quaternion
-        if detection.transform.rotation.x < -0.5 or detection.transform.rotation.x > 0.5:
-            return False
-        if detection.transform.rotation.y < -0.5 or detection.transform.rotation.y > 0.5:
-            return False
-        if detection.transform.rotation.z < -0.5 or detection.transform.rotation.z > 0.5:
-            return False
-        if detection.transform.rotation.w < 0.5:
+        # Check if the tag is not at an extreme angle using the x, y, z components of the quaternion
+        # w is not used for angle checks, so we can ignore it
+        if abs(detection.transform.rotation.x) > APRIL_TAG_DETCTION_ROTATION_THRESHOLD or \
+                abs(detection.transform.rotation.y) > APRIL_TAG_DETCTION_ROTATION_THRESHOLD or \
+                    abs(detection.transform.rotation.z) > APRIL_TAG_DETCTION_ROTATION_THRESHOLD:
             return False
         
         # If all checks passed, the tag is in a valid position
