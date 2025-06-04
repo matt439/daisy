@@ -472,10 +472,10 @@ class OvertakingState(MovementControllerState):
 
         # Publish the velocities to the wheels
         self.context.publish_velocity(left_velocity, right_velocity)
-        rospy.loginfo(f"Vel: L: {left_velocity:.2f} m/s, R: {right_velocity:.2f} m/s | "
-                    f"Curr Dist: L: {current_left_distance:.2f} m, R: {current_right_distance:.2f} m | "
-                        f"Target Dist: L: {target_left_distance:.2f} m, R: {target_right_distance:.2f} m | "
-                            f"Time: {timer_elapsed:.2f} s | ")
+        # rospy.loginfo(f"Vel: L: {left_velocity:.2f} m/s, R: {right_velocity:.2f} m/s | "
+        #             f"Curr Dist: L: {current_left_distance:.2f} m, R: {current_right_distance:.2f} m | "
+        #                 f"Target Dist: L: {target_left_distance:.2f} m, R: {target_right_distance:.2f} m | "
+        #                     f"Time: {timer_elapsed:.2f} s | ")
 
 class ApproachingSignTools:
     # @staticmethod
@@ -665,10 +665,10 @@ class TurningState(MovementControllerState):
 
         # Publish the velocities to the wheels
         self.context.publish_velocity(left_velocity, right_velocity)
-        rospy.loginfo(f"Vel: L: {left_velocity:.2f} m/s, R: {right_velocity:.2f} m/s | "
-                    f"Curr Dist: L: {current_left_distance:.2f} m, R: {current_right_distance:.2f} m | "
-                        f"Target Dist: L: {target_left_distance:.2f} m, R: {target_right_distance:.2f} m | "
-                            f"Time: {timer_elapsed:.2f} s | ")
+        # rospy.loginfo(f"Vel: L: {left_velocity:.2f} m/s, R: {right_velocity:.2f} m/s | "
+        #             f"Curr Dist: L: {current_left_distance:.2f} m, R: {current_right_distance:.2f} m | "
+        #                 f"Target Dist: L: {target_left_distance:.2f} m, R: {target_right_distance:.2f} m | "
+        #                     f"Time: {timer_elapsed:.2f} s | ")
 
 class StoppingState(MovementControllerState):
     def __init__(self):
