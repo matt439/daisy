@@ -106,8 +106,6 @@ class Timer:
         if self._start_time is None:
             return False
         return (rospy.get_time() - self._start_time) >= self._duration
-    def reset(self):
-        self._start_time = None
     def get_elapsed_time(self) -> float:
         if self._start_time is None:
             return 0.0
