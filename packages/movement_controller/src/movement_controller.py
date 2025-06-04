@@ -698,8 +698,8 @@ class StoppingState(MovementControllerState):
 
     def is_wheels_stopped(self) -> bool:
         wheel_info = self.context.get_wheel_movement_info()
-        left_velocity = wheel_info.get_left_info()[2]
-        right_velocity = wheel_info.get_right_info()[2]
+        left_velocity = wheel_info.get_left_velocity()
+        right_velocity = wheel_info.get_right_velocity()
         return abs(left_velocity) < WHEEL_VELOCITY_STOPPED_THRESHOLD and \
                abs(right_velocity) < WHEEL_VELOCITY_STOPPED_THRESHOLD
 
