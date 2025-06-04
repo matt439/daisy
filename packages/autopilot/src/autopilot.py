@@ -113,12 +113,13 @@ class Timer:
 
 class Duckiebot():
     def __init__(self, state: 'DuckiebotState', state_pub, stopping_pub,
-                 overtaking_pub, turning_pub, approaching_sign_pub) -> None:
+                 overtaking_pub, turning_pub, approaching_sign_pub, cmd_pub) -> None:
         self._state_publisher = state_pub
         self._stopping_publisher = stopping_pub
         self._overtaking_publisher = overtaking_pub
         self._turning_publisher = turning_pub
         self._approaching_sign_publisher = approaching_sign_pub
+        self._cmd_vel_publisher = cmd_pub
         self._sign_tag_id = None
         rospy.loginfo("Duckiebot class initialized!")
         self.transition_to(state)
@@ -160,7 +161,7 @@ class Duckiebot():
         cmd_msg.header.stamp = rospy.Time.now()
         cmd_msg.v = 0.0
         cmd_msg.omega = 0.0
-        self.cmd_vel_pub.publish(cmd_msg)
+        self._cmd_vel_publisher.publish(cmd_msg)
 
     def publish_overtaking_goal(self):
         overtaking_goal_msg = Int8()
@@ -558,7 +559,8 @@ class Autopilot:
         self.set_lane_following_parameters()
 
         self._duckiebot = Duckiebot(LaneFollowingState(), self._state_publisher, self._stopping_publisher,
-                                    self._overtaking_publisher, self._turning_publisher, self._approaching_sign_publisher)
+                                    self._overtaking_publisher, self._turning_publisher,
+                                    self._approaching_sign_publisher, self.cmd_vel_pub)
 
         rospy.loginfo("Initialized autopilot node!")
  
