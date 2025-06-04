@@ -46,7 +46,6 @@ T_INTERSECTION_SIGNS_IDS = [11, 65, 66, 67, 68]
 SIGN_WAITING_DURATION = 5.0  # seconds
 TURNING_TIMEOUT_DURATION = 5.0  # seconds
 APPROACHING_SIGN_TIMEOUT_DURATION = 7.0  # seconds
-LANE_FOLLOWING_POST_TURN_TIME = 2.0  # seconds
 
 # Lane controller node parameters constants
 LANE_CONTROLLER_NODE_V_BAR = "/vader/lane_controller_node/v_bar" # nominal velocity in m/s
@@ -230,6 +229,12 @@ class LaneFollowingState(DuckiebotState):
             self.context.transition_to(ApproachingTurnLeftSignState(self._context.get_sign_tag_id()))
         elif event == DuckieBotEvent.TURN_RIGHT_SIGN_DETECTED:
             self.context.transition_to(ApproachingTurnRightSignState(self._context.get_sign_tag_id()))
+        elif event == DuckieBotEvent.T_INTERSECTON_SIGN_DETECTED:
+            # Randomly choose between left and right turn for T-intersection
+            if random.choice([True, False]):
+                self.context.transition_to(ApproachingTurnLeftSignState(self._context.get_sign_tag_id()))
+            else:
+                self.context.transition_to(ApproachingTurnRightSignState(self._context.get_sign_tag_id()))
 
     def update(self) -> None:
         pass
@@ -284,6 +289,12 @@ class LaneFollowingStopSignState(DuckiebotState):
             self.context.transition_to(ApproachingTurnLeftSignState(self._context.get_sign_tag_id()))
         elif event == DuckieBotEvent.TURN_RIGHT_SIGN_DETECTED:
             self.context.transition_to(ApproachingTurnRightSignState(self._context.get_sign_tag_id()))
+        elif event == DuckieBotEvent.T_INTERSECTON_SIGN_DETECTED:
+            # Randomly choose between left and right turn for T-intersection
+            if random.choice([True, False]):
+                self.context.transition_to(ApproachingTurnLeftSignState(self._context.get_sign_tag_id()))
+            else:
+                self.context.transition_to(ApproachingTurnRightSignState(self._context.get_sign_tag_id()))
 
     def update(self) -> None:
         if self._timer.is_expired():
@@ -348,36 +359,6 @@ class OvertakingState(DuckiebotState):
             rospy.logwarn("Overtaking timer expired, transitioning to lane following state.")
             self.context.transition_to(LaneFollowingState())
 
-class LaneFollowingPostTurnState(DuckiebotState):
-    def __init__(self):
-        self._timer = Timer(LANE_FOLLOWING_POST_TURN_TIME)
-
-    def on_enter(self) -> None:
-        self._context.publish_FSM_state(LANE_FOLLOWING_FSM_STATE)
-        self._timer.start()
-
-    def on_event(self, event: DuckieBotEvent) -> None:
-        if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
-            self.context.transition_to(PauseState())
-        elif event == DuckieBotEvent.STOP_SIGN_DETECTED:
-            self.context.transition_to(StoppingForStopSignState())
-        elif event == DuckieBotEvent.CAR_DETECTED:
-            self.context.transition_to(StoppingForCarState())
-        elif event == DuckieBotEvent.TURN_LEFT_SIGN_DETECTED:
-            self.context.transition_to(ApproachingTurnLeftSignState(self._context.get_sign_tag_id()))
-        elif event == DuckieBotEvent.TURN_RIGHT_SIGN_DETECTED:
-            self.context.transition_to(ApproachingTurnRightSignState(self._context.get_sign_tag_id()))
-        elif event == DuckieBotEvent.T_INTERSECTON_SIGN_DETECTED:
-            # Randomly choose between left and right turn for T-intersection
-            if random.choice([True, False]):
-                self.context.transition_to(ApproachingTurnLeftSignState(self._context.get_sign_tag_id()))
-            else:
-                self.context.transition_to(ApproachingTurnRightSignState(self._context.get_sign_tag_id()))
-
-    def update(self) -> None:
-        if self._timer.is_expired():
-            self.context.transition_to(LaneFollowingState())
-
 class TurningLeftState(DuckiebotState):
     def __init__(self, tag_id: int):
         self._tag_id = tag_id
@@ -391,7 +372,7 @@ class TurningLeftState(DuckiebotState):
         if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
             self.context.transition_to(PauseState())
         elif event == DuckieBotEvent.TURNING_SUCCESS:
-            self.context.transition_to(LaneFollowingPostTurnState())
+            self.context.transition_to(LaneFollowingState())
         elif event == DuckieBotEvent.TURNING_FAILURE:
             rospy.logerr("Turning left failed. Transitioning to lane following state.")
             self.context.transition_to(LaneFollowingState())
@@ -414,7 +395,7 @@ class TurningRightState(DuckiebotState):
         if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
             self.context.transition_to(PauseState())
         elif event == DuckieBotEvent.TURNING_SUCCESS:
-            self.context.transition_to(LaneFollowingPostTurnState())
+            self.context.transition_to(LaneFollowingState())
         elif event == DuckieBotEvent.TURNING_FAILURE:
             rospy.logerr("Turning right failed. Transitioning to lane following state.")
             self.context.transition_to(LaneFollowingState())
@@ -591,6 +572,11 @@ class Autopilot:
     def april_tag_callback(self, msg: AprilTagDetectionArray):
         # Process the AprilTag detections
         for detection in msg.detections:
+            # check if the tag is to the left or right of the robot
+            # ignore the tag if it is to the left
+            if detection.transform.translation.x < 0.0:
+                continue
+            
             id = detection.tag_id
             self._duckiebot._sign_tag_id = id  # Store the detected tag ID in the Duckiebot instance
             if self.is_stop_sign_id(id):
@@ -601,7 +587,6 @@ class Autopilot:
                 self._duckiebot.on_event(DuckieBotEvent.TURN_RIGHT_SIGN_DETECTED)
             elif self.is_t_intersection_sign_id(id):
                 self._duckiebot.on_event(DuckieBotEvent.T_INTERSECTON_SIGN_DETECTED)
-
 
                 # # Randomly choose between left and right turn for T-intersection
                 # import random
