@@ -35,31 +35,38 @@ TURNING_TIMEOUT_DURATION = 10.0  # seconds
 TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR = 1.5
 TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR = 0.75
 AXLE_LENGTH = 0.1  # meters, distance between the two wheels
-TURN_VELOCITY_ADJUSTMENT_SCALAR = 0.75
 
 TURN_LEFT_RIGHT_WHEEL_RADIUS = 0.39  # meters, radius of the right wheel during left turn
 TURN_LEFT_LEFT_WHEEL_RADIUS = TURN_LEFT_RIGHT_WHEEL_RADIUS - AXLE_LENGTH  # meters, radius of the left wheel during left turn
-TURN_LEFT_LEFT_WHEEL_DISTANCE = math.pi * TURN_LEFT_LEFT_WHEEL_RADIUS / 2.0  # meters, distance traveled by the left wheel during left turn
-TURN_LEFT_RIGHT_WHEEL_DISTANCE = math.pi * TURN_LEFT_RIGHT_WHEEL_RADIUS / 2.0  # meters, distance traveled by the right wheel during left turn
-TURN_LEFT_MANEUVER_DURATION = 2.0  # seconds
-TURN_LEFT_VELOCITY_LEFT = TURN_LEFT_LEFT_WHEEL_DISTANCE / TURN_LEFT_MANEUVER_DURATION  # m/s for left wheel
-TURN_LEFT_VELOCITY_LEFT_MAX = TURN_LEFT_VELOCITY_LEFT * TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel max
-TURN_LEFT_VELOCITY_LEFT_MIN = TURN_LEFT_VELOCITY_LEFT * TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel min
-TURN_LEFT_VELOCITY_RIGHT = TURN_LEFT_RIGHT_WHEEL_DISTANCE / TURN_LEFT_MANEUVER_DURATION  # m/s for right wheel
-TURN_LEFT_VELOCITY_RIGHT_MAX = TURN_LEFT_VELOCITY_RIGHT * TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR  # m/s for right wheel max
-TURN_LEFT_VELOCITY_RIGHT_MIN = TURN_LEFT_VELOCITY_RIGHT * TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR  # m/s for right wheel min
+TURN_LEFT_LEFT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR = 1.0  # scalar to adjust the velocity for left turn
+TURN_LEFT_RIGHT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR = 1.0  # scalar to adjust the velocity for right wheel during left turn
+TURN_LEFT_LEFT_WHEEL_DISTANCE = math.pi * TURN_LEFT_LEFT_WHEEL_RADIUS * \
+    TURN_LEFT_LEFT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the left wheel during left turn
+TURN_LEFT_RIGHT_WHEEL_DISTANCE = math.pi * TURN_LEFT_RIGHT_WHEEL_RADIUS * \
+    TURN_LEFT_RIGHT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the right wheel during left turn
+TURN_LEFT_MANEUVER_DURATION = 3.0  # seconds
+# TURN_LEFT_VELOCITY_LEFT = TURN_LEFT_LEFT_WHEEL_DISTANCE / TURN_LEFT_MANEUVER_DURATION  # m/s for left wheel
+# TURN_LEFT_VELOCITY_LEFT_MAX = TURN_LEFT_VELOCITY_LEFT * TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel max
+# TURN_LEFT_VELOCITY_LEFT_MIN = TURN_LEFT_VELOCITY_LEFT * TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel min
+# TURN_LEFT_VELOCITY_RIGHT = TURN_LEFT_RIGHT_WHEEL_DISTANCE / TURN_LEFT_MANEUVER_DURATION  # m/s for right wheel
+# TURN_LEFT_VELOCITY_RIGHT_MAX = TURN_LEFT_VELOCITY_RIGHT * TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR  # m/s for right wheel max
+# TURN_LEFT_VELOCITY_RIGHT_MIN = TURN_LEFT_VELOCITY_RIGHT * TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR  # m/s for right wheel min
 
 TURN_RIGHT_LEFT_WHEEL_RADIUS = 0.17  # meters, radius of the left wheel during right turn
 TURN_RIGHT_RIGHT_WHEEL_RADIUS = TURN_RIGHT_LEFT_WHEEL_RADIUS - AXLE_LENGTH  # meters, radius of the right wheel during right turn
-TURN_RIGHT_LEFT_WHEEL_DISTANCE = math.pi * TURN_RIGHT_LEFT_WHEEL_RADIUS / 2.0  # meters, distance traveled by the left wheel during right turn
-TURN_RIGHT_RIGHT_WHEEL_DISTANCE = math.pi * TURN_RIGHT_RIGHT_WHEEL_RADIUS / 2.0  # meters, distance traveled by the right wheel during right turn
+TURN_RIGHT_LEFT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR = 1.0  # scalar to adjust the velocity for left wheel during right turn
+TURN_RIGHT_RIGHT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR = 1.0  # scalar to adjust the velocity for right wheel during right turn
+TURN_RIGHT_LEFT_WHEEL_DISTANCE = math.pi * TURN_RIGHT_LEFT_WHEEL_RADIUS * \
+    TURN_RIGHT_LEFT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the left wheel during right turn
+TURN_RIGHT_RIGHT_WHEEL_DISTANCE = math.pi * TURN_RIGHT_RIGHT_WHEEL_RADIUS * \
+    TURN_RIGHT_RIGHT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the right wheel during right turn
 TURN_RIGHT_MANEUVER_DURATION = 1.0  # seconds
-TURN_RIGHT_VELOCITY_LEFT = TURN_RIGHT_LEFT_WHEEL_DISTANCE / TURN_RIGHT_MANEUVER_DURATION  # m/s for left wheel
-TURN_RIGHT_VELOCITY_RIGHT = TURN_RIGHT_RIGHT_WHEEL_DISTANCE / TURN_RIGHT_MANEUVER_DURATION  # m/s for right wheel
-TURN_RIGHT_VELOCITY_LEFT_MAX = TURN_RIGHT_VELOCITY_LEFT * TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel max
-TURN_RIGHT_VELOCITY_LEFT_MIN = TURN_RIGHT_VELOCITY_LEFT * TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel min
-TURN_RIGHT_VELOCITY_RIGHT_MAX = TURN_RIGHT_VELOCITY_RIGHT * TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR  # m/s for right wheel max
-TURN_RIGHT_VELOCITY_RIGHT_MIN = TURN_RIGHT_VELOCITY_RIGHT * TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR  # m/s for right wheel min
+# TURN_RIGHT_VELOCITY_LEFT = TURN_RIGHT_LEFT_WHEEL_DISTANCE / TURN_RIGHT_MANEUVER_DURATION  # m/s for left wheel
+# TURN_RIGHT_VELOCITY_RIGHT = TURN_RIGHT_RIGHT_WHEEL_DISTANCE / TURN_RIGHT_MANEUVER_DURATION  # m/s for right wheel
+# TURN_RIGHT_VELOCITY_LEFT_MAX = TURN_RIGHT_VELOCITY_LEFT * TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel max
+# TURN_RIGHT_VELOCITY_LEFT_MIN = TURN_RIGHT_VELOCITY_LEFT * TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel min
+# TURN_RIGHT_VELOCITY_RIGHT_MAX = TURN_RIGHT_VELOCITY_RIGHT * TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR  # m/s for right wheel max
+# TURN_RIGHT_VELOCITY_RIGHT_MIN = TURN_RIGHT_VELOCITY_RIGHT * TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR  # m/s for right wheel min
 TURNING_START_FSM_STATE = 'TURNING_START'
 TURNING_SUCCESS_FSM_STATE = 'TURNING_SUCCESS'
 TURNING_FAILURE_FSM_STATE = 'TURNING_FAILURE'
@@ -578,36 +585,48 @@ class ApproachingSignState(MovementControllerState):
             return False
 
 class TurningTools:
+    # @staticmethod
+    # def calculate_turning_velocity(is_left_turn: bool, is_left_wheel: bool,
+    #                                current_vel: float, target_vel: float) -> float:
+
+    #     new_vel = (1 - TURN_VELOCITY_ADJUSTMENT_SCALAR) * \
+    #         current_vel + TURN_VELOCITY_ADJUSTMENT_SCALAR * target_vel
+
+    #     if is_left_turn:
+    #         if is_left_wheel:
+    #             if new_vel > TURN_LEFT_VELOCITY_LEFT_MAX:
+    #                 return TURN_LEFT_VELOCITY_LEFT_MAX
+    #             elif new_vel < TURN_LEFT_VELOCITY_LEFT_MIN:
+    #                 return TURN_LEFT_VELOCITY_LEFT_MIN
+    #         else: # right wheel
+    #             if new_vel > TURN_LEFT_VELOCITY_RIGHT_MAX:
+    #                 return TURN_LEFT_VELOCITY_RIGHT_MAX
+    #             elif new_vel < TURN_LEFT_VELOCITY_RIGHT_MIN:
+    #                 return TURN_LEFT_VELOCITY_RIGHT_MIN
+    #     else: # right turn
+    #         if is_left_wheel:
+    #             if new_vel > TURN_RIGHT_VELOCITY_LEFT_MAX:
+    #                 return TURN_RIGHT_VELOCITY_LEFT_MAX
+    #             elif new_vel < TURN_RIGHT_VELOCITY_LEFT_MIN:
+    #                 return TURN_RIGHT_VELOCITY_LEFT_MIN
+    #         else: # right wheel
+    #             if new_vel > TURN_RIGHT_VELOCITY_RIGHT_MAX:
+    #                 return TURN_RIGHT_VELOCITY_RIGHT_MAX
+    #             elif new_vel < TURN_RIGHT_VELOCITY_RIGHT_MIN:
+    #                 return TURN_RIGHT_VELOCITY_RIGHT_MIN
+    #     return new_vel
     @staticmethod
-    def calculate_turning_velocity(is_left_turn: bool, is_left_wheel: bool,
-                                   current_vel: float, target_vel: float) -> float:
-
-        new_vel = (1 - TURN_VELOCITY_ADJUSTMENT_SCALAR) * \
-            current_vel + TURN_VELOCITY_ADJUSTMENT_SCALAR * target_vel
-
+    def calculate_turning_track_distance(is_left_turn: bool, is_left_wheel: float, timer_elapsed: float) -> float:
         if is_left_turn:
             if is_left_wheel:
-                if new_vel > TURN_LEFT_VELOCITY_LEFT_MAX:
-                    return TURN_LEFT_VELOCITY_LEFT_MAX
-                elif new_vel < TURN_LEFT_VELOCITY_LEFT_MIN:
-                    return TURN_LEFT_VELOCITY_LEFT_MIN
+                return TURN_LEFT_LEFT_WHEEL_DISTANCE * timer_elapsed / TURN_LEFT_MANEUVER_DURATION
             else: # right wheel
-                if new_vel > TURN_LEFT_VELOCITY_RIGHT_MAX:
-                    return TURN_LEFT_VELOCITY_RIGHT_MAX
-                elif new_vel < TURN_LEFT_VELOCITY_RIGHT_MIN:
-                    return TURN_LEFT_VELOCITY_RIGHT_MIN
+                return TURN_LEFT_RIGHT_WHEEL_DISTANCE * timer_elapsed / TURN_LEFT_MANEUVER_DURATION
         else: # right turn
             if is_left_wheel:
-                if new_vel > TURN_RIGHT_VELOCITY_LEFT_MAX:
-                    return TURN_RIGHT_VELOCITY_LEFT_MAX
-                elif new_vel < TURN_RIGHT_VELOCITY_LEFT_MIN:
-                    return TURN_RIGHT_VELOCITY_LEFT_MIN
+                return TURN_RIGHT_LEFT_WHEEL_DISTANCE * timer_elapsed / TURN_RIGHT_MANEUVER_DURATION
             else: # right wheel
-                if new_vel > TURN_RIGHT_VELOCITY_RIGHT_MAX:
-                    return TURN_RIGHT_VELOCITY_RIGHT_MAX
-                elif new_vel < TURN_RIGHT_VELOCITY_RIGHT_MIN:
-                    return TURN_RIGHT_VELOCITY_RIGHT_MIN
-        return new_vel
+                return TURN_RIGHT_RIGHT_WHEEL_DISTANCE * timer_elapsed / TURN_RIGHT_MANEUVER_DURATION
 
 class TurningState(MovementControllerState):
     def __init__(self, is_left_turn: bool):
@@ -615,15 +634,23 @@ class TurningState(MovementControllerState):
         self._is_left_turn = is_left_turn
         self._goal_timer = Timer(TURN_LEFT_MANEUVER_DURATION if is_left_turn \
                                                 else TURN_RIGHT_MANEUVER_DURATION)
+        self._start_left_distance = 0.0
+        self._start_right_distance = 0.0
+        self._last_wheel_info_time = None
 
     def on_enter(self) -> None:
         self.context.publish_fsm_state(TURNING_START_FSM_STATE)
         self._timeout_timer.start()
         self._goal_timer.start()
+        wheel_info = self.context.get_wheel_movement_info()
+        self._start_left_distance = wheel_info.get_left_distance()
+        self._start_right_distance = wheel_info.get_right_distance()
+        self._last_wheel_info_time = rospy.get_time()
 
     def on_event(self, event: MovementControllerEvent) -> None:
         if event == MovementControllerEvent.WHEEL_MOVEMENT_INFO_UPDATED:
-            self.control_bot()
+            if self._last_wheel_info_time is not None: # If on_enter has been called
+                self.control_bot()
 
     def update(self) -> None:
         if self._timeout_timer.is_expired():
@@ -637,6 +664,39 @@ class TurningState(MovementControllerState):
             self.context.transition_to(IdleState())
 
     def control_bot(self):
+        wheel_info = self.context.get_wheel_movement_info()
+        left_distance = wheel_info.get_left_distance()
+        right_distance = wheel_info.get_right_distance()
+
+        # Calculate the current distances from the starting point
+        current_left_distance = left_distance - self._start_left_distance
+        current_right_distance = right_distance - self._start_right_distance
+
+        timer_elapsed = self._goal_timer.get_elapsed_time()
+
+        target_left_distance = TurningTools.calculate_turning_track_distance(
+            self._is_left_turn, True, timer_elapsed)
+        
+        target_right_distance = TurningTools.calculate_turning_track_distance(
+            self._is_left_turn, False, timer_elapsed)
+        
+        current_time = rospy.get_time()
+        elapsed_time = current_time - self._last_wheel_info_time
+        self._last_wheel_info_time = current_time
+
+        # Calculate the velocities for the left and right wheels
+        left_velocity = VelocityCalculator.calculate_velocity(
+            target_left_distance, current_left_distance, elapsed_time)
+        right_velocity = VelocityCalculator.calculate_velocity(
+            target_right_distance, current_right_distance, elapsed_time)
+
+        # Publish the velocities to the wheels
+        self.context.publish_velocity(left_velocity, right_velocity)
+        rospy.loginfo(f"Vel: L: {left_velocity:.2f} m/s, R: {right_velocity:.2f} m/s | "
+                    f"Curr Dist: L: {current_left_distance:.2f} m, R: {current_right_distance:.2f} m | "
+                        f"Target Dist: L: {target_left_distance:.2f} m, R: {target_right_distance:.2f} m | "
+                            f"Time: {timer_elapsed:.2f} s | ")
+        
         # wheel_info = self.context.get_wheel_movement_info()
         # measured_left_velocity = wheel_info.get_left_velocity()
         # measured_right_velocity = wheel_info.get_right_velocity()
@@ -659,12 +719,6 @@ class TurningState(MovementControllerState):
         #               f"Is Left Turn: {self._is_left_turn} | "
         #               f"Goal Timer: {self._goal_timer.get_elapsed_time():.2f} s | "
         #               f"Target vel L turn: L: {TURN_LEFT_VELOCITY_LEFT:.2f} m/s, R: {TURN_LEFT_VELOCITY_RIGHT:.2f} m/s")
-
-        self.context.publish_velocity(
-            TURN_LEFT_VELOCITY_LEFT if self._is_left_turn else TURN_RIGHT_VELOCITY_LEFT,
-            TURN_LEFT_VELOCITY_RIGHT if self._is_left_turn else TURN_RIGHT_VELOCITY_RIGHT
-        )
-        
 
 class StoppingState(MovementControllerState):
     def __init__(self):
