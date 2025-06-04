@@ -40,7 +40,7 @@ TURN_LEFT_RIGHT_WHEEL_RADIUS = 0.39  # meters, radius of the right wheel during 
 TURN_LEFT_LEFT_WHEEL_RADIUS = TURN_LEFT_RIGHT_WHEEL_RADIUS - AXLE_LENGTH  # meters, radius of the left wheel during left turn
 TURN_LEFT_LEFT_WHEEL_DISTANCE = math.pi * TURN_LEFT_LEFT_WHEEL_RADIUS / 2.0  # meters, distance traveled by the left wheel during left turn
 TURN_LEFT_RIGHT_WHEEL_DISTANCE = math.pi * TURN_LEFT_RIGHT_WHEEL_RADIUS / 2.0  # meters, distance traveled by the right wheel during left turn
-TURN_LEFT_MANEUVER_DURATION = 3.0  # seconds
+TURN_LEFT_MANEUVER_DURATION = 2.0  # seconds
 TURN_LEFT_VELOCITY_LEFT = TURN_LEFT_LEFT_WHEEL_DISTANCE / TURN_LEFT_MANEUVER_DURATION  # m/s for left wheel
 TURN_LEFT_VELOCITY_LEFT_MAX = TURN_LEFT_VELOCITY_LEFT * TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel max
 TURN_LEFT_VELOCITY_LEFT_MIN = TURN_LEFT_VELOCITY_LEFT * TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel min
@@ -52,7 +52,7 @@ TURN_RIGHT_LEFT_WHEEL_RADIUS = 0.17  # meters, radius of the left wheel during r
 TURN_RIGHT_RIGHT_WHEEL_RADIUS = TURN_RIGHT_LEFT_WHEEL_RADIUS - AXLE_LENGTH  # meters, radius of the right wheel during right turn
 TURN_RIGHT_LEFT_WHEEL_DISTANCE = math.pi * TURN_RIGHT_LEFT_WHEEL_RADIUS / 2.0  # meters, distance traveled by the left wheel during right turn
 TURN_RIGHT_RIGHT_WHEEL_DISTANCE = math.pi * TURN_RIGHT_RIGHT_WHEEL_RADIUS / 2.0  # meters, distance traveled by the right wheel during right turn
-TURN_RIGHT_MANEUVER_DURATION = 1.5  # seconds
+TURN_RIGHT_MANEUVER_DURATION = 1.0  # seconds
 TURN_RIGHT_VELOCITY_LEFT = TURN_RIGHT_LEFT_WHEEL_DISTANCE / TURN_RIGHT_MANEUVER_DURATION  # m/s for left wheel
 TURN_RIGHT_VELOCITY_RIGHT = TURN_RIGHT_RIGHT_WHEEL_DISTANCE / TURN_RIGHT_MANEUVER_DURATION  # m/s for right wheel
 TURN_RIGHT_VELOCITY_LEFT_MAX = TURN_RIGHT_VELOCITY_LEFT * TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR  # m/s for left wheel max
@@ -646,9 +646,8 @@ class TurningState(MovementControllerState):
         # Log the velocities for debugging
         rospy.loginfo(f"Turning Velocities - Left: {left_velocity:.2f} m/s, Right: {right_velocity:.2f} m/s | "
                       f"Is Left Turn: {self._is_left_turn} | "
-                      f"Goal Timer: {self._goal_timer.get_elapsed_time():.2f} s"
-                      f"Target Velocities left turn - Left: {TURN_LEFT_VELOCITY_LEFT:.2f} m/s, Right: {TURN_LEFT_VELOCITY_RIGHT:.2f} m/s | "
-                      f"Target Velocities right turn - Left: {TURN_RIGHT_VELOCITY_LEFT:.2f} m/s, Right: {TURN_RIGHT_VELOCITY_RIGHT:.2f} m/s")
+                      f"Goal Timer: {self._goal_timer.get_elapsed_time():.2f} s | "
+                      f"Target vel L turn: L: {TURN_LEFT_VELOCITY_LEFT:.2f} m/s, R: {TURN_LEFT_VELOCITY_RIGHT:.2f} m/s")
         
 
 class StoppingState(MovementControllerState):
