@@ -73,12 +73,14 @@ FOLLOW_ANGULAR_VELOCITY = 0.1 # rad/s
 FOLLOW_ANGULAR_VELOCITY_MAX = 0.2 # rad/s
 FOLLOW_ANGULAR_VELOCITY_MIN = 0.0 # rad/s
 FOLLOW_X_DISTANCE_TARGET = 0.25 # meter, the sign should be to the right of the bot
-FOLLOW_X_DISTANCE_THRESHOLD = 0.03 # meter
+FOLLOW_X_DISTANCE_THRESHOLD = 0.02 # meter
+FOLLOW_ANGULAR_SLOWDOWN_RADIANS = math.pi / 8.0 # radians, distance at which the bot starts slowing down
 
 FOLLOW_Z_DISTANCE_TARGET = 0.6 # meter, sign is this distance in front of the stop line
-FOLLOW_Z_DISTANCE_THRESHOLD = 0.05 # meter
-FOLLOW_LINEAR_VELOCITY = 0.15 # m/s
-FOLLOW_LINEAR_VELOCITY_MAX = 0.3 # m/s
+FOLLOW_Z_DISTANCE_THRESHOLD = 0.02 # meter
+FOLLOW_LINEAR_SLOWDOWN_DISTANCE = 0.2 # meter, distance at which the bot starts slowing down
+FOLLOW_LINEAR_VELOCITY = 0.3 # m/s
+FOLLOW_LINEAR_VELOCITY_MAX = 0.35 # m/s
 FOLLOW_LINEAR_VELOCITY_MIN = 0.0 # m/s
 
 APPROACHING_SIGN_START_FSM_STATE = 'APPROACHING_SIGN_START'
@@ -470,16 +472,16 @@ class OvertakingState(MovementControllerState):
                             f"Time: {timer_elapsed:.2f} s | ")
 
 class ApproachingSignTools:
-    @staticmethod
-    def calculate_abs_proportional_follow_angular_velocity(x):
-        # Scale the angular velocity based on the distance from the target x position
-        vel = FOLLOW_ANGULAR_VELOCITY * abs(x) / FOLLOW_X_DISTANCE_THRESHOLD
-        # Clamp the velocity to a maximum value
-        if vel > FOLLOW_ANGULAR_VELOCITY_MAX:
-            vel = FOLLOW_ANGULAR_VELOCITY_MAX
-        elif vel < FOLLOW_ANGULAR_VELOCITY_MIN:
-            vel = FOLLOW_ANGULAR_VELOCITY_MIN
-        return vel
+    # @staticmethod
+    # def calculate_abs_proportional_follow_angular_velocity(x):
+    #     # Scale the angular velocity based on the distance from the target x position
+    #     vel = FOLLOW_ANGULAR_VELOCITY * abs(x) / FOLLOW_X_DISTANCE_THRESHOLD
+    #     # Clamp the velocity to a maximum value
+    #     if vel > FOLLOW_ANGULAR_VELOCITY_MAX:
+    #         vel = FOLLOW_ANGULAR_VELOCITY_MAX
+    #     elif vel < FOLLOW_ANGULAR_VELOCITY_MIN:
+    #         vel = FOLLOW_ANGULAR_VELOCITY_MIN
+    #     return vel
 
     @staticmethod
     def calculate_follow_angular_velocity(x):
@@ -488,33 +490,40 @@ class ApproachingSignTools:
             rospy.loginfo("Object is within angular target threshold distance.")
             return 0.0
         
-        vel = ApproachingSignTools.calculate_abs_proportional_follow_angular_velocity(x)
+        if abs(x) < FOLLOW_ANGULAR_SLOWDOWN_RADIANS:
+            # Scale the velocity based on the distance from the target
+            vel = FOLLOW_ANGULAR_VELOCITY * (abs(x) / FOLLOW_ANGULAR_SLOWDOWN_RADIANS)
+        else:
+            # Use the maximum velocity if the distance is greater than the start slow distance
+            vel = FOLLOW_ANGULAR_VELOCITY
+
+        if vel > FOLLOW_ANGULAR_VELOCITY_MAX:
+            vel = FOLLOW_ANGULAR_VELOCITY_MAX
+        elif vel < FOLLOW_ANGULAR_VELOCITY_MIN:
+            vel = FOLLOW_ANGULAR_VELOCITY_MIN
         if x > 0.0:
             vel = -vel
         return vel
-    
+
     @staticmethod
-    def calculate_abs_proportional_follow_linear_velocity(z):
-        # If the object is closer than the target distance, decrease the velocity
-        # If the object is further than the target distance, increase the velocity
-        # The velocity is proportional to the distance
-        distance_from_target = abs(z - FOLLOW_Z_DISTANCE_TARGET)
-        vel = FOLLOW_LINEAR_VELOCITY * distance_from_target / FOLLOW_Z_DISTANCE_TARGET
+    def calculate_follow_linear_velocity(z):
+        if abs(z) < FOLLOW_Z_DISTANCE_THRESHOLD:
+            rospy.loginfo("Object is within linear target threshold distance.")
+            return 0.0
+        
+        if abs(z) < FOLLOW_LINEAR_SLOWDOWN_DISTANCE:
+            # Scale the velocity based on the distance from the target
+            vel = FOLLOW_LINEAR_VELOCITY * (abs(z) / FOLLOW_LINEAR_SLOWDOWN_DISTANCE)
+        else:
+            # Use the maximum velocity if the distance is greater than the start slow distance
+            vel = FOLLOW_LINEAR_VELOCITY
+
         # Clamp the velocity to a maximum value
         if vel > FOLLOW_LINEAR_VELOCITY_MAX:
             vel = FOLLOW_LINEAR_VELOCITY_MAX
         elif vel < FOLLOW_LINEAR_VELOCITY_MIN:
             vel = FOLLOW_LINEAR_VELOCITY_MIN
-        return vel
-
-    @staticmethod
-    def calculate_follow_linear_velocity(z):
-        # check if the object is within the threshold distance
-        if abs(z - FOLLOW_Z_DISTANCE_TARGET) < FOLLOW_Z_DISTANCE_THRESHOLD:
-            rospy.loginfo("Object is within linear threshold distance.")
-            return 0.0
-        vel = ApproachingSignTools.calculate_abs_proportional_follow_linear_velocity(z)
-        if z < FOLLOW_Z_DISTANCE_TARGET:
+        if z < 0.0:
             vel = -vel
         return vel
 
@@ -559,7 +568,8 @@ class ApproachingSignState(MovementControllerState):
             z = tag_detection.get_z()
             rospy.loginfo(f"Tag ID {self._tag_id} detected at x: {x}, z: {z}")
             self.context.publish_cmd_vel(
-                ApproachingSignTools.follow_object(x - FOLLOW_X_DISTANCE_TARGET, z))
+                ApproachingSignTools.follow_object(x - FOLLOW_X_DISTANCE_TARGET,
+                                                   z - FOLLOW_Z_DISTANCE_TARGET))
         else:
             rospy.logwarn(f"Tag ID {self._tag_id} not found in detections.")
 
