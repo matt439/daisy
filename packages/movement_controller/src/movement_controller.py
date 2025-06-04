@@ -582,7 +582,8 @@ class TurningTools:
     def calculate_turning_velocity(is_left_turn: bool, is_left_wheel: bool,
                                    current_vel: float, target_vel: float) -> float:
 
-        new_vel = current_vel + (target_vel - current_vel) * TURN_VELOCITY_ADJUSTMENT_SCALAR
+        new_vel = (1 - TURN_VELOCITY_ADJUSTMENT_SCALAR) * \
+            current_vel + TURN_VELOCITY_ADJUSTMENT_SCALAR * target_vel
 
         if is_left_turn:
             if is_left_wheel:
