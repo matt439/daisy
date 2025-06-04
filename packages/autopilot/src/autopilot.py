@@ -39,13 +39,13 @@ STOP_SIGN_IDS = [1, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 
 # Overtaking constants
 OVERTAKING_TIMEOUT_DURATION = 7.0  # seconds
 STOPPING_FOR_CAR_TIMEOUT_DURATION = 3.0  # seconds
-CAR_WAITING_TIME = 5.0  # seconds
+CAR_WAITING_TIME = 3.0  # seconds
 
 # Intersection constants
 LEFT_INTERSECTION_SIGNS_IDS = [10, 61, 62, 63, 64]
 RIGHT_INTERSECTION_SIGNS_IDS = [9, 57, 58, 59, 60]
 T_INTERSECTION_SIGNS_IDS = [11, 65, 66, 67, 68]
-SIGN_WAITING_DURATION = 5.0  # seconds
+SIGN_WAITING_DURATION = 2.0  # seconds
 TURNING_TIMEOUT_DURATION = 5.0  # seconds
 APPROACHING_SIGN_TIMEOUT_DURATION = 7.0  # seconds
 APRIL_TAG_DETCTION_ROTATION_THRESHOLD = 0.5  # Threshold for quaternion components to determine valid tag orientation
