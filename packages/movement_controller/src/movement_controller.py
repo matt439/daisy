@@ -35,6 +35,7 @@ TURNING_TIMEOUT_DURATION = 10.0  # seconds
 TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR = 1.5
 TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR = 0.75
 AXLE_LENGTH = 0.1  # meters, distance between the two wheels
+TURN_VELOCITY_ADJUSTMENT_SCALAR = 0.75
 
 TURN_LEFT_RIGHT_WHEEL_RADIUS = 0.39  # meters, radius of the right wheel during left turn
 TURN_LEFT_LEFT_WHEEL_RADIUS = TURN_LEFT_RIGHT_WHEEL_RADIUS - AXLE_LENGTH  # meters, radius of the left wheel during left turn
@@ -587,25 +588,33 @@ class ApproachingSignState(MovementControllerState):
 
 class TurningTools:
     @staticmethod
-    def calculate_turning_velocity(is_left_turn: bool,
+    def calculate_turning_velocity(is_left_turn: bool, is_left_wheel: bool,
                                    current_vel: float, target_vel: float) -> float:
-        if target_vel == 0.0:
-            rospy.logwarn("Target velocity is zero, cannot adjust current velocity.")
-            return 0.0
-        
-        diff = target_vel - current_vel
-        new_vel = target_vel + diff
+
+        new_vel = current_vel + (target_vel - current_vel) * TURN_VELOCITY_ADJUSTMENT_SCALAR
 
         if is_left_turn:
-            if new_vel > TURN_LEFT_VELOCITY_LEFT_MAX:
-                return TURN_LEFT_VELOCITY_LEFT_MAX
-            elif new_vel < TURN_LEFT_VELOCITY_LEFT_MIN:
-                return TURN_LEFT_VELOCITY_LEFT_MIN
-        else:
-            if new_vel > TURN_RIGHT_VELOCITY_LEFT_MAX:
-                return TURN_RIGHT_VELOCITY_LEFT_MAX
-            elif new_vel < TURN_RIGHT_VELOCITY_LEFT_MIN:
-                return TURN_RIGHT_VELOCITY_LEFT_MIN
+            if is_left_wheel:
+                if new_vel > TURN_LEFT_VELOCITY_LEFT_MAX:
+                    return TURN_LEFT_VELOCITY_LEFT_MAX
+                elif new_vel < TURN_LEFT_VELOCITY_LEFT_MIN:
+                    return TURN_LEFT_VELOCITY_LEFT_MIN
+            else: # right wheel
+                if new_vel > TURN_LEFT_VELOCITY_RIGHT_MAX:
+                    return TURN_LEFT_VELOCITY_RIGHT_MAX
+                elif new_vel < TURN_LEFT_VELOCITY_RIGHT_MIN:
+                    return TURN_LEFT_VELOCITY_RIGHT_MIN
+        else: # right turn
+            if is_left_wheel:
+                if new_vel > TURN_RIGHT_VELOCITY_LEFT_MAX:
+                    return TURN_RIGHT_VELOCITY_LEFT_MAX
+                elif new_vel < TURN_RIGHT_VELOCITY_LEFT_MIN:
+                    return TURN_RIGHT_VELOCITY_LEFT_MIN
+            else: # right wheel
+                if new_vel > TURN_RIGHT_VELOCITY_RIGHT_MAX:
+                    return TURN_RIGHT_VELOCITY_RIGHT_MAX
+                elif new_vel < TURN_RIGHT_VELOCITY_RIGHT_MIN:
+                    return TURN_RIGHT_VELOCITY_RIGHT_MIN
         return new_vel
 
 class TurningState(MovementControllerState):
@@ -642,14 +651,14 @@ class TurningState(MovementControllerState):
 
         if self._is_left_turn:
             left_velocity = TurningTools.calculate_turning_velocity(
-                True, measured_left_velocity, TURN_LEFT_VELOCITY_LEFT)
+                True, True, measured_left_velocity, TURN_LEFT_VELOCITY_LEFT)
             right_velocity = TurningTools.calculate_turning_velocity(
-                True, measured_right_velocity, TURN_LEFT_VELOCITY_RIGHT)
+                True, False, measured_right_velocity, TURN_LEFT_VELOCITY_RIGHT)
         else:
             left_velocity = TurningTools.calculate_turning_velocity(
-                False, measured_left_velocity, TURN_RIGHT_VELOCITY_LEFT)
+                False, True, measured_left_velocity, TURN_RIGHT_VELOCITY_LEFT)
             right_velocity = TurningTools.calculate_turning_velocity(
-                False, measured_right_velocity, TURN_RIGHT_VELOCITY_RIGHT)
+                False, False, measured_right_velocity, TURN_RIGHT_VELOCITY_RIGHT)
             
         self.context.publish_velocity(left_velocity, right_velocity)
         # Log the velocities for debugging
