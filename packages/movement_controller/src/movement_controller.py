@@ -293,6 +293,13 @@ class MovementController:
         wheels_cmd.vel_right = right_velocity
         self._velocity_publisher.publish(wheels_cmd)
 
+    def stop_robot(self):
+        cmd_msg = Twist2DStamped()
+        cmd_msg.header.stamp = rospy.Time.now()
+        cmd_msg.v = 0.0
+        cmd_msg.omega = 0.0
+        self.publish_cmd_vel(cmd_msg)
+
     def run(self):
         rate = rospy.Rate(MOVEMENT_CONTROLLER_UPDATE_FREQUENCY)
         while not rospy.is_shutdown():
@@ -549,11 +556,13 @@ class ApproachingSignState(MovementControllerState):
         if self._timer.is_expired():
             rospy.logwarn("Approaching sign timed out, transitioning to IdleState")
             self.context.publish_fsm_state(APPROACHING_SIGN_FAILURE_FSM_STATE)
+            self.context.stop_robot()
             self.context.transition_to(IdleState())
             return
 
         if self.is_at_sign():
             self.context.publish_fsm_state(APPROACHING_SIGN_SUCCESS_FSM_STATE)
+            self.context.stop_robot()
             self.context.transition_to(IdleState())
 
     def control_bot(self):
@@ -584,8 +593,8 @@ class TurningTools:
             rospy.logwarn("Target velocity is zero, cannot adjust current velocity.")
             return 0.0
         
-        accuracy = current_vel / target_vel
-        new_vel = current_vel * accuracy
+        diff = target_vel - current_vel
+        new_vel = target_vel + diff
 
         if is_left_turn:
             if new_vel > TURN_LEFT_VELOCITY_LEFT_MAX:
