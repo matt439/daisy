@@ -434,19 +434,14 @@ class Autopilot:
         self._turning_publisher = rospy.Publisher('/vader/movement_controller_node/goal_turning', Int8, queue_size=1)
         self._approaching_sign_publisher = rospy.Publisher('/vader/movement_controller_node/goal_approaching_sign', Int8, queue_size=1)
         rospy.Subscriber('/vader/fsm_node/mode', FSMState, self.FSM_state_callback, queue_size=1)
-        rospy.Subscriber('/vader/apriltag_detector_node/detections',
-                         AprilTagDetectionArray, self.april_tag_callback, queue_size=1)
+        rospy.Subscriber('/vader/apriltag_detector_node/detections', AprilTagDetectionArray, self.april_tag_callback, queue_size=1)
         rospy.Subscriber('/vader/obstacle_detector', Int8, self.obstacle_callback, queue_size=1)
         rospy.Subscriber('/vader/autopilot_node/mode', Int8, self.autopilot_control_callback, queue_size=1)
 
         self.set_lane_following_parameters()
 
-        self._duckiebot = Duckiebot(LaneFollowingState(),
-                                    self._state_publisher,
-                                    self._stopping_publisher,
-                                    self._overtaking_publisher,
-                                    self._turning_publisher,
-                                    self._approaching_sign_publisher)
+        self._duckiebot = Duckiebot(LaneFollowingState(), self._state_publisher, self._stopping_publisher,
+                                    self._overtaking_publisher, self._turning_publisher, self._approaching_sign_publisher)
 
         rospy.loginfo("Initialized autopilot node!")
  
