@@ -155,6 +155,13 @@ class Duckiebot():
     def stop_bot(self):
         self.publish_stopping_goal()
 
+    def stop_bot_simple(self):
+        cmd_msg = Twist2DStamped()
+        cmd_msg.header.stamp = rospy.Time.now()
+        cmd_msg.v = 0.0
+        cmd_msg.omega = 0.0
+        self.cmd_vel_pub.publish(cmd_msg)
+
     def publish_overtaking_goal(self):
         overtaking_goal_msg = Int8()
         overtaking_goal_msg.data = 1  # 1 indicates the bot should start overtaking
@@ -462,6 +469,7 @@ class WaitingAtTurnRightSignState(DuckiebotState):
     def on_enter(self) -> None:
         self._timer.start()
         self._context.publish_FSM_state(NORMAL_JOYSTICK_CONTROL_FSM_STATE)  # Stop lane following
+        self._context.stop_bot_simple()
 
     def on_event(self, event: DuckieBotEvent) -> None:
         if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
@@ -664,15 +672,7 @@ class Autopilot:
     # Stop Robot before node has shut down. This ensures the robot keep moving with the latest velocity command
     def clean_shutdown(self):
         rospy.loginfo("System shutting down. Stopping robot...")
-        self.stop_robot()
-
-    # Sends zero velocity to stop the robot
-    def stop_robot(self):
-        cmd_msg = Twist2DStamped()
-        cmd_msg.header.stamp = rospy.Time.now()
-        cmd_msg.v = 0.0
-        cmd_msg.omega = 0.0
-        self.cmd_vel_pub.publish(cmd_msg)
+        self._duckiebot.stop_bot_simple()  # Stop the robot before shutdown
 
     def is_stop_sign_id(self, tag_id):
         return tag_id in STOP_SIGN_IDS
