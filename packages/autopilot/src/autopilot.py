@@ -368,7 +368,27 @@ class TurningLeftState(DuckiebotState):
             self.context.transition_to(LaneFollowingState())
 
 class TurningRightState(DuckiebotState):
-    pass
+    def __init__(self, tag_id: int):
+        self._tag_id = tag_id
+        self._timer = Timer(TURNING_TIMEOUT_DURATION)
+
+    def on_enter(self) -> None:
+        self._timer.start()
+        self._context.publish_turning_goal(Direction.RIGHT)
+
+    def on_event(self, event: DuckieBotEvent) -> None:
+        if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
+            self.context.transition_to(PauseState())
+        elif event == DuckieBotEvent.TURNING_SUCCESS:
+            self.context.transition_to(LaneFollowingState())
+        elif event == DuckieBotEvent.TURNING_FAILURE:
+            rospy.logerr("Turning right failed. Transitioning to lane following state.")
+            self.context.transition_to(LaneFollowingState())
+
+    def update(self) -> None:
+        if self._timer.is_expired():
+            rospy.logwarn("Turning right timer expired, transitioning to lane following state.")
+            self.context.transition_to(LaneFollowingState())
 
 class WaitingAtTurnLeftSignState(DuckiebotState):
     def __init__(self, tag_id: int):
@@ -387,7 +407,20 @@ class WaitingAtTurnLeftSignState(DuckiebotState):
             self.context.transition_to(TurningLeftState(self._tag_id))
 
 class WaitingAtTurnRightSignState(DuckiebotState):
-    pass
+    def __init__(self, tag_id: int):
+        self._timer = Timer(SIGN_WAITING_DURATION)
+        self._tag_id = tag_id
+    
+    def on_enter(self) -> None:
+        self._timer.start()
+
+    def on_event(self, event: DuckieBotEvent) -> None:
+        if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
+            self.context.transition_to(PauseState())
+    
+    def update(self) -> None:
+        if self._timer.is_expired():
+            self.context.transition_to(TurningRightState(self._tag_id))
 
 class ApproachingTurnLeftSignState(DuckiebotState):
     def __init__(self, tag_id: int):
@@ -413,7 +446,27 @@ class ApproachingTurnLeftSignState(DuckiebotState):
             self.context.transition_to(LaneFollowingState())
 
 class ApproachingTurnRightSignState(DuckiebotState):
-    pass
+    def __init__(self, tag_id: int):
+        self._tag_id = tag_id
+        self._timer = Timer(APPROACHING_SIGN_TIMEOUT_DURATION)
+
+    def on_enter(self) -> None:
+        self._context.publish_approaching_sign_goal(self._tag_id)
+        self._timer.start()
+
+    def on_event(self, event: DuckieBotEvent) -> None:
+        if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
+            self.context.transition_to(PauseState())
+        elif event == DuckieBotEvent.APPROACHING_SIGN_SUCCESS:
+            self.context.transition_to(WaitingAtTurnRightSignState(self._tag_id))
+        elif event == DuckieBotEvent.APPROACHING_SIGN_FAILURE:
+            rospy.logerr("Approaching right turn sign failed. Transitioning to lane following state.")
+            self.context.transition_to(LaneFollowingState())
+
+    def update(self) -> None:
+        if self._timer.is_expired():
+            rospy.logwarn("Approaching right turn sign timer expired, transitioning to lane following state.")
+            self.context.transition_to(LaneFollowingState())
 
 class Autopilot:
     def __init__(self):
