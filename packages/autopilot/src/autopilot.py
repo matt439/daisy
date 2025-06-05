@@ -24,7 +24,7 @@ NORMAL_JOYSTICK_CONTROL_FSM_STATE = "NORMAL_JOYSTICK_CONTROL"
 SIGN_DETECTION_DISTANCE_THRESHOLD = 0.8  # meters, distance at which the bot detects the sign
 
 # Stop sign constants
-STOP_SIGN_WAITING_TIME = 3.0  # seconds
+# STOP_SIGN_WAITING_TIME = 3.0  # seconds
 LANE_FOLLOWING_STOP_SIGN_TIME = 4.0  # seconds
 STOPPING_FOR_STOP_SIGN_TIMEOUT_DURATION = 10.0  # seconds
 STOP_SIGN_SLOWDOWN_DISTANCE = 0.4  # meters
@@ -53,25 +53,25 @@ V = 1.0
 LEFT_INTERSECTION_SIGNS_IDS = [10, 61, 62, 63, 64]
 RIGHT_INTERSECTION_SIGNS_IDS = [9, 57, 58, 59, 60]
 T_INTERSECTION_SIGNS_IDS = [11, 65, 66, 67, 68]
-APRIL_TAG_DETCTION_ROTATION_THRESHOLD = 0.5  # Threshold for quaternion components to determine valid tag orientation
+# APRIL_TAG_DETCTION_ROTATION_THRESHOLD = 0.5  # Threshold for quaternion components to determine valid tag orientation
 
 # Approaching intersection sign constants
-INTERSECTION_SIGN_SLOWDOWN_DISTANCE = 0.3  # meters, distance at which the bot starts slowing down
-INTERSECTION_SIGN_SLOWDOWN_DURATION = 2.0  # seconds, duration of the slowdown phase
+INTERSECTION_SIGN_SLOWDOWN_DISTANCE = 0.4  # meters, distance at which the bot starts slowing down
+INTERSECTION_SIGN_SLOWDOWN_DURATION = 3.0  # seconds, duration of the slowdown phase
 APPROACHING_SIGN_TIMEOUT_DURATION = 10.0  # seconds
-FOLLOW_ANGULAR_VELOCITY = 0.1 # rad/s
-FOLLOW_ANGULAR_VELOCITY_MAX = 0.2 # rad/s
-FOLLOW_ANGULAR_VELOCITY_MIN = 0.0 # rad/s
-FOLLOW_X_DISTANCE_TARGET = 0.2 # meter, the sign should be to the right of the bot
-FOLLOW_X_DISTANCE_THRESHOLD = 0.02 # meter
-FOLLOW_ANGULAR_SLOWDOWN_RADIANS = math.pi / 8.0 # radians, distance at which the bot starts slowing down
+# FOLLOW_ANGULAR_VELOCITY = 0.1 # rad/s
+# FOLLOW_ANGULAR_VELOCITY_MAX = 0.2 # rad/s
+# FOLLOW_ANGULAR_VELOCITY_MIN = 0.0 # rad/s
+# FOLLOW_X_DISTANCE_TARGET = 0.2 # meter, the sign should be to the right of the bot
+# FOLLOW_X_DISTANCE_THRESHOLD = 0.02 # meter
+# FOLLOW_ANGULAR_SLOWDOWN_RADIANS = math.pi / 8.0 # radians, distance at which the bot starts slowing down
 
-FOLLOW_Z_DISTANCE_TARGET = 0.51 # meter, sign is this distance in front of the stop line
-FOLLOW_Z_DISTANCE_THRESHOLD = 0.02 # meter
+# FOLLOW_Z_DISTANCE_TARGET = 0.51 # meter, sign is this distance in front of the stop line
+# FOLLOW_Z_DISTANCE_THRESHOLD = 0.02 # meter
 # FOLLOW_LINEAR_SLOWDOWN_DISTANCE = 0.2 # meter, distance at which the bot starts slowing down
-FOLLOW_LINEAR_VELOCITY = 0.25 # m/s
-FOLLOW_LINEAR_VELOCITY_MAX = 0.35 # m/s
-FOLLOW_LINEAR_VELOCITY_MIN = 0.1 # m/s
+# FOLLOW_LINEAR_VELOCITY = 0.25 # m/s
+# FOLLOW_LINEAR_VELOCITY_MAX = 0.35 # m/s
+# FOLLOW_LINEAR_VELOCITY_MIN = 0.1 # m/s
 
 # Waiting for intersection sign constants
 SIGN_WAITING_DURATION = 2.0  # seconds
@@ -529,7 +529,7 @@ class StoppingForStopSignState(DuckiebotState):
 
 class WaitingAtStopSignState(DuckiebotState):
     def __init__(self):
-        self._timer = Timer(STOP_SIGN_WAITING_TIME)
+        self._timer = Timer(SIGN_WAITING_DURATION)
 
     def on_enter(self) -> None:
         self._timer.start()
@@ -833,6 +833,11 @@ class TurningLeftState(DuckiebotState):
         rospy.loginfo(f"Left velocity: {left_velocity}, Right velocity: {right_velocity}")
         rospy.loginfo(f"Left min velocity: {min_left_vel}, Left max velocity: {max_left_vel}")
         rospy.loginfo(f"Right min velocity: {min_right_vel}, Right max velocity: {max_right_vel}")
+        rospy.loginfo(f"timer_elapsed: {timer_elapsed}")
+        rospy.loginfo(f"target_left_distance: {target_left_distance}, target_right_distance: {target_right_distance}")
+        rospy.loginfo(f"current_left_distance: {current_left_distance}, current_right_distance: {current_right_distance}")
+        rospy.loginfo(f"elapsed_time: {elapsed_time}")
+        rospy.loginfo("")
 
         # Publish the velocities to the wheels
         self.context.publish_velocity(left_velocity, right_velocity)
