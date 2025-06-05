@@ -5,6 +5,7 @@ from duckietown_msgs.msg import Twist2DStamped, FSMState, AprilTagDetectionArray
 from std_msgs.msg import Int8, Float64MultiArray
 from enum import Enum
 from abc import ABC, abstractmethod
+from typing import Tuple
 import random
 import math
 
@@ -227,6 +228,7 @@ class Duckiebot():
         rospy.Subscriber('/vader/apriltag_detector_node/detections', AprilTagDetectionArray, self.april_tag_callback, queue_size=1)
         self._state_publisher = rospy.Publisher('/vader/fsm_node/mode', FSMState, queue_size=1)
         self._velocity_publisher = rospy.Publisher('/vader/wheels_driver_node/wheels_cmd', WheelsCmdStamped, queue_size=1)
+        self._cmd_vel_publisher = rospy.Publisher('/vader/car_cmd_switch_node/cmd', Twist2DStamped, queue_size=1)
         rospy.loginfo("Duckiebot class initialized!")
         self.transition_to(state)
 
@@ -257,12 +259,12 @@ class Duckiebot():
         fsm_state_msg.state = state
         self._state_publisher.publish(fsm_state_msg)
 
-    # def publish_cmd_vel(self, v: float, omega: float):
-    #     cmd_msg = Twist2DStamped()
-    #     cmd_msg.header.stamp = rospy.Time.now()
-    #     cmd_msg.v = v
-    #     cmd_msg.omega = omega
-    #     self._cmd_vel_publisher.publish(cmd_msg)
+    def publish_cmd_vel(self, v: float, omega: float):
+        cmd_msg = Twist2DStamped()
+        cmd_msg.header.stamp = rospy.Time.now()
+        cmd_msg.v = v
+        cmd_msg.omega = omega
+        self._cmd_vel_publisher.publish(cmd_msg)
 
     def publish_velocity(self, left_velocity: float, right_velocity: float):
         wheels_cmd = WheelsCmdStamped()
@@ -667,31 +669,18 @@ class TurningLeftState(DuckiebotState):
         # Publish the velocities to the wheels
         self.context.publish_velocity(left_velocity, right_velocity)
 
-# class TurningRightState(DuckiebotState):
-#     def __init__(self, tag_id: int):
-#         self._tag_id = tag_id
-#         self._timer = Timer(TURNING_TIMEOUT_DURATION)
+class TurningRightState(DuckiebotState):
+    def __init__(self):
+        pass
 
-#     def on_enter(self) -> None:
-#         self._timer.start()
-#         self._context.publish_FSM_state(NORMAL_JOYSTICK_CONTROL_FSM_STATE)  # Stop lane following
-#         self._context.publish_turning_goal(Direction.RIGHT)
+    def on_enter(self) -> None:
+        pass
 
-#     def on_event(self, event: DuckieBotEvent) -> None:
-#         if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
-#             self.context.transition_to(PauseState())
-#         elif event == DuckieBotEvent.TURNING_SUCCESS:
-#             self.context.transition_to(LaneFollowingState())
-#         elif event == DuckieBotEvent.TURNING_FAILURE:
-#             rospy.logerr("Turning right failed. Transitioning to lane following state.")
-#             self.context.transition_to(LaneFollowingState())
+    def on_event(self, event: DuckieBotEvent) -> None:
+        pass
 
-#     def update(self) -> None:
-#         if self._timer.is_expired():
-#             rospy.logwarn("Turning right timer expired, transitioning to lane following state.")
-#             self.context.transition_to(LaneFollowingState())
-
-#         self._context.publish_FSM_state(NORMAL_JOYSTICK_CONTROL_FSM_STATE)  # Keep publishing normal joystick control state
+    def update(self) -> None:
+        pass
 
 class WaitingAtTurnLeftSignState(DuckiebotState):
     def __init__(self):
@@ -709,25 +698,18 @@ class WaitingAtTurnLeftSignState(DuckiebotState):
         if self._timer.is_expired():
             self.context.transition_to(TurningLeftState())
 
-# class WaitingAtTurnRightSignState(DuckiebotState):
-#     def __init__(self, tag_id: int):
-#         self._timer = Timer(SIGN_WAITING_DURATION)
-#         self._tag_id = tag_id
+class WaitingAtTurnRightSignState(DuckiebotState):
+    def __init__(self):
+        pass
     
-#     def on_enter(self) -> None:
-#         self._timer.start()
-#         self._context.publish_FSM_state(NORMAL_JOYSTICK_CONTROL_FSM_STATE)  # Stop lane following
-#         self._context.stop_bot_simple()
+    def on_enter(self) -> None:
+        pass
 
-#     def on_event(self, event: DuckieBotEvent) -> None:
-#         if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
-#             self.context.transition_to(PauseState())
+    def on_event(self, event: DuckieBotEvent) -> None:
+        pass
     
-#     def update(self) -> None:
-#         if self._timer.is_expired():
-#             self.context.transition_to(TurningRightState(self._tag_id))
-
-#         self._context.publish_FSM_state(NORMAL_JOYSTICK_CONTROL_FSM_STATE)  # Keep publishing normal joystick control state
+    def update(self) -> None:
+        pass
 
 class ApproachingSignTools:
     @staticmethod
@@ -774,16 +756,13 @@ class ApproachingSignTools:
         return vel
 
     @staticmethod
-    def follow_object(x, z) -> Twist2DStamped:
-        cmd_msg = Twist2DStamped()
-        cmd_msg.header.stamp = rospy.Time.now()
-        cmd_msg.v = ApproachingSignTools.calculate_follow_linear_velocity(z)
-        cmd_msg.omega = ApproachingSignTools.calculate_follow_angular_velocity(x)
-        return cmd_msg
+    def follow_object(x, z) -> Tuple[float, float]:
+        return (ApproachingSignTools.calculate_follow_linear_velocity(z),
+                ApproachingSignTools.calculate_follow_angular_velocity(x))
 
 class ApproachingTurnLeftSignState(DuckiebotState):
     def __init__(self, tag: AprilTagDetection):
-        self._tag = tag
+        self._tag_id = tag.tag_id
         self._timer = Timer(APPROACHING_SIGN_TIMEOUT_DURATION)
 
     def on_enter(self) -> None:
@@ -796,63 +775,44 @@ class ApproachingTurnLeftSignState(DuckiebotState):
         elif event == DuckieBotEvent.BOT_BECOMES_STOPPED:
             self.context.transition_to(WaitingAtTurnLeftSignState())
         elif event == DuckieBotEvent.TURN_LEFT_SIGN_DETECTED:
-            self.control_approaching_sign()
+            tag = self.context.get_most_recent_april_tag()
+            if tag.tag_id == self._tag_id:
+                if self.is_at_correct_position(tag):
+                    self.context.stop_bot() # Stop the robot, as we are at the correct position
+                    self.context.transition_to(WaitingAtTurnLeftSignState())
+                else:
+                    self.control_approaching_sign(tag)
+            else:
+                rospy.logwarn(f"Detected tag ID {tag.tag_id} does not match expected tag ID {self._tag_id}. Ignoring.")
 
     def update(self) -> None:
         if self._timer.is_expired():
             rospy.logwarn("Approaching left turn sign timer expired, transitioning to lane following state.")
             self.context.transition_to(LaneFollowingState())
-            return
 
-        if self.is_at_correct_position():
-            self.context.transition_to(WaitingAtTurnLeftSignState())
+    def control_approaching_sign(self, tag: AprilTagDetection) -> None:
+        x = tag.transform.translation.x
+        z = tag.transform.translation.z
+        rospy.loginfo(f"Tag ID {self._tag_id} detected at x: {x}, z: {z}")
+        self.context.publish_cmd_vel(ApproachingSignTools.follow_object(
+            x - FOLLOW_X_DISTANCE_TARGET, z - FOLLOW_Z_DISTANCE_TARGET))
 
-    def control_approaching_sign(self):
-        tag_detection = self.context._april_tag_detections_map.get(self._tag_id)
-        if tag_detection:
-            x = tag_detection.get_x()
-            z = tag_detection.get_z()
-            rospy.loginfo(f"Tag ID {self._tag_id} detected at x: {x}, z: {z}")
-            self.context.publish_cmd_vel(
-                ApproachingSignTools.follow_object(x - FOLLOW_X_DISTANCE_TARGET,
-                                                   z - FOLLOW_Z_DISTANCE_TARGET))
-        else:
-            rospy.logwarn(f"Tag ID {self._tag_id} not found in detections.")
+    def is_at_correct_position(self, tag: AprilTagDetection) -> bool:
+        z = tag.transform.translation.z
+        return z <= FOLLOW_Z_DISTANCE_TARGET
 
-    def is_at_correct_position(self) -> bool:
-        tag_detection = self.context._april_tag_detections_map.get(self._tag_id)
-        if tag_detection:
-            z = tag_detection.get_z()
-            return z <= FOLLOW_Z_DISTANCE_TARGET
-        else:
-            rospy.logwarn(f"Tag ID {self._tag_id} not found in detections.")
-            return False
+class ApproachingTurnRightSignState(DuckiebotState):
+    def __init__(self):
+        pass
 
-# class ApproachingTurnRightSignState(DuckiebotState):
-#     def __init__(self, tag: AprilTagDetection):
-#         self._tag = tag
-#         self._timer = Timer(APPROACHING_SIGN_TIMEOUT_DURATION)
+    def on_enter(self) -> None:
+        pass
 
-#     def on_enter(self) -> None:
-#         self._context.publish_FSM_state(NORMAL_JOYSTICK_CONTROL_FSM_STATE)  # Stop lane following
-#         self._context.publish_approaching_sign_goal(self._tag_id)
-#         self._timer.start()
+    def on_event(self, event: DuckieBotEvent) -> None:
+        pass
 
-#     def on_event(self, event: DuckieBotEvent) -> None:
-#         if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
-#             self.context.transition_to(PauseState())
-#         elif event == DuckieBotEvent.APPROACHING_SIGN_SUCCESS:
-#             self.context.transition_to(WaitingAtTurnRightSignState(self._tag_id))
-#         elif event == DuckieBotEvent.APPROACHING_SIGN_FAILURE:
-#             rospy.logerr("Approaching right turn sign failed. Transitioning to lane following state.")
-#             self.context.transition_to(LaneFollowingState())
-
-#     def update(self) -> None:
-#         if self._timer.is_expired():
-#             rospy.logwarn("Approaching right turn sign timer expired, transitioning to lane following state.")
-#             self.context.transition_to(LaneFollowingState())
-
-#         self._context.publish_FSM_state(NORMAL_JOYSTICK_CONTROL_FSM_STATE)  # Keep publishing normal joystick control state
+    def update(self) -> None:
+        pass
 
 class Autopilot:
     def __init__(self):
