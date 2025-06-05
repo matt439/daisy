@@ -19,9 +19,9 @@ LANE_FOLLOWING_FSM_STATE = "LANE_FOLLOWING"
 NORMAL_JOYSTICK_CONTROL_FSM_STATE = "NORMAL_JOYSTICK_CONTROL"
 
 # Sign constants
-APPROACHING_SIGN_SLOWDOWN_DISTANCE = 0.3  # meters, distance at which the bot starts slowing down
-APPROACHING_SIGN_SLOWDOWN_DURATION = 4.0  # seconds, duration of the slowdown phase
-SIGN_DETECTION_DISTANCE_THRESHOLD = 0.8  # meters, distance at which the bot detects the sign
+APPROACHING_SIGN_SLOWDOWN_DISTANCE = 0.1  # meters, distance at which the bot starts slowing down
+APPROACHING_SIGN_SLOWDOWN_DURATION = 2.0  # seconds, duration of the slowdown phase
+SIGN_DETECTION_DISTANCE_THRESHOLD = 0.6  # meters, distance at which the bot detects the sign
 
 # Stop sign constants
 # STOP_SIGN_WAITING_TIME = 3.0  # seconds
@@ -484,7 +484,10 @@ class StoppingForStopSignState(DuckiebotState):
         self._slowdown_timer = Timer(APPROACHING_SIGN_SLOWDOWN_DURATION)
         self._tag_id = tag.tag_id
         self._in_slowdown_phase = False
+        self._in_travelling_phase = False
         self._start_slowdown_velocity = None
+        self._detection_left_distance = None
+        self._detection_right_distance = None
 
     def on_enter(self) -> None:
         self._timer.start()
@@ -494,36 +497,53 @@ class StoppingForStopSignState(DuckiebotState):
         if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
             self.context.transition_to(PauseState())
         elif event == DuckieBotEvent.STOP_SIGN_DETECTED:
-            if self._in_slowdown_phase:
+            if self._in_slowdown_phase or self._in_travelling_phase:
                 return
             
             tag = self.context.get_most_recent_april_tag()
             if tag.tag_id == self._tag_id:
                 # AprilTagTools.print_april_tag_info(tag)
-                if self.is_at_slowdown_position(tag):
+
+                # save the current wheel distances at the moment of detection
+                wheel_info = self.context.get_wheel_movement_info()
+                self._detection_left_distance = wheel_info.get_left_distance()
+                self._detection_right_distance = wheel_info.get_right_distance()
+                self._is_in_travelling_phase = True
+            else:
+                rospy.logwarn(f"Detected tag ID {tag.tag_id} does not match expected tag ID {self._tag_id}. Ignoring.")
+        elif event == DuckieBotEvent.WHEEL_MOVEMENT_INFO_RECEIVED:
+            if self._in_travelling_phase:
+                if self.is_at_slowdown_position():
                     self.context.publish_FSM_state(NORMAL_JOYSTICK_CONTROL_FSM_STATE) # Stop lane following
                     self._slowdown_timer.start()
                     # Get the average velocity of the wheels at the start of the slowdown phase
                     self._start_slowdown_velocity = self.context.get_wheel_movement_info().get_average_velocity()
                     self._in_slowdown_phase = True
-            else:
-                rospy.logwarn(f"Detected tag ID {tag.tag_id} does not match expected tag ID {self._tag_id}. Ignoring.")
-        elif event == DuckieBotEvent.WHEEL_MOVEMENT_INFO_RECEIVED:
-            if self._in_slowdown_phase:
+                    self._in_travelling_phase = False
+            elif self._in_slowdown_phase:
                 self.calculate_and_set_slowdown_velocity()
             
     def update(self) -> None:
         if self._timer.is_expired():
             rospy.logwarn("Stopping for stop sign timer expired, transitioning to lane following state.")
             self.context.transition_to(LaneFollowingState())
+            return
 
         if self._slowdown_timer.is_expired():
             self.context.stop_bot() # Stop the robot, as we are at the correct position
             self.context.transition_to(WaitingAtStopSignState())
 
-    def is_at_slowdown_position(self, tag: AprilTagDetection) -> bool:
-        z = tag.transform.translation.z
-        return z <= APPROACHING_SIGN_SLOWDOWN_DISTANCE
+    def is_at_slowdown_position(self) -> bool:
+        wheel_info = self.context.get_wheel_movement_info()
+        left_distance = wheel_info.get_left_distance()
+        right_distance = wheel_info.get_right_distance()
+
+        left_distance_from_detection = abs(left_distance - self._detection_left_distance)
+        right_distance_from_detection = abs(right_distance - self._detection_right_distance)
+
+        if left_distance_from_detection < APPROACHING_SIGN_SLOWDOWN_DISTANCE or \
+           right_distance_from_detection < APPROACHING_SIGN_SLOWDOWN_DISTANCE:
+            return True
     
     def calculate_and_set_slowdown_velocity(self):
         vel = ApproachingSignTools.calculate_slow_down_veloticy(
