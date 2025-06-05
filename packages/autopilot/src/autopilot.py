@@ -77,8 +77,8 @@ APPROACHING_SIGN_TIMEOUT_DURATION = 10.0  # seconds
 SIGN_WAITING_DURATION = 2.0  # seconds
 
 # Turning constants
-TURN_MAX_VELOCITY_FACTOR = 1.5
-TURN_MIN_VELOCITY_FACTOR = 0.75
+TURN_MAX_VELOCITY_FACTOR = 10.0
+TURN_MIN_VELOCITY_FACTOR = 0.0
 AXLE_LENGTH = 0.1  # meters, distance between the two wheels
 
 TURN_LEFT_RIGHT_WHEEL_RADIUS = 0.39  # meters, radius of the right wheel during left turn
@@ -283,7 +283,8 @@ class Duckiebot():
             event is not DuckieBotEvent.TURN_RIGHT_SIGN_DETECTED and \
             event is not DuckieBotEvent.T_INTERSECTON_SIGN_DETECTED and \
             event is not DuckieBotEvent.STOP_SIGN_DETECTED and \
-            event is not DuckieBotEvent.BOT_BECOMES_STOPPED:
+            event is not DuckieBotEvent.BOT_BECOMES_STOPPED and \
+            event is not DuckieBotEvent.WHEEL_MOVEMENT_INFO_RECEIVED:
             # Avoid logging too many events
             rospy.loginfo(f"Event received: {event}")
         self._state.on_event(event)
@@ -319,7 +320,7 @@ class Duckiebot():
         self._wheel_movement_info.update(msg)
         if self.is_wheels_stopped():
             self.on_event(DuckieBotEvent.BOT_BECOMES_STOPPED)
-        self._state.on_event(DuckieBotEvent.WHEEL_MOVEMENT_INFO_RECEIVED)
+        self.on_event(DuckieBotEvent.WHEEL_MOVEMENT_INFO_RECEIVED)
 
     def get_wheel_movement_info(self) -> WheelMovementInfo:
         return self._wheel_movement_info
@@ -341,13 +342,13 @@ class Duckiebot():
             id = detection.tag_id
             self._most_recent_april_tag = detection  # Update the most recent tag
             if AprilTagTools.is_stop_sign_id(id):
-                self._state.on_event(DuckieBotEvent.STOP_SIGN_DETECTED)
+                self.on_event(DuckieBotEvent.STOP_SIGN_DETECTED)
             elif AprilTagTools.is_left_intersection_sign_id(id):
-                self._state.on_event(DuckieBotEvent.TURN_LEFT_SIGN_DETECTED)
+                self.on_event(DuckieBotEvent.TURN_LEFT_SIGN_DETECTED)
             elif AprilTagTools.is_right_intersection_sign_id(id):
-                self._state.on_event(DuckieBotEvent.TURN_RIGHT_SIGN_DETECTED)
+                self.on_event(DuckieBotEvent.TURN_RIGHT_SIGN_DETECTED)
             elif AprilTagTools.is_t_intersection_sign_id(id):
-                self._state.on_event(DuckieBotEvent.T_INTERSECTON_SIGN_DETECTED)
+                self.on_event(DuckieBotEvent.T_INTERSECTON_SIGN_DETECTED)
             else:
                 rospy.loginfo(f"Unknown tag ID: {id}")
 
