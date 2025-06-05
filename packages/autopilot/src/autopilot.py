@@ -238,6 +238,17 @@ class AprilTagTools:
         # If all checks passed, the tag is in a valid position
         return True
     
+    @staticmethod
+    def print_april_tag_info(detection: AprilTagDetection):
+        rospy.loginfo(f"AprilTag ID: {detection.tag_id}")
+        rospy.loginfo(f"Position: x={detection.transform.translation.x}, "
+                      f"y={detection.transform.translation.y}, "
+                      f"z={detection.transform.translation.z}")
+        rospy.loginfo(f"Rotation: x={detection.transform.rotation.x}, "
+                      f"y={detection.transform.rotation.y}, "
+                      f"z={detection.transform.rotation.z}, "
+                      f"w={detection.transform.rotation.w}")
+    
     # @staticmethod
     # def is_sign_in_stoppable_position(detection: AprilTagDetection) -> bool:
     #     z = detection.transform.translation.z
@@ -469,18 +480,18 @@ class StoppingForStopSignState(DuckiebotState):
 
     def on_enter(self) -> None:
         self._timer.start()
+        self.context.publish_FSM_state(LANE_FOLLOWING_FSM_STATE)
 
     def on_event(self, event: DuckieBotEvent) -> None:
         if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
             self.context.transition_to(PauseState())
-        elif event == DuckieBotEvent.BOT_BECOMES_STOPPED:
-            self.context.transition_to(WaitingAtStopSignState())
         elif event == DuckieBotEvent.STOP_SIGN_DETECTED:
             if self._in_slowdown_phase:
                 return
             
             tag = self.context.get_most_recent_april_tag()
             if tag.tag_id == self._tag_id:
+                AprilTagTools.print_april_tag_info(tag)
                 if self.is_at_slowdown_position(tag):
                     self.context.publish_FSM_state(NORMAL_JOYSTICK_CONTROL_FSM_STATE) # Stop lane following
                     self._slowdown_timer.start()
