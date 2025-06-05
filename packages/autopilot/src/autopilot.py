@@ -20,7 +20,7 @@ NORMAL_JOYSTICK_CONTROL_FSM_STATE = "NORMAL_JOYSTICK_CONTROL"
 
 # Sign constants
 APPROACHING_SIGN_SLOWDOWN_DISTANCE = 0.3  # meters, distance at which the bot starts slowing down
-APPROACHING_SIGN_SLOWDOWN_DURATION = 3.0  # seconds, duration of the slowdown phase
+APPROACHING_SIGN_SLOWDOWN_DURATION = 4.0  # seconds, duration of the slowdown phase
 SIGN_DETECTION_DISTANCE_THRESHOLD = 0.8  # meters, distance at which the bot detects the sign
 
 # Stop sign constants
@@ -89,7 +89,7 @@ TURN_LEFT_LEFT_WHEEL_DISTANCE = math.pi * TURN_LEFT_LEFT_WHEEL_RADIUS * \
     TURN_LEFT_LEFT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the left wheel during left turn
 TURN_LEFT_RIGHT_WHEEL_DISTANCE = math.pi * TURN_LEFT_RIGHT_WHEEL_RADIUS * \
     TURN_LEFT_RIGHT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the right wheel during left turn
-TURN_LEFT_MANEUVER_DURATION = 3.0  # seconds
+TURN_LEFT_MANEUVER_DURATION = 4.0  # seconds
 TURN_LEFT_LEFT_WHEEL_VELOCITY = TURN_LEFT_LEFT_WHEEL_DISTANCE / TURN_LEFT_MANEUVER_DURATION  # m/s, velocity of the left wheel during left turn
 TURN_LEFT_RIGHT_WHEEL_VELOCITY = TURN_LEFT_RIGHT_WHEEL_DISTANCE / TURN_LEFT_MANEUVER_DURATION  # m/s, velocity of the right wheel during left turn
 
@@ -101,7 +101,7 @@ TURN_RIGHT_LEFT_WHEEL_DISTANCE = math.pi * TURN_RIGHT_LEFT_WHEEL_RADIUS * \
     TURN_RIGHT_LEFT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the left wheel during right turn
 TURN_RIGHT_RIGHT_WHEEL_DISTANCE = math.pi * TURN_RIGHT_RIGHT_WHEEL_RADIUS * \
     TURN_RIGHT_RIGHT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the right wheel during right turn
-TURN_RIGHT_MANEUVER_DURATION = 1.2  # seconds
+TURN_RIGHT_MANEUVER_DURATION = 1.7  # seconds
 TURN_RIGHT_LEFT_WHEEL_VELOCITY = TURN_RIGHT_LEFT_WHEEL_DISTANCE / TURN_RIGHT_MANEUVER_DURATION  # m/s, velocity of the left wheel during right turn
 TURN_RIGHT_RIGHT_WHEEL_VELOCITY = TURN_RIGHT_RIGHT_WHEEL_DISTANCE / TURN_RIGHT_MANEUVER_DURATION  # m/s, velocity of the right wheel during right turn
 
@@ -114,7 +114,7 @@ LANE_CONTROLLER_NODE_K_ID = "/vader/lane_controller_node/k_Id" # integral term f
 LANE_CONTROLLER_NODE_K_IPHI = "/vader/lane_controller_node/k_IphI" # integral term for lateral deviation?
 LANE_CONTROLLER_NODE_THETA_THRES_MIN = "/vader/lane_controller_node/theta_thres_min" # minimum value for heading error
 LANE_CONTROLLER_NODE_THETA_THRES_MAX = "/vader/lane_controller_node/theta_thres_max" # maximum value for heading error
-V_BAR = 0.28 # clamped from 0 to 5, default 0.19
+V_BAR = 0.25 # clamped from 0 to 5, default 0.19
 K_D = -30.0 # clamped from -100 to 100, default -6.0
 K_THETA = -9.0 # clamped from -100 to 100, default -5.0
 K_ID = -0.3 # clamped from -100 to 100, default -0.3
