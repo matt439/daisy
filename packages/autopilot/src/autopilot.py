@@ -20,7 +20,7 @@ NORMAL_JOYSTICK_CONTROL_FSM_STATE = "NORMAL_JOYSTICK_CONTROL"
 
 # Sign constants
 APPROACHING_SIGN_SLOWDOWN_DISTANCE = 0.1  # meters, distance at which the bot starts slowing down
-APPROACHING_SIGN_SLOWDOWN_DURATION = 2.0  # seconds, duration of the slowdown phase
+APPROACHING_SIGN_SLOWDOWN_DURATION = 1.0  # seconds, duration of the slowdown phase
 SIGN_DETECTION_DISTANCE_THRESHOLD = 0.6  # meters, distance at which the bot detects the sign
 APPROACHING_SIGN_TIMEOUT_DURATION = 7.0  # seconds
 SIGN_WAITING_DURATION = 2.0  # seconds
