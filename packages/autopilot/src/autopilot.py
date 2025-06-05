@@ -398,28 +398,6 @@ class LaneFollowingState(DuckiebotState):
         pass
 
 class ApproachingSignTools:
-    # @staticmethod
-    # def calculate_follow_angular_velocity(x):
-    #     # If the object is too close, stop moving
-    #     if abs(x) < FOLLOW_X_DISTANCE_THRESHOLD:
-    #         rospy.loginfo("Object is within angular target threshold distance.")
-    #         return 0.0
-        
-    #     if abs(x) < FOLLOW_ANGULAR_SLOWDOWN_RADIANS:
-    #         # Scale the velocity based on the distance from the target
-    #         vel = FOLLOW_ANGULAR_VELOCITY * (abs(x) / FOLLOW_ANGULAR_SLOWDOWN_RADIANS)
-    #     else:
-    #         # Use the maximum velocity if the distance is greater than the start slow distance
-    #         vel = FOLLOW_ANGULAR_VELOCITY
-
-    #     if vel > FOLLOW_ANGULAR_VELOCITY_MAX:
-    #         vel = FOLLOW_ANGULAR_VELOCITY_MAX
-    #     elif vel < FOLLOW_ANGULAR_VELOCITY_MIN:
-    #         vel = FOLLOW_ANGULAR_VELOCITY_MIN
-    #     if x > 0.0:
-    #         vel = -vel
-    #     return vel
-
     @staticmethod
     def calculate_slow_down_veloticy(total_duration: float, current_duration: float,
                                      start_velocity: float, end_velocity: float) -> float:
@@ -427,40 +405,35 @@ class ApproachingSignTools:
             return end_velocity
         # Calculate the velocity based on the elapsed time
         return start_velocity + (end_velocity - start_velocity) * (current_duration / total_duration)
+    
+    @staticmethod
+    def is_at_slowdown_position(wheel_info: WheelMovementInfo, detection_left_distance: float,
+                                detection_right_distance: float, detection_z_distance: float) -> bool:
+        left_distance = wheel_info.get_left_distance()
+        right_distance = wheel_info.get_right_distance()
 
-    # @staticmethod
-    # def calculate_follow_linear_velocity(z):
-    #     if abs(z) < FOLLOW_Z_DISTANCE_THRESHOLD:
-    #         rospy.loginfo("Object is within linear target threshold distance.")
-    #         return 0.0
-        
-    #     if abs(z) < APPROACHING_SIGN_SLOWDOWN_DISTANCE:
-    #         # Scale the velocity based on the distance from the target
-    #         vel = FOLLOW_LINEAR_VELOCITY * (abs(z) / APPROACHING_SIGN_SLOWDOWN_DISTANCE)
-    #     else:
-    #         # Use the maximum velocity if the distance is greater than the start slow distance
-    #         vel = FOLLOW_LINEAR_VELOCITY
+        target_left_distance = detection_left_distance + detection_z_distance - APPROACHING_SIGN_SLOWDOWN_DISTANCE
+        target_right_distance = detection_right_distance + detection_z_distance - APPROACHING_SIGN_SLOWDOWN_DISTANCE
 
-    #     # Clamp the velocity to a maximum value
-    #     if vel > FOLLOW_LINEAR_VELOCITY_MAX:
-    #         vel = FOLLOW_LINEAR_VELOCITY_MAX
-    #     elif vel < FOLLOW_LINEAR_VELOCITY_MIN:
-    #         vel = FOLLOW_LINEAR_VELOCITY_MIN
-
-    #     return vel
-
-    # @staticmethod
-    # def follow_object(x, z) -> Tuple[float, float]:
-    #     return (ApproachingSignTools.calculate_follow_linear_velocity(z),
-    #             ApproachingSignTools.calculate_follow_angular_velocity(x))
+        # rospy.loginfo(f"Left distance: {left_distance}, Target left distance: {target_left_distance}")
+        # rospy.loginfo(f"Right distance: {right_distance}, Target right distance: {target_right_distance}")
+        if left_distance >= target_left_distance or right_distance >= target_right_distance:
+            return True
+        return False
+    
+    @staticmethod
+    def calculate_slowdown_velocity(slowdown_timer: Timer, start_slowdown_velocity: float) -> float:
+        return ApproachingSignTools.calculate_slow_down_veloticy(
+            APPROACHING_SIGN_SLOWDOWN_DURATION,
+            slowdown_timer.get_elapsed_time(),
+            start_slowdown_velocity,
+            0.0)
 
 class StoppingForStopSignState(DuckiebotState):
     def __init__(self, tag: AprilTagDetection):
         self._timer = Timer(APPROACHING_SIGN_TIMEOUT_DURATION)
         self._slowdown_timer = Timer(APPROACHING_SIGN_SLOWDOWN_DURATION)
-        # self._tag_id = tag.tag_id
         self._in_slowdown_phase = False
-        # self._in_travelling_phase = False
         self._start_slowdown_velocity = math.inf
         self._detection_left_distance = math.inf
         self._detection_right_distance = math.inf
@@ -476,40 +449,22 @@ class StoppingForStopSignState(DuckiebotState):
     def on_event(self, event: DuckieBotEvent) -> None:
         if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
             self.context.transition_to(PauseState())
-        # elif event == DuckieBotEvent.STOP_SIGN_DETECTED:
-        #     if self._in_slowdown_phase or self._in_travelling_phase:
-        #         return
-            
-        #     tag = self.context.get_most_recent_april_tag()
-        #     if tag.tag_id == self._tag_id:
-        #         # AprilTagTools.print_april_tag_info(tag)
-
-        #         # save the current wheel distances at the moment of detection
-        #         wheel_info = self.context.get_wheel_movement_info()
-        #         self._detection_left_distance = wheel_info.get_left_distance()
-        #         self._detection_right_distance = wheel_info.get_right_distance()
-        #         self._detection_z_distance = tag.transform.translation.z
-        #         rospy.loginfo(f"Detected stop sign with ID {tag.tag_id} at distances: "
-        #                      f"left={self._detection_left_distance}, "
-        #                      f"right={self._detection_right_distance}, "
-        #                      f"z={self._detection_z_distance}")
-        #         self._is_in_travelling_phase = True
-        #     else:
-        #         rospy.logwarn(f"Detected tag ID {tag.tag_id} does not match expected tag ID {self._tag_id}. Ignoring.")
         elif event == DuckieBotEvent.WHEEL_MOVEMENT_INFO_RECEIVED:
             if self._in_slowdown_phase:
-                self.calculate_and_set_slowdown_velocity()
+                vel = ApproachingSignTools.calculate_slowdown_velocity(
+                    self._slowdown_timer, self._start_slowdown_velocity)
+                self.context.publish_velocity(vel, vel)
                 return
             
-            if self.is_at_slowdown_position():
+            if ApproachingSignTools.is_at_slowdown_position(self.context.get_wheel_movement_info(),
+                            self._detection_left_distance, self._detection_right_distance,
+                                self._detection_z_distance):
                 self.context.publish_FSM_state(NORMAL_JOYSTICK_CONTROL_FSM_STATE) # Stop lane following
                 self._slowdown_timer.start()
                 # Get the average velocity of the wheels at the start of the slowdown phase
                 self._start_slowdown_velocity = self.context.get_wheel_movement_info().get_average_velocity()
                 self._in_slowdown_phase = True
-                # self._in_travelling_phase = False
-            
-            
+
     def update(self) -> None:
         if self._timer.is_expired():
             rospy.logwarn("Stopping for stop sign timer expired, transitioning to lane following state.")
@@ -520,28 +475,28 @@ class StoppingForStopSignState(DuckiebotState):
             self.context.stop_bot() # Stop the robot, as we are at the correct position
             self.context.transition_to(WaitingAtStopSignState())
 
-    def is_at_slowdown_position(self) -> bool:
-        wheel_info = self.context.get_wheel_movement_info()
-        left_distance = wheel_info.get_left_distance()
-        right_distance = wheel_info.get_right_distance()
+    # def is_at_slowdown_position(self) -> bool:
+    #     wheel_info = self.context.get_wheel_movement_info()
+    #     left_distance = wheel_info.get_left_distance()
+    #     right_distance = wheel_info.get_right_distance()
 
-        target_left_distance = self._detection_left_distance + self._detection_z_distance - APPROACHING_SIGN_SLOWDOWN_DISTANCE
-        target_right_distance = self._detection_right_distance + self._detection_z_distance - APPROACHING_SIGN_SLOWDOWN_DISTANCE
+    #     target_left_distance = self._detection_left_distance + self._detection_z_distance - APPROACHING_SIGN_SLOWDOWN_DISTANCE
+    #     target_right_distance = self._detection_right_distance + self._detection_z_distance - APPROACHING_SIGN_SLOWDOWN_DISTANCE
 
-        rospy.loginfo(f"Left distance: {left_distance}, Target left distance: {target_left_distance}")
-        rospy.loginfo(f"Right distance: {right_distance}, Target right distance: {target_right_distance}")
+    #     rospy.loginfo(f"Left distance: {left_distance}, Target left distance: {target_left_distance}")
+    #     rospy.loginfo(f"Right distance: {right_distance}, Target right distance: {target_right_distance}")
 
-        if left_distance >= target_left_distance and right_distance >= target_right_distance:
-            return True
-        return False
+    #     if left_distance >= target_left_distance or right_distance >= target_right_distance:
+    #         return True
+    #     return False
     
-    def calculate_and_set_slowdown_velocity(self):
-        vel = ApproachingSignTools.calculate_slow_down_veloticy(
-            APPROACHING_SIGN_SLOWDOWN_DURATION,
-            self._slowdown_timer.get_elapsed_time(),
-            self._start_slowdown_velocity,
-            0.0)
-        self.context.publish_velocity(vel, vel)
+    # def calculate_and_set_slowdown_velocity(self):
+    #     vel = ApproachingSignTools.calculate_slow_down_veloticy(
+    #         APPROACHING_SIGN_SLOWDOWN_DURATION,
+    #         self._slowdown_timer.get_elapsed_time(),
+    #         self._start_slowdown_velocity,
+    #         0.0)
+    #     self.context.publish_velocity(vel, vel)
 
 class WaitingAtStopSignState(DuckiebotState):
     def __init__(self):
