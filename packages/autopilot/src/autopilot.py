@@ -72,8 +72,8 @@ FOLLOW_LINEAR_VELOCITY_MIN = 0.1 # m/s
 SIGN_WAITING_DURATION = 2.0  # seconds
 
 # Turning constants
-TURN_MAX_VELOCITY_ADJUSTMENT_SCALAR = 1.5
-TURN_MIN_VELOCITY_ADJUSTMENT_SCALAR = 0.75
+TURN_MAX_VELOCITY_FACTOR = 1.5
+TURN_MIN_VELOCITY_FACTOR = 0.75
 AXLE_LENGTH = 0.1  # meters, distance between the two wheels
 
 TURN_LEFT_RIGHT_WHEEL_RADIUS = 0.39  # meters, radius of the right wheel during left turn
@@ -85,6 +85,8 @@ TURN_LEFT_LEFT_WHEEL_DISTANCE = math.pi * TURN_LEFT_LEFT_WHEEL_RADIUS * \
 TURN_LEFT_RIGHT_WHEEL_DISTANCE = math.pi * TURN_LEFT_RIGHT_WHEEL_RADIUS * \
     TURN_LEFT_RIGHT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the right wheel during left turn
 TURN_LEFT_MANEUVER_DURATION = 3.0  # seconds
+TURN_LEFT_LEFT_WHEEL_VELOCITY = TURN_LEFT_LEFT_WHEEL_DISTANCE / TURN_LEFT_MANEUVER_DURATION  # m/s, velocity of the left wheel during left turn
+TURN_LEFT_RIGHT_WHEEL_VELOCITY = TURN_LEFT_RIGHT_WHEEL_DISTANCE / TURN_LEFT_MANEUVER_DURATION  # m/s, velocity of the right wheel during left turn
 
 TURN_RIGHT_LEFT_WHEEL_RADIUS = 0.17  # meters, radius of the left wheel during right turn
 TURN_RIGHT_RIGHT_WHEEL_RADIUS = TURN_RIGHT_LEFT_WHEEL_RADIUS - AXLE_LENGTH  # meters, radius of the right wheel during right turn
@@ -95,6 +97,9 @@ TURN_RIGHT_LEFT_WHEEL_DISTANCE = math.pi * TURN_RIGHT_LEFT_WHEEL_RADIUS * \
 TURN_RIGHT_RIGHT_WHEEL_DISTANCE = math.pi * TURN_RIGHT_RIGHT_WHEEL_RADIUS * \
     TURN_RIGHT_RIGHT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the right wheel during right turn
 TURN_RIGHT_MANEUVER_DURATION = 1.2  # seconds
+TURN_RIGHT_LEFT_WHEEL_VELOCITY = TURN_RIGHT_LEFT_WHEEL_DISTANCE / TURN_RIGHT_MANEUVER_DURATION  # m/s, velocity of the left wheel during right turn
+TURN_RIGHT_RIGHT_WHEEL_VELOCITY = TURN_RIGHT_RIGHT_WHEEL_DISTANCE / TURN_RIGHT_MANEUVER_DURATION  # m/s, velocity of the right wheel during right turn
+
 
 # Lane controller node parameters constants
 LANE_CONTROLLER_NODE_V_BAR = "/vader/lane_controller_node/v_bar" # nominal velocity in m/s
@@ -655,6 +660,24 @@ class TurningTools:
                 return TURN_RIGHT_LEFT_WHEEL_DISTANCE * timer_elapsed / TURN_RIGHT_MANEUVER_DURATION
             else: # right wheel
                 return TURN_RIGHT_RIGHT_WHEEL_DISTANCE * timer_elapsed / TURN_RIGHT_MANEUVER_DURATION
+            
+    @staticmethod
+    def calculate_min_max_vels(is_left_turn: bool, is_left_wheel: bool) -> Tuple[float, float]:
+        if is_left_turn:
+            if is_left_wheel:
+                min_vel = TURN_LEFT_LEFT_WHEEL_VELOCITY * TURN_MIN_VELOCITY_FACTOR
+                max_vel = TURN_LEFT_LEFT_WHEEL_VELOCITY * TURN_MAX_VELOCITY_FACTOR
+            else: # right wheel
+                min_vel = TURN_LEFT_RIGHT_WHEEL_VELOCITY * TURN_MIN_VELOCITY_FACTOR
+                max_vel = TURN_LEFT_RIGHT_WHEEL_VELOCITY * TURN_MAX_VELOCITY_FACTOR
+        else:  # right turn
+            if is_left_wheel:
+                min_vel = TURN_RIGHT_LEFT_WHEEL_VELOCITY * TURN_MIN_VELOCITY_FACTOR
+                max_vel = TURN_RIGHT_LEFT_WHEEL_VELOCITY * TURN_MAX_VELOCITY_FACTOR
+            else:   # right wheel
+                min_vel = TURN_RIGHT_RIGHT_WHEEL_VELOCITY * TURN_MIN_VELOCITY_FACTOR
+                max_vel = TURN_RIGHT_RIGHT_WHEEL_VELOCITY * TURN_MAX_VELOCITY_FACTOR
+        return (min_vel, max_vel)
 
 class TurningLeftState(DuckiebotState):
     def __init__(self):
@@ -703,11 +726,16 @@ class TurningLeftState(DuckiebotState):
         elapsed_time = current_time - self._last_wheel_info_time
         self._last_wheel_info_time = current_time
 
+        min_left_vel, max_left_vel = TurningTools.calculate_min_max_vels(True, True)
+        min_right_vel, max_right_vel = TurningTools.calculate_min_max_vels(True, False)
+
         # Calculate the velocities for the left and right wheels
         left_velocity = VelocityCalculator.calculate_velocity(
-            target_left_distance, current_left_distance, elapsed_time)
+            target_left_distance, current_left_distance, elapsed_time,
+            min_left_vel, max_left_vel)
         right_velocity = VelocityCalculator.calculate_velocity(
-            target_right_distance, current_right_distance, elapsed_time)
+            target_right_distance, current_right_distance, elapsed_time,
+            min_right_vel, max_right_vel)
 
         # Publish the velocities to the wheels
         self.context.publish_velocity(left_velocity, right_velocity)
