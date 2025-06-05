@@ -488,6 +488,7 @@ class StoppingForStopSignState(DuckiebotState):
         self._start_slowdown_velocity = None
         self._detection_left_distance = None
         self._detection_right_distance = None
+        self._detection_z_distance = None
 
     def on_enter(self) -> None:
         self._timer.start()
@@ -508,6 +509,7 @@ class StoppingForStopSignState(DuckiebotState):
                 wheel_info = self.context.get_wheel_movement_info()
                 self._detection_left_distance = wheel_info.get_left_distance()
                 self._detection_right_distance = wheel_info.get_right_distance()
+                self._detection_z_distance = tag.transform.translation.z
                 self._is_in_travelling_phase = True
             else:
                 rospy.logwarn(f"Detected tag ID {tag.tag_id} does not match expected tag ID {self._tag_id}. Ignoring.")
@@ -538,11 +540,10 @@ class StoppingForStopSignState(DuckiebotState):
         left_distance = wheel_info.get_left_distance()
         right_distance = wheel_info.get_right_distance()
 
-        left_distance_from_detection = abs(left_distance - self._detection_left_distance)
-        right_distance_from_detection = abs(right_distance - self._detection_right_distance)
+        target_left_distance = self._detection_left_distance + self._detection_z_distance - APPROACHING_SIGN_SLOWDOWN_DISTANCE
+        target_right_distance = self._detection_right_distance + self._detection_z_distance - APPROACHING_SIGN_SLOWDOWN_DISTANCE
 
-        if left_distance_from_detection < APPROACHING_SIGN_SLOWDOWN_DISTANCE or \
-           right_distance_from_detection < APPROACHING_SIGN_SLOWDOWN_DISTANCE:
+        if left_distance >= target_left_distance or right_distance >= target_right_distance:
             return True
     
     def calculate_and_set_slowdown_velocity(self):
