@@ -510,6 +510,10 @@ class StoppingForStopSignState(DuckiebotState):
                 self._detection_left_distance = wheel_info.get_left_distance()
                 self._detection_right_distance = wheel_info.get_right_distance()
                 self._detection_z_distance = tag.transform.translation.z
+                rospy.loginfo(f"Detected stop sign with ID {tag.tag_id} at distances: "
+                             f"left={self._detection_left_distance}, "
+                             f"right={self._detection_right_distance}, "
+                             f"z={self._detection_z_distance}")
                 self._is_in_travelling_phase = True
             else:
                 rospy.logwarn(f"Detected tag ID {tag.tag_id} does not match expected tag ID {self._tag_id}. Ignoring.")
@@ -522,7 +526,7 @@ class StoppingForStopSignState(DuckiebotState):
                     self._start_slowdown_velocity = self.context.get_wheel_movement_info().get_average_velocity()
                     self._in_slowdown_phase = True
                     self._in_travelling_phase = False
-            elif self._in_slowdown_phase:
+            if self._in_slowdown_phase:
                 self.calculate_and_set_slowdown_velocity()
             
     def update(self) -> None:
@@ -543,8 +547,12 @@ class StoppingForStopSignState(DuckiebotState):
         target_left_distance = self._detection_left_distance + self._detection_z_distance - APPROACHING_SIGN_SLOWDOWN_DISTANCE
         target_right_distance = self._detection_right_distance + self._detection_z_distance - APPROACHING_SIGN_SLOWDOWN_DISTANCE
 
+        rospy.loginfo(f"Left distance: {left_distance}, Target left distance: {target_left_distance}")
+        rospy.loginfo(f"Right distance: {right_distance}, Target right distance: {target_right_distance}")
+
         if left_distance >= target_left_distance or right_distance >= target_right_distance:
             return True
+        return False
     
     def calculate_and_set_slowdown_velocity(self):
         vel = ApproachingSignTools.calculate_slow_down_veloticy(
