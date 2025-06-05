@@ -19,16 +19,16 @@ LANE_FOLLOWING_FSM_STATE = "LANE_FOLLOWING"
 NORMAL_JOYSTICK_CONTROL_FSM_STATE = "NORMAL_JOYSTICK_CONTROL"
 
 # Sign constants
-APPROACHING_SIGN_SLOWDOWN_DISTANCE = 0.1  # meters, distance at which the bot starts slowing down
-APPROACHING_SIGN_SLOWDOWN_DURATION = 2.0  # seconds, duration of the slowdown phase
-SIGN_DETECTION_DISTANCE_THRESHOLD = 0.7  # meters, distance at which the bot detects the sign
+# APPROACHING_SIGN_SLOWDOWN_DISTANCE = 0.2  # meters, distance at which the bot starts slowing down
+# APPROACHING_SIGN_SLOWDOWN_DURATION = 2.0  # seconds, duration of the slowdown phase
+SIGN_DETECTION_DISTANCE_THRESHOLD = 0.8  # meters, distance at which the bot detects the sign
 
 # Stop sign constants
 STOP_SIGN_WAITING_TIME = 3.0  # seconds
 LANE_FOLLOWING_STOP_SIGN_TIME = 3.0  # seconds
-STOPPING_FOR_STOP_SIGN_TIMEOUT_DURATION = 7.0  # seconds
-STOP_SIGN_Z_TARGET_DISTANCE = 0.1  # meters, distance from the stop line to the sign
-# STOP_SIGN_Z_SLOW_DOWN_DISTANCE = 0.1  # meters, distance at which the bot starts slowing down
+STOPPING_FOR_STOP_SIGN_TIMEOUT_DURATION = 12.0  # seconds
+STOP_SIGN_SLOWDOWN_DISTANCE = 0.3  # meters
+STOP_SIGN_SLOWDOWN_DURATION = 2.0  # seconds, duration of the slowdown phase
 STOP_SIGN_IDS = [1, 20, 21, 22, 23, 24, 25, 26, 27,
                  28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38]
 
@@ -228,12 +228,12 @@ class AprilTagTools:
             # The tag is too far away, ignore it
             return False
 
-        # Check if the tag is not at an extreme angle using the x, y, z components of the quaternion
-        # w is not used for angle checks, so we can ignore it
-        if abs(detection.transform.rotation.x) > APRIL_TAG_DETCTION_ROTATION_THRESHOLD or \
-                abs(detection.transform.rotation.y) > APRIL_TAG_DETCTION_ROTATION_THRESHOLD or \
-                    abs(detection.transform.rotation.z) > APRIL_TAG_DETCTION_ROTATION_THRESHOLD:
-            return False
+        # # Check if the tag is not at an extreme angle using the x, y, z components of the quaternion
+        # # w is not used for angle checks, so we can ignore it
+        # if abs(detection.transform.rotation.x) > APRIL_TAG_DETCTION_ROTATION_THRESHOLD or \
+        #         abs(detection.transform.rotation.y) > APRIL_TAG_DETCTION_ROTATION_THRESHOLD or \
+        #             abs(detection.transform.rotation.z) > APRIL_TAG_DETCTION_ROTATION_THRESHOLD:
+        #     return False
         
         # If all checks passed, the tag is in a valid position
         return True
@@ -473,7 +473,7 @@ class ApproachingSignTools:
 class StoppingForStopSignState(DuckiebotState):
     def __init__(self, tag: AprilTagDetection):
         self._timer = Timer(STOPPING_FOR_STOP_SIGN_TIMEOUT_DURATION)
-        self._slowdown_timer = Timer(APPROACHING_SIGN_SLOWDOWN_DURATION)
+        self._slowdown_timer = Timer(STOP_SIGN_SLOWDOWN_DURATION)
         self._tag_id = tag.tag_id
         self._in_slowdown_phase = False
         self._start_slowdown_velocity = None
@@ -515,11 +515,11 @@ class StoppingForStopSignState(DuckiebotState):
 
     def is_at_slowdown_position(self, tag: AprilTagDetection) -> bool:
         z = tag.transform.translation.z
-        return z <= STOP_SIGN_Z_TARGET_DISTANCE + APPROACHING_SIGN_SLOWDOWN_DISTANCE
+        return z <= STOP_SIGN_SLOWDOWN_DISTANCE
     
     def calculate_and_set_slowdown_velocity(self):
         vel = ApproachingSignTools.calculate_slow_down_veloticy(
-            APPROACHING_SIGN_SLOWDOWN_DURATION,
+            STOP_SIGN_SLOWDOWN_DURATION,
             self._slowdown_timer.get_elapsed_time(),
             self._start_slowdown_velocity,
             0.0)
@@ -543,10 +543,11 @@ class WaitingAtStopSignState(DuckiebotState):
 
 class LaneFollowingStopSignState(DuckiebotState):
     def __init__(self):
-        pass
+        self._timer = Timer(LANE_FOLLOWING_STOP_SIGN_TIME)
 
     def on_enter(self) -> None:
         self.context.publish_FSM_state(LANE_FOLLOWING_FSM_STATE)
+        self._timer.start()
 
     def on_event(self, event: DuckieBotEvent) -> None:
         if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
@@ -566,7 +567,8 @@ class LaneFollowingStopSignState(DuckiebotState):
                 self.context.transition_to(ApproachingTurnRightSignState(tag))
 
     def update(self) -> None:
-        pass
+        if self._timer.is_expired():
+            self.context.transition_to(LaneFollowingState())
     
 class StoppingForCarState(DuckiebotState):
     def __init__(self):
