@@ -202,6 +202,10 @@ class WheelMovementInfo:
     #     return self._last_update_time
     def get_average_velocity(self) -> float:
         return (self._left_velocity + self._right_velocity) / 2.0
+    
+    def print_info(self):
+        rospy.loginfo(f"Left - Dist: {self._left_distance}, Disp: {self._left_displacement}, Vel: {self._left_velocity}")
+        rospy.loginfo(f"Right - Dist: {self._right_distance}, Disp: {self._right_displacement}, Vel: {self._right_velocity}")
 
 class AprilTagTools:
     @staticmethod
@@ -264,7 +268,7 @@ class Duckiebot():
         self._sign_tag_id = None
         self._wheel_movement_info = WheelMovementInfo()
         self._most_recent_april_tag = None
-        rospy.Subscriber('/vader/wheel_movement_info', Float64MultiArray, self.wheel_movement_info_callback)
+        rospy.Subscriber('/vader/wheel_movement_info', Float64MultiArray, self.wheel_movement_info_callback, queue_size=1)
         rospy.Subscriber('/vader/apriltag_detector_node/detections', AprilTagDetectionArray, self.april_tag_callback, queue_size=1)
         self._state_publisher = state_pub
         self._velocity_publisher = rospy.Publisher('/vader/wheels_driver_node/wheels_cmd', WheelsCmdStamped, queue_size=1)
@@ -318,6 +322,7 @@ class Duckiebot():
     
     def wheel_movement_info_callback(self, msg: Float64MultiArray):
         self._wheel_movement_info.update(msg)
+        self._wheel_movement_info.print_info()
         if self.is_wheels_stopped():
             self.on_event(DuckieBotEvent.BOT_BECOMES_STOPPED)
         self.on_event(DuckieBotEvent.WHEEL_MOVEMENT_INFO_RECEIVED)
