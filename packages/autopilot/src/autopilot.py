@@ -837,8 +837,9 @@ class ApproachingTurnLeftSignState(DuckiebotState):
         x = tag.transform.translation.x
         z = tag.transform.translation.z
         rospy.loginfo(f"Tag ID {self._tag_id} detected at x: {x}, z: {z}")
-        self.context.publish_cmd_vel(ApproachingSignTools.follow_object(
-            x - FOLLOW_X_DISTANCE_TARGET, z - FOLLOW_Z_DISTANCE_TARGET))
+        v, omega = ApproachingSignTools.follow_object(
+            x - FOLLOW_X_DISTANCE_TARGET, z - FOLLOW_Z_DISTANCE_TARGET)
+        self.context.publish_cmd_vel(v, omega)
 
     def is_at_correct_position(self, tag: AprilTagDetection) -> bool:
         z = tag.transform.translation.z
