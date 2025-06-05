@@ -19,9 +19,9 @@ LANE_FOLLOWING_FSM_STATE = "LANE_FOLLOWING"
 NORMAL_JOYSTICK_CONTROL_FSM_STATE = "NORMAL_JOYSTICK_CONTROL"
 
 # Sign constants
-APPROACHING_SIGN_SLOWDOWN_DISTANCE = 0.25  # meters, distance at which the bot starts slowing down
-APPROACHING_SIGN_SLOWDOWN_DURATION = 2.0  # seconds, duration of the slowdown phase
-SIGN_DETECTION_DISTANCE_THRESHOLD = 0.6  # meters, distance at which the bot detects the sign
+APPROACHING_SIGN_SLOWDOWN_DISTANCE = 0.3  # meters, distance at which the bot starts slowing down
+APPROACHING_SIGN_SLOWDOWN_DURATION = 3.0  # seconds, duration of the slowdown phase
+SIGN_DETECTION_DISTANCE_THRESHOLD = 0.8  # meters, distance at which the bot detects the sign
 
 # Stop sign constants
 # STOP_SIGN_WAITING_TIME = 3.0  # seconds
@@ -114,7 +114,7 @@ LANE_CONTROLLER_NODE_K_ID = "/vader/lane_controller_node/k_Id" # integral term f
 LANE_CONTROLLER_NODE_K_IPHI = "/vader/lane_controller_node/k_IphI" # integral term for lateral deviation?
 LANE_CONTROLLER_NODE_THETA_THRES_MIN = "/vader/lane_controller_node/theta_thres_min" # minimum value for heading error
 LANE_CONTROLLER_NODE_THETA_THRES_MAX = "/vader/lane_controller_node/theta_thres_max" # maximum value for heading error
-V_BAR = 0.3 # clamped from 0 to 5, default 0.19
+V_BAR = 0.28 # clamped from 0 to 5, default 0.19
 K_D = -30.0 # clamped from -100 to 100, default -6.0
 K_THETA = -9.0 # clamped from -100 to 100, default -5.0
 K_ID = -0.3 # clamped from -100 to 100, default -0.3
