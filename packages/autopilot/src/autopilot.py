@@ -27,7 +27,7 @@ SIGN_DETECTION_DISTANCE_THRESHOLD = 0.8  # meters, distance at which the bot det
 STOP_SIGN_WAITING_TIME = 3.0  # seconds
 LANE_FOLLOWING_STOP_SIGN_TIME = 3.0  # seconds
 STOPPING_FOR_STOP_SIGN_TIMEOUT_DURATION = 12.0  # seconds
-STOP_SIGN_SLOWDOWN_DISTANCE = 0.3  # meters
+STOP_SIGN_SLOWDOWN_DISTANCE = 0.45  # meters
 STOP_SIGN_SLOWDOWN_DURATION = 2.0  # seconds, duration of the slowdown phase
 STOP_SIGN_IDS = [1, 20, 21, 22, 23, 24, 25, 26, 27,
                  28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38]
@@ -166,7 +166,7 @@ class WheelMovementInfo:
         self._right_distance = 0.0
         self._right_displacement = 0.0
         self._right_velocity = 0.0
-        self._last_update_time = rospy.Time.now()
+        # self._last_update_time = rospy.Time.now()
 
     def update(self, msg: Float64MultiArray):
         if len(msg.data) != 6:
@@ -178,7 +178,7 @@ class WheelMovementInfo:
         self._right_distance = msg.data[3]
         self._right_displacement = msg.data[4]
         self._right_velocity = msg.data[5]
-        self._last_update_time = rospy.Time.now()
+        # self._last_update_time = rospy.Time.now()
 
     def get_left_info(self):
         return (self._left_distance, self._left_displacement, self._left_velocity)
@@ -196,8 +196,8 @@ class WheelMovementInfo:
         return self._right_displacement
     def get_right_velocity(self):
         return self._right_velocity
-    def get_last_update_time(self):
-        return self._last_update_time
+    # def get_last_update_time(self):
+    #     return self._last_update_time
     def get_average_velocity(self) -> float:
         return (self._left_velocity + self._right_velocity) / 2.0
 
@@ -723,7 +723,7 @@ class OvertakingState(DuckiebotState):
             0.0, adjusted_timer, A, K, B, X0, V,
                 OVERTAKING_MIDWAY_DISTANCE, OVERTAKING_WHEEL_OFFSET, False)
         
-        current_time = wheel_info.get_last_update_time()
+        current_time = rospy.get_time()
         elapsed_time = current_time - self._last_wheel_info_time
         self._last_wheel_info_time = current_time
 
