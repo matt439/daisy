@@ -295,7 +295,11 @@ class Duckiebot():
     
     def april_tag_callback(self, msg: AprilTagDetectionArray):
         for detection in msg.detections:
-            self._most_recent_april_tag = detection  # Store the most recent tag detection
+            if not AprilTagTools.is_april_tag_in_valid_position(detection):
+                continue
+
+            id = detection.tag_id
+            self._most_recent_april_tag = detection  # Update the most recent tag
             if AprilTagTools.is_stop_sign_id(id):
                 self._state.on_event(DuckieBotEvent.STOP_SIGN_DETECTED)
             elif AprilTagTools.is_left_intersection_sign_id(id):
