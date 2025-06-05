@@ -837,6 +837,8 @@ class TurningLeftState(DuckiebotState):
         rospy.loginfo(f"target_left_distance: {target_left_distance}, target_right_distance: {target_right_distance}")
         rospy.loginfo(f"current_left_distance: {current_left_distance}, current_right_distance: {current_right_distance}")
         rospy.loginfo(f"elapsed_time: {elapsed_time}")
+        rospy.loginfo(f"Wheel movement info: Left distance: {left_distance}, Right distance: {right_distance}")
+        rospy.loginfo(f"Start left distance: {self._start_left_distance}, Start right distance: {self._start_right_distance}")
         rospy.loginfo("")
 
         # Publish the velocities to the wheels
