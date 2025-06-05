@@ -21,6 +21,7 @@ NORMAL_JOYSTICK_CONTROL_FSM_STATE = "NORMAL_JOYSTICK_CONTROL"
 # Sign constants
 APPROACHING_SIGN_SLOWDOWN_DISTANCE = 0.1  # meters, distance at which the bot starts slowing down
 APPROACHING_SIGN_SLOWDOWN_DURATION = 2.0  # seconds, duration of the slowdown phase
+SIGN_DETECTION_DISTANCE_THRESHOLD = 0.7  # meters, distance at which the bot detects the sign
 
 # Stop sign constants
 STOP_SIGN_WAITING_TIME = 3.0  # seconds
@@ -219,8 +220,12 @@ class AprilTagTools:
     
     @staticmethod
     def is_april_tag_in_valid_position(detection : AprilTagDetection) -> bool:
-        # Check if the tag is to the right of the robot
-        if detection.transform.translation.x < 0:
+        if detection.transform.translation.x < 0.0:
+            # Check if the tag is to the left of the bot
+            return False
+        
+        if detection.transform.translation.z > SIGN_DETECTION_DISTANCE_THRESHOLD:
+            # The tag is too far away, ignore it
             return False
 
         # Check if the tag is not at an extreme angle using the x, y, z components of the quaternion
@@ -233,13 +238,13 @@ class AprilTagTools:
         # If all checks passed, the tag is in a valid position
         return True
     
-    @staticmethod
-    def is_sign_in_stoppable_position(detection: AprilTagDetection) -> bool:
-        z = detection.transform.translation.z
-        if z < FOLLOW_Z_DISTANCE_TARGET + APPROACHING_SIGN_SLOWDOWN_DISTANCE:
-            # There is not enough distance to stop before the sign
-            return False
-        return True
+    # @staticmethod
+    # def is_sign_in_stoppable_position(detection: AprilTagDetection) -> bool:
+    #     z = detection.transform.translation.z
+    #     if z < FOLLOW_Z_DISTANCE_TARGET + APPROACHING_SIGN_SLOWDOWN_DISTANCE:
+    #         # There is not enough distance to stop before the sign
+    #         return False
+    #     return True
 
 class Duckiebot():
     def __init__(self, state: 'DuckiebotState', state_pub) -> None:
@@ -379,21 +384,15 @@ class LaneFollowingState(DuckiebotState):
         if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
             self.context.transition_to(PauseState())
         elif event == DuckieBotEvent.STOP_SIGN_DETECTED:
-            if AprilTagTools.is_sign_in_stoppable_position(self.context.get_most_recent_april_tag()):
-                self.context.transition_to(StoppingForStopSignState(self.context.get_most_recent_april_tag()))
+            self.context.transition_to(StoppingForStopSignState(self.context.get_most_recent_april_tag()))
         elif event == DuckieBotEvent.CAR_DETECTED:
             self.context.transition_to(StoppingForCarState())
         elif event == DuckieBotEvent.TURN_LEFT_SIGN_DETECTED:
-            if AprilTagTools.is_sign_in_stoppable_position(self.context.get_most_recent_april_tag()):
-                self.context.transition_to(ApproachingTurnLeftSignState(self.context.get_most_recent_april_tag()))
+            self.context.transition_to(ApproachingTurnLeftSignState(self.context.get_most_recent_april_tag()))
         elif event == DuckieBotEvent.TURN_RIGHT_SIGN_DETECTED:
-            if AprilTagTools.is_sign_in_stoppable_position(self.context.get_most_recent_april_tag()):
-                self.context.transition_to(ApproachingTurnRightSignState(self.context.get_most_recent_april_tag()))
+            self.context.transition_to(ApproachingTurnRightSignState(self.context.get_most_recent_april_tag()))
         elif event == DuckieBotEvent.T_INTERSECTON_SIGN_DETECTED:
             tag = self.context.get_most_recent_april_tag()
-            if not AprilTagTools.is_sign_in_stoppable_position(tag):
-                return
-            
             # Randomly choose between left and right turn for T-intersection
             if random.choice([True, False]):
                 self.context.transition_to(ApproachingTurnLeftSignState(tag))
@@ -544,16 +543,11 @@ class LaneFollowingStopSignState(DuckiebotState):
         elif event == DuckieBotEvent.CAR_DETECTED:
             self.context.transition_to(StoppingForCarState())
         elif event == DuckieBotEvent.TURN_LEFT_SIGN_DETECTED:
-            if AprilTagTools.is_sign_in_stoppable_position(self.context.get_most_recent_april_tag()):
-                self.context.transition_to(ApproachingTurnLeftSignState(self.context.get_most_recent_april_tag()))
+            self.context.transition_to(ApproachingTurnLeftSignState(self.context.get_most_recent_april_tag()))
         elif event == DuckieBotEvent.TURN_RIGHT_SIGN_DETECTED:
-            if AprilTagTools.is_sign_in_stoppable_position(self.context.get_most_recent_april_tag()):
-                self.context.transition_to(ApproachingTurnRightSignState(self.context.get_most_recent_april_tag()))
+            self.context.transition_to(ApproachingTurnRightSignState(self.context.get_most_recent_april_tag()))
         elif event == DuckieBotEvent.T_INTERSECTON_SIGN_DETECTED:
             tag = self.context.get_most_recent_april_tag()
-            if not AprilTagTools.is_sign_in_stoppable_position(tag):
-                return
-            
             # Randomly choose between left and right turn for T-intersection
             if random.choice([True, False]):
                 self.context.transition_to(ApproachingTurnLeftSignState(tag))
