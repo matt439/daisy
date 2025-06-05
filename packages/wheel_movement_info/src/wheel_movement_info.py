@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import rospy
-import os
 import time
 import math
 from std_msgs.msg import Float64MultiArray, MultiArrayLayout, MultiArrayDimension
