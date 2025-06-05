@@ -19,16 +19,16 @@ LANE_FOLLOWING_FSM_STATE = "LANE_FOLLOWING"
 NORMAL_JOYSTICK_CONTROL_FSM_STATE = "NORMAL_JOYSTICK_CONTROL"
 
 # Sign constants
-# APPROACHING_SIGN_SLOWDOWN_DISTANCE = 0.2  # meters, distance at which the bot starts slowing down
-# APPROACHING_SIGN_SLOWDOWN_DURATION = 2.0  # seconds, duration of the slowdown phase
-SIGN_DETECTION_DISTANCE_THRESHOLD = 0.8  # meters, distance at which the bot detects the sign
+APPROACHING_SIGN_SLOWDOWN_DISTANCE = 0.25  # meters, distance at which the bot starts slowing down
+APPROACHING_SIGN_SLOWDOWN_DURATION = 2.0  # seconds, duration of the slowdown phase
+SIGN_DETECTION_DISTANCE_THRESHOLD = 0.6  # meters, distance at which the bot detects the sign
 
 # Stop sign constants
 # STOP_SIGN_WAITING_TIME = 3.0  # seconds
 LANE_FOLLOWING_STOP_SIGN_TIME = 4.0  # seconds
-STOPPING_FOR_STOP_SIGN_TIMEOUT_DURATION = 10.0  # seconds
-STOP_SIGN_SLOWDOWN_DISTANCE = 0.4  # meters
-STOP_SIGN_SLOWDOWN_DURATION = 3.0  # seconds, duration of the slowdown phase
+# STOPPING_FOR_STOP_SIGN_TIMEOUT_DURATION = 7.0  # seconds
+# STOP_SIGN_SLOWDOWN_DISTANCE = 0.4  # meters
+# STOP_SIGN_SLOWDOWN_DURATION = 3.0  # seconds, duration of the slowdown phase
 STOP_SIGN_IDS = [1, 20, 21, 22, 23, 24, 25, 26, 27,
                  28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38]
 
@@ -56,9 +56,9 @@ T_INTERSECTION_SIGNS_IDS = [11, 65, 66, 67, 68]
 # APRIL_TAG_DETCTION_ROTATION_THRESHOLD = 0.5  # Threshold for quaternion components to determine valid tag orientation
 
 # Approaching intersection sign constants
-INTERSECTION_SIGN_SLOWDOWN_DISTANCE = 0.4  # meters, distance at which the bot starts slowing down
-INTERSECTION_SIGN_SLOWDOWN_DURATION = 3.0  # seconds, duration of the slowdown phase
-APPROACHING_SIGN_TIMEOUT_DURATION = 10.0  # seconds
+# INTERSECTION_SIGN_SLOWDOWN_DISTANCE = 0.4  # meters, distance at which the bot starts slowing down
+# INTERSECTION_SIGN_SLOWDOWN_DURATION = 3.0  # seconds, duration of the slowdown phase
+APPROACHING_SIGN_TIMEOUT_DURATION = 7.0  # seconds
 # FOLLOW_ANGULAR_VELOCITY = 0.1 # rad/s
 # FOLLOW_ANGULAR_VELOCITY_MAX = 0.2 # rad/s
 # FOLLOW_ANGULAR_VELOCITY_MIN = 0.0 # rad/s
@@ -480,8 +480,8 @@ class ApproachingSignTools:
 
 class StoppingForStopSignState(DuckiebotState):
     def __init__(self, tag: AprilTagDetection):
-        self._timer = Timer(STOPPING_FOR_STOP_SIGN_TIMEOUT_DURATION)
-        self._slowdown_timer = Timer(STOP_SIGN_SLOWDOWN_DURATION)
+        self._timer = Timer(APPROACHING_SIGN_TIMEOUT_DURATION)
+        self._slowdown_timer = Timer(APPROACHING_SIGN_SLOWDOWN_DURATION)
         self._tag_id = tag.tag_id
         self._in_slowdown_phase = False
         self._start_slowdown_velocity = None
@@ -523,11 +523,11 @@ class StoppingForStopSignState(DuckiebotState):
 
     def is_at_slowdown_position(self, tag: AprilTagDetection) -> bool:
         z = tag.transform.translation.z
-        return z <= STOP_SIGN_SLOWDOWN_DISTANCE
+        return z <= APPROACHING_SIGN_SLOWDOWN_DISTANCE
     
     def calculate_and_set_slowdown_velocity(self):
         vel = ApproachingSignTools.calculate_slow_down_veloticy(
-            STOP_SIGN_SLOWDOWN_DURATION,
+            APPROACHING_SIGN_SLOWDOWN_DURATION,
             self._slowdown_timer.get_elapsed_time(),
             self._start_slowdown_velocity,
             0.0)
@@ -947,7 +947,7 @@ class ApproachingTurnLeftSignState(DuckiebotState):
     def __init__(self, tag: AprilTagDetection):
         self._tag_id = tag.tag_id
         self._timer = Timer(APPROACHING_SIGN_TIMEOUT_DURATION)
-        self._slowdown_timer = Timer(INTERSECTION_SIGN_SLOWDOWN_DURATION)
+        self._slowdown_timer = Timer(APPROACHING_SIGN_SLOWDOWN_DURATION)
         self._in_slowdown_phase = False
         self._start_slowdown_velocity = None
 
@@ -996,11 +996,11 @@ class ApproachingTurnLeftSignState(DuckiebotState):
 
     def is_at_slowdown_position(self, tag: AprilTagDetection) -> bool:
         z = tag.transform.translation.z
-        return z <= INTERSECTION_SIGN_SLOWDOWN_DISTANCE
+        return z <= APPROACHING_SIGN_SLOWDOWN_DISTANCE
     
     def calculate_and_set_slowdown_velocity(self):
         vel = ApproachingSignTools.calculate_slow_down_veloticy(
-            INTERSECTION_SIGN_SLOWDOWN_DURATION,
+            APPROACHING_SIGN_SLOWDOWN_DURATION,
             self._slowdown_timer.get_elapsed_time(),
             self._start_slowdown_velocity,
             0.0)
@@ -1014,7 +1014,7 @@ class ApproachingTurnRightSignState(DuckiebotState):
     def __init__(self, tag: AprilTagDetection):
         self._tag_id = tag.tag_id
         self._timer = Timer(APPROACHING_SIGN_TIMEOUT_DURATION)
-        self._slowdown_timer = Timer(INTERSECTION_SIGN_SLOWDOWN_DURATION)
+        self._slowdown_timer = Timer(APPROACHING_SIGN_SLOWDOWN_DURATION)
         self._in_slowdown_phase = False
         self._start_slowdown_velocity = None
 
@@ -1055,11 +1055,11 @@ class ApproachingTurnRightSignState(DuckiebotState):
 
     def is_at_slowdown_position(self, tag: AprilTagDetection) -> bool:
         z = tag.transform.translation.z
-        return z <= INTERSECTION_SIGN_SLOWDOWN_DISTANCE
+        return z <= APPROACHING_SIGN_SLOWDOWN_DISTANCE
     
     def calculate_and_set_slowdown_velocity(self):
         vel = ApproachingSignTools.calculate_slow_down_veloticy(
-            INTERSECTION_SIGN_SLOWDOWN_DURATION,
+            APPROACHING_SIGN_SLOWDOWN_DURATION,
             self._slowdown_timer.get_elapsed_time(),
             self._start_slowdown_velocity,
             0.0)
