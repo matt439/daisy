@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import rospy
-from duckietown_msgs.msg import Twist2DStamped, FSMState, AprilTagDetectionArray, \
+from duckietown_msgs.msg import FSMState, AprilTagDetectionArray, \
                                 AprilTagDetection, WheelsCmdStamped
 from std_msgs.msg import Int8, Float64MultiArray
 from enum import Enum
@@ -22,13 +22,12 @@ NORMAL_JOYSTICK_CONTROL_FSM_STATE = "NORMAL_JOYSTICK_CONTROL"
 APPROACHING_SIGN_SLOWDOWN_DISTANCE = 0.1  # meters, distance at which the bot starts slowing down
 APPROACHING_SIGN_SLOWDOWN_DURATION = 2.0  # seconds, duration of the slowdown phase
 SIGN_DETECTION_DISTANCE_THRESHOLD = 0.6  # meters, distance at which the bot detects the sign
+APPROACHING_SIGN_TIMEOUT_DURATION = 7.0  # seconds
+SIGN_WAITING_DURATION = 2.0  # seconds
+# APRIL_TAG_DETCTION_ROTATION_THRESHOLD = 0.5  # Threshold for quaternion components to determine valid tag orientation
 
 # Stop sign constants
-# STOP_SIGN_WAITING_TIME = 3.0  # seconds
 LANE_FOLLOWING_STOP_SIGN_TIME = 4.0  # seconds
-# STOPPING_FOR_STOP_SIGN_TIMEOUT_DURATION = 7.0  # seconds
-# STOP_SIGN_SLOWDOWN_DISTANCE = 0.4  # meters
-# STOP_SIGN_SLOWDOWN_DURATION = 3.0  # seconds, duration of the slowdown phase
 STOP_SIGN_IDS = [1, 20, 21, 22, 23, 24, 25, 26, 27,
                  28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38]
 
@@ -53,28 +52,6 @@ V = 1.0
 LEFT_INTERSECTION_SIGNS_IDS = [10, 61, 62, 63, 64]
 RIGHT_INTERSECTION_SIGNS_IDS = [9, 57, 58, 59, 60]
 T_INTERSECTION_SIGNS_IDS = [11, 65, 66, 67, 68]
-# APRIL_TAG_DETCTION_ROTATION_THRESHOLD = 0.5  # Threshold for quaternion components to determine valid tag orientation
-
-# Approaching intersection sign constants
-# INTERSECTION_SIGN_SLOWDOWN_DISTANCE = 0.4  # meters, distance at which the bot starts slowing down
-# INTERSECTION_SIGN_SLOWDOWN_DURATION = 3.0  # seconds, duration of the slowdown phase
-APPROACHING_SIGN_TIMEOUT_DURATION = 7.0  # seconds
-# FOLLOW_ANGULAR_VELOCITY = 0.1 # rad/s
-# FOLLOW_ANGULAR_VELOCITY_MAX = 0.2 # rad/s
-# FOLLOW_ANGULAR_VELOCITY_MIN = 0.0 # rad/s
-# FOLLOW_X_DISTANCE_TARGET = 0.2 # meter, the sign should be to the right of the bot
-# FOLLOW_X_DISTANCE_THRESHOLD = 0.02 # meter
-# FOLLOW_ANGULAR_SLOWDOWN_RADIANS = math.pi / 8.0 # radians, distance at which the bot starts slowing down
-
-# FOLLOW_Z_DISTANCE_TARGET = 0.51 # meter, sign is this distance in front of the stop line
-# FOLLOW_Z_DISTANCE_THRESHOLD = 0.02 # meter
-# FOLLOW_LINEAR_SLOWDOWN_DISTANCE = 0.2 # meter, distance at which the bot starts slowing down
-# FOLLOW_LINEAR_VELOCITY = 0.25 # m/s
-# FOLLOW_LINEAR_VELOCITY_MAX = 0.35 # m/s
-# FOLLOW_LINEAR_VELOCITY_MIN = 0.1 # m/s
-
-# Waiting for intersection sign constants
-SIGN_WAITING_DURATION = 2.0  # seconds
 
 # Turning constants
 TURN_MAX_VELOCITY_FACTOR = 2.0
@@ -104,7 +81,6 @@ TURN_RIGHT_RIGHT_WHEEL_DISTANCE = math.pi * TURN_RIGHT_RIGHT_WHEEL_RADIUS * \
 TURN_RIGHT_MANEUVER_DURATION = 1.7  # seconds
 TURN_RIGHT_LEFT_WHEEL_VELOCITY = TURN_RIGHT_LEFT_WHEEL_DISTANCE / TURN_RIGHT_MANEUVER_DURATION  # m/s, velocity of the left wheel during right turn
 TURN_RIGHT_RIGHT_WHEEL_VELOCITY = TURN_RIGHT_RIGHT_WHEEL_DISTANCE / TURN_RIGHT_MANEUVER_DURATION  # m/s, velocity of the right wheel during right turn
-
 
 # Lane controller node parameters constants
 LANE_CONTROLLER_NODE_V_BAR = "/vader/lane_controller_node/v_bar" # nominal velocity in m/s
@@ -182,21 +158,21 @@ class WheelMovementInfo:
         self._right_velocity = msg.data[5]
         # self._last_update_time = rospy.Time.now()
 
-    def get_left_info(self):
-        return (self._left_distance, self._left_displacement, self._left_velocity)
-    def get_left_distance(self):
+    # def get_left_info(self) -> float:
+    #     return (self._left_distance, self._left_displacement, self._left_velocity)
+    def get_left_distance(self) -> float:
         return self._left_distance
-    def get_left_displacement(self):
+    def get_left_displacement(self) -> float:
         return self._left_displacement
-    def get_left_velocity(self):
+    def get_left_velocity(self) -> float:
         return self._left_velocity
-    def get_right_info(self):
-        return (self._right_distance, self._right_displacement, self._right_velocity)
-    def get_right_distance(self):
+    # def get_right_info(self) -> float:
+    #     return (self._right_distance, self._right_displacement, self._right_velocity)
+    def get_right_distance(self) -> float:
         return self._right_distance
-    def get_right_displacement(self):
+    def get_right_displacement(self) -> float:
         return self._right_displacement
-    def get_right_velocity(self):
+    def get_right_velocity(self) -> float:
         return self._right_velocity
     # def get_last_update_time(self):
     #     return self._last_update_time
@@ -482,52 +458,57 @@ class StoppingForStopSignState(DuckiebotState):
     def __init__(self, tag: AprilTagDetection):
         self._timer = Timer(APPROACHING_SIGN_TIMEOUT_DURATION)
         self._slowdown_timer = Timer(APPROACHING_SIGN_SLOWDOWN_DURATION)
-        self._tag_id = tag.tag_id
+        # self._tag_id = tag.tag_id
         self._in_slowdown_phase = False
-        self._in_travelling_phase = False
-        self._start_slowdown_velocity = None
-        self._detection_left_distance = None
-        self._detection_right_distance = None
-        self._detection_z_distance = None
+        # self._in_travelling_phase = False
+        self._start_slowdown_velocity = math.inf
+        self._detection_left_distance = math.inf
+        self._detection_right_distance = math.inf
+        self._detection_z_distance = tag.transform.translation.z
 
     def on_enter(self) -> None:
         self._timer.start()
         self.context.publish_FSM_state(LANE_FOLLOWING_FSM_STATE)
+        wheel_info = self.context.get_wheel_movement_info()
+        self._detection_left_distance = wheel_info.get_left_distance()
+        self._detection_right_distance = wheel_info.get_right_distance()
 
     def on_event(self, event: DuckieBotEvent) -> None:
         if event == DuckieBotEvent.PAUSE_COMMAND_RECEIVED:
             self.context.transition_to(PauseState())
-        elif event == DuckieBotEvent.STOP_SIGN_DETECTED:
-            if self._in_slowdown_phase or self._in_travelling_phase:
-                return
+        # elif event == DuckieBotEvent.STOP_SIGN_DETECTED:
+        #     if self._in_slowdown_phase or self._in_travelling_phase:
+        #         return
             
-            tag = self.context.get_most_recent_april_tag()
-            if tag.tag_id == self._tag_id:
-                # AprilTagTools.print_april_tag_info(tag)
+        #     tag = self.context.get_most_recent_april_tag()
+        #     if tag.tag_id == self._tag_id:
+        #         # AprilTagTools.print_april_tag_info(tag)
 
-                # save the current wheel distances at the moment of detection
-                wheel_info = self.context.get_wheel_movement_info()
-                self._detection_left_distance = wheel_info.get_left_distance()
-                self._detection_right_distance = wheel_info.get_right_distance()
-                self._detection_z_distance = tag.transform.translation.z
-                rospy.loginfo(f"Detected stop sign with ID {tag.tag_id} at distances: "
-                             f"left={self._detection_left_distance}, "
-                             f"right={self._detection_right_distance}, "
-                             f"z={self._detection_z_distance}")
-                self._is_in_travelling_phase = True
-            else:
-                rospy.logwarn(f"Detected tag ID {tag.tag_id} does not match expected tag ID {self._tag_id}. Ignoring.")
+        #         # save the current wheel distances at the moment of detection
+        #         wheel_info = self.context.get_wheel_movement_info()
+        #         self._detection_left_distance = wheel_info.get_left_distance()
+        #         self._detection_right_distance = wheel_info.get_right_distance()
+        #         self._detection_z_distance = tag.transform.translation.z
+        #         rospy.loginfo(f"Detected stop sign with ID {tag.tag_id} at distances: "
+        #                      f"left={self._detection_left_distance}, "
+        #                      f"right={self._detection_right_distance}, "
+        #                      f"z={self._detection_z_distance}")
+        #         self._is_in_travelling_phase = True
+        #     else:
+        #         rospy.logwarn(f"Detected tag ID {tag.tag_id} does not match expected tag ID {self._tag_id}. Ignoring.")
         elif event == DuckieBotEvent.WHEEL_MOVEMENT_INFO_RECEIVED:
-            if self._in_travelling_phase:
-                if self.is_at_slowdown_position():
-                    self.context.publish_FSM_state(NORMAL_JOYSTICK_CONTROL_FSM_STATE) # Stop lane following
-                    self._slowdown_timer.start()
-                    # Get the average velocity of the wheels at the start of the slowdown phase
-                    self._start_slowdown_velocity = self.context.get_wheel_movement_info().get_average_velocity()
-                    self._in_slowdown_phase = True
-                    self._in_travelling_phase = False
             if self._in_slowdown_phase:
                 self.calculate_and_set_slowdown_velocity()
+                return
+            
+            if self.is_at_slowdown_position():
+                self.context.publish_FSM_state(NORMAL_JOYSTICK_CONTROL_FSM_STATE) # Stop lane following
+                self._slowdown_timer.start()
+                # Get the average velocity of the wheels at the start of the slowdown phase
+                self._start_slowdown_velocity = self.context.get_wheel_movement_info().get_average_velocity()
+                self._in_slowdown_phase = True
+                # self._in_travelling_phase = False
+            
             
     def update(self) -> None:
         if self._timer.is_expired():
@@ -550,7 +531,7 @@ class StoppingForStopSignState(DuckiebotState):
         rospy.loginfo(f"Left distance: {left_distance}, Target left distance: {target_left_distance}")
         rospy.loginfo(f"Right distance: {right_distance}, Target right distance: {target_right_distance}")
 
-        if left_distance >= target_left_distance or right_distance >= target_right_distance:
+        if left_distance >= target_left_distance and right_distance >= target_right_distance:
             return True
         return False
     
