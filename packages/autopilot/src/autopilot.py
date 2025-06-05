@@ -767,7 +767,7 @@ class TurningTools:
             if is_left_wheel:
                 min_vel = TURN_RIGHT_LEFT_WHEEL_VELOCITY * TURN_MIN_VELOCITY_FACTOR
                 max_vel = TURN_RIGHT_LEFT_WHEEL_VELOCITY * TURN_MAX_VELOCITY_FACTOR
-            else:   # right wheel
+            else:  # right wheel
                 min_vel = TURN_RIGHT_RIGHT_WHEEL_VELOCITY * TURN_MIN_VELOCITY_FACTOR
                 max_vel = TURN_RIGHT_RIGHT_WHEEL_VELOCITY * TURN_MAX_VELOCITY_FACTOR
         return (min_vel, max_vel)
@@ -781,7 +781,7 @@ class TurningLeftState(DuckiebotState):
 
     def on_enter(self) -> None:
         self._timer.start()
-        self._context.publish_FSM_state(NORMAL_JOYSTICK_CONTROL_FSM_STATE)  # Stop lane following
+        self.context.stop_bot()  # Stop the robot, in case it wasn't already stopped
         wheel_info = self.context.get_wheel_movement_info()
         self._start_left_distance = wheel_info.get_left_distance()
         self._start_right_distance = wheel_info.get_right_distance()
@@ -819,8 +819,8 @@ class TurningLeftState(DuckiebotState):
         elapsed_time = current_time - self._last_wheel_info_time
         self._last_wheel_info_time = current_time
 
-        min_left_vel, max_left_vel = TurningTools.calculate_min_max_vels(True, True)
-        min_right_vel, max_right_vel = TurningTools.calculate_min_max_vels(True, False)
+        (min_left_vel, max_left_vel) = TurningTools.calculate_min_max_vels(True, True)
+        (min_right_vel, max_right_vel) = TurningTools.calculate_min_max_vels(True, False)
 
         # Calculate the velocities for the left and right wheels
         left_velocity = VelocityCalculator.calculate_velocity(
@@ -829,6 +829,10 @@ class TurningLeftState(DuckiebotState):
         right_velocity = VelocityCalculator.calculate_velocity(
             target_right_distance, current_right_distance, elapsed_time,
             min_right_vel, max_right_vel)
+
+        rospy.loginfo(f"Left velocity: {left_velocity}, Right velocity: {right_velocity}")
+        rospy.loginfo(f"Left min velocity: {min_left_vel}, Left max velocity: {max_left_vel}")
+        rospy.loginfo(f"Right min velocity: {min_right_vel}, Right max velocity: {max_right_vel}")
 
         # Publish the velocities to the wheels
         self.context.publish_velocity(left_velocity, right_velocity)
