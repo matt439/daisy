@@ -66,7 +66,7 @@ TURN_LEFT_LEFT_WHEEL_DISTANCE = math.pi * TURN_LEFT_LEFT_WHEEL_RADIUS * \
     TURN_LEFT_LEFT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the left wheel during left turn
 TURN_LEFT_RIGHT_WHEEL_DISTANCE = math.pi * TURN_LEFT_RIGHT_WHEEL_RADIUS * \
     TURN_LEFT_RIGHT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the right wheel during left turn
-TURN_LEFT_MANEUVER_DURATION = 2.7  # seconds
+TURN_LEFT_MANEUVER_DURATION = 2.5  # seconds
 TURN_LEFT_LEFT_WHEEL_VELOCITY = TURN_LEFT_LEFT_WHEEL_DISTANCE / TURN_LEFT_MANEUVER_DURATION  # m/s, velocity of the left wheel during left turn
 TURN_LEFT_RIGHT_WHEEL_VELOCITY = TURN_LEFT_RIGHT_WHEEL_DISTANCE / TURN_LEFT_MANEUVER_DURATION  # m/s, velocity of the right wheel during left turn
 
