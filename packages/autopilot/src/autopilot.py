@@ -37,8 +37,8 @@ CAR_WAITING_TIME = 3.0  # seconds
 TRAPEZOIDAL_RULE_N = 100  # Number of intervals for trapezoidal rule integration
 OVERTAKING_MAX_VELOCITY = 0.6  # m/s, maximum velocity during overtaking
 OVERTAKING_MIN_VELOCITY = 0.0  # m/s, minimum velocity during overtaking
-OVERTAKING_MANEUVER_DURATION = 10.0  # seconds, duration of the overtaking maneuver
-OVERTAKING_FORWARD_DISTANCE = 0.7  # meters
+OVERTAKING_MANEUVER_DURATION = 8.0  # seconds, duration of the overtaking maneuver
+OVERTAKING_FORWARD_DISTANCE = 0.5  # meters
 OVERTAKING_MIDWAY_DISTANCE = 0.4 # meters, where the piecewise function is split into two parts 
 OVERTAKING_WHEEL_OFFSET = 0.08  # meters
 # Generalized logistic function parameters for overtaking
@@ -60,24 +60,24 @@ AXLE_LENGTH = 0.1  # meters, distance between the two wheels
 
 TURN_LEFT_RIGHT_WHEEL_RADIUS = 0.39  # meters, radius of the right wheel during left turn
 TURN_LEFT_LEFT_WHEEL_RADIUS = TURN_LEFT_RIGHT_WHEEL_RADIUS - AXLE_LENGTH  # meters, radius of the left wheel during left turn
-TURN_LEFT_LEFT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR = 1.0  # scalar to adjust the velocity for left turn
-TURN_LEFT_RIGHT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR = 1.0  # scalar to adjust the velocity for right wheel during left turn
+TURN_LEFT_LEFT_WHEEL_ADJUSTMENT_SCALAR = 1.1  # scalar to adjust the velocity for left turn
+TURN_LEFT_RIGHT_WHEEL_ADJUSTMENT_SCALAR = 1.1  # scalar to adjust the velocity for right wheel during left turn
 TURN_LEFT_LEFT_WHEEL_DISTANCE = math.pi * TURN_LEFT_LEFT_WHEEL_RADIUS * \
-    TURN_LEFT_LEFT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the left wheel during left turn
+    TURN_LEFT_LEFT_WHEEL_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the left wheel during left turn
 TURN_LEFT_RIGHT_WHEEL_DISTANCE = math.pi * TURN_LEFT_RIGHT_WHEEL_RADIUS * \
-    TURN_LEFT_RIGHT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the right wheel during left turn
+    TURN_LEFT_RIGHT_WHEEL_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the right wheel during left turn
 TURN_LEFT_MANEUVER_DURATION = 2.5  # seconds
 TURN_LEFT_LEFT_WHEEL_VELOCITY = TURN_LEFT_LEFT_WHEEL_DISTANCE / TURN_LEFT_MANEUVER_DURATION  # m/s, velocity of the left wheel during left turn
 TURN_LEFT_RIGHT_WHEEL_VELOCITY = TURN_LEFT_RIGHT_WHEEL_DISTANCE / TURN_LEFT_MANEUVER_DURATION  # m/s, velocity of the right wheel during left turn
 
 TURN_RIGHT_LEFT_WHEEL_RADIUS = 0.17  # meters, radius of the left wheel during right turn
 TURN_RIGHT_RIGHT_WHEEL_RADIUS = TURN_RIGHT_LEFT_WHEEL_RADIUS - AXLE_LENGTH  # meters, radius of the right wheel during right turn
-TURN_RIGHT_LEFT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR = 1.0  # scalar to adjust the velocity for left wheel during right turn
-TURN_RIGHT_RIGHT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR = 1.0  # scalar to adjust the velocity for right wheel during right turn
+TURN_RIGHT_LEFT_WHEEL_ADJUSTMENT_SCALAR = 1.0  # scalar to adjust the velocity for left wheel during right turn
+TURN_RIGHT_RIGHT_WHEEL_ADJUSTMENT_SCALAR = 1.0  # scalar to adjust the velocity for right wheel during right turn
 TURN_RIGHT_LEFT_WHEEL_DISTANCE = math.pi * TURN_RIGHT_LEFT_WHEEL_RADIUS * \
-    TURN_RIGHT_LEFT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the left wheel during right turn
+    TURN_RIGHT_LEFT_WHEEL_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the left wheel during right turn
 TURN_RIGHT_RIGHT_WHEEL_DISTANCE = math.pi * TURN_RIGHT_RIGHT_WHEEL_RADIUS * \
-    TURN_RIGHT_RIGHT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the right wheel during right turn
+    TURN_RIGHT_RIGHT_WHEEL_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the right wheel during right turn
 TURN_RIGHT_MANEUVER_DURATION = 1.2  # seconds
 TURN_RIGHT_LEFT_WHEEL_VELOCITY = TURN_RIGHT_LEFT_WHEEL_DISTANCE / TURN_RIGHT_MANEUVER_DURATION  # m/s, velocity of the left wheel during right turn
 TURN_RIGHT_RIGHT_WHEEL_VELOCITY = TURN_RIGHT_RIGHT_WHEEL_DISTANCE / TURN_RIGHT_MANEUVER_DURATION  # m/s, velocity of the right wheel during right turn
