@@ -38,14 +38,14 @@ TRAPEZOIDAL_RULE_N = 100  # Number of intervals for trapezoidal rule integration
 OVERTAKING_MAX_VELOCITY = 0.8  # m/s, maximum velocity during overtaking
 OVERTAKING_MIN_VELOCITY = 0.0  # m/s, minimum velocity during overtaking
 OVERTAKING_MANEUVER_DURATION = 7.0  # seconds, duration of the overtaking maneuver
-OVERTAKING_FORWARD_DISTANCE = 0.6  # meters
-OVERTAKING_MIDWAY_DISTANCE = 0.35 # meters, where the piecewise function is split into two parts 
-OVERTAKING_WHEEL_OFFSET = 0.09  # meters
+OVERTAKING_FORWARD_DISTANCE = 0.65  # meters
+OVERTAKING_MIDWAY_DISTANCE = 0.4 # meters, where the piecewise function is split into two parts 
+OVERTAKING_WHEEL_OFFSET = 0.08  # meters
 # Generalized logistic function parameters for overtaking
 A = 0.0 # Lower asymptote
 K = 0.25 # Upper asymptote
-B = 70.0 # Growth rate
-X0 = 0.08 # Inflection point
+B = 60.0 # Growth rate
+X0 = 0.09 # Inflection point
 V = 1.0
 
 # Intersection constants
