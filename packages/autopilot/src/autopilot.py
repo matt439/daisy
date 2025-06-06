@@ -876,7 +876,11 @@ class WaitingAtTurnLeftSignState(DuckiebotState):
     
     def update(self) -> None:
         if self._timer.is_expired():
-            self.context.transition_to(TurningLeftState())
+            # 50/50 chance to turn left or continue lane following
+            if random.choice([True, False]):
+                self.context.transition_to(LaneFollowingState())
+            else:
+                self.context.transition_to(TurningLeftState())
 
 class WaitingAtTurnRightSignState(DuckiebotState):
     def __init__(self):
