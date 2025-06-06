@@ -417,7 +417,7 @@ class ApproachingSignTools:
 
         # rospy.loginfo(f"Left distance: {left_distance}, Target left distance: {target_left_distance}")
         # rospy.loginfo(f"Right distance: {right_distance}, Target right distance: {target_right_distance}")
-        if left_distance >= target_left_distance or right_distance >= target_right_distance:
+        if left_distance >= target_left_distance and right_distance >= target_right_distance:
             return True
         return False
     
