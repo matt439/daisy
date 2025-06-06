@@ -21,7 +21,7 @@ NORMAL_JOYSTICK_CONTROL_FSM_STATE = "NORMAL_JOYSTICK_CONTROL"
 # Sign constants
 APPROACHING_SIGN_SLOWDOWN_DISTANCE = 0.1  # meters, distance at which the bot starts slowing down
 APPROACHING_SIGN_SLOWDOWN_DURATION = 1.0  # seconds, duration of the slowdown phase
-SIGN_DETECTION_DISTANCE_THRESHOLD = 0.6  # meters, distance at which the bot detects the sign
+SIGN_DETECTION_DISTANCE_THRESHOLD = 0.4  # meters, distance at which the bot detects the sign
 APPROACHING_SIGN_TIMEOUT_DURATION = 7.0  # seconds
 SIGN_WAITING_DURATION = 2.0  # seconds
 # APRIL_TAG_DETCTION_ROTATION_THRESHOLD = 0.5  # Threshold for quaternion components to determine valid tag orientation
@@ -55,7 +55,7 @@ T_INTERSECTION_SIGNS_IDS = [11, 65, 66, 67, 68]
 
 # Turning constants
 TURN_MAX_VELOCITY_FACTOR = 2.0
-TURN_MIN_VELOCITY_FACTOR = 0.0
+TURN_MIN_VELOCITY_FACTOR = 0.5
 AXLE_LENGTH = 0.1  # meters, distance between the two wheels
 
 TURN_LEFT_RIGHT_WHEEL_RADIUS = 0.39  # meters, radius of the right wheel during left turn
