@@ -249,6 +249,10 @@ class Duckiebot():
         self._state_publisher = state_pub
         self._velocity_publisher = rospy.Publisher('/vader/wheels_driver_node/wheels_cmd', WheelsCmdStamped, queue_size=1)
         # self._cmd_vel_publisher = rospy.Publisher('/vader/car_cmd_switch_node/cmd', Twist2DStamped, queue_size=1)
+
+        self._num_left_turns = 0
+        self._num_t_intersections = 0
+
         rospy.loginfo("Duckiebot class initialized!")
         self.transition_to(state)
 
@@ -397,11 +401,16 @@ class LaneFollowingState(DuckiebotState):
             self.context.transition_to(ApproachingTurnRightSignState(self.context.get_most_recent_april_tag()))
         elif event == DuckieBotEvent.T_INTERSECTON_SIGN_DETECTED:
             tag = self.context.get_most_recent_april_tag()
-            # Randomly choose between left and right turn for T-intersection
-            if random.choice([True, False]):
-                self.context.transition_to(ApproachingTurnLeftSignState(tag))
-            else:
+            num = self.context._num_t_intersections
+            if num == 0:
+                self.context._num_t_intersections += 1
                 self.context.transition_to(ApproachingTurnRightSignState(tag))
+            else:
+                # Randomly choose between left and right turn for T-intersection
+                if random.choice([True, False]):
+                    self.context.transition_to(ApproachingTurnLeftSignState(tag))
+                else:
+                    self.context.transition_to(ApproachingTurnRightSignState(tag))
 
     def update(self) -> None:
         pass
@@ -876,11 +885,19 @@ class WaitingAtTurnLeftSignState(DuckiebotState):
     
     def update(self) -> None:
         if self._timer.is_expired():
-            # 50/50 chance to turn left or continue lane following
-            if random.choice([True, False]):
+            num = self.context._num_left_turns
+            if num == 0:
+                self.context._num_left_turns += 1
                 self.context.transition_to(LaneFollowingState())
-            else:
+            elif num == 1:
+                self.context._num_left_turns += 1
                 self.context.transition_to(TurningLeftState())
+            else:
+                # 50/50 chance to turn left or continue lane following
+                if random.choice([True, False]):
+                    self.context.transition_to(LaneFollowingState())
+                else:
+                    self.context.transition_to(TurningLeftState())
 
 class WaitingAtTurnRightSignState(DuckiebotState):
     def __init__(self):
