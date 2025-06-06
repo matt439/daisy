@@ -297,6 +297,10 @@ class Duckiebot():
         self.publish_velocity(0.0, 0.0)
     
     def wheel_movement_info_callback(self, msg: Float64MultiArray):
+        if self._state is None:
+            rospy.logwarn("Duckiebot state is not set, cannot process wheel movement info.")
+            return
+        
         self._wheel_movement_info.update(msg)
         # self._wheel_movement_info.print_info()
         if self.is_wheels_stopped():
@@ -316,12 +320,17 @@ class Duckiebot():
         return self._most_recent_april_tag
     
     def april_tag_callback(self, msg: AprilTagDetectionArray):
+        if self._state is None:
+                rospy.logwarn("Duckiebot state is not set, cannot process AprilTag detection.")
+                return
+        
         for detection in msg.detections:
             if not AprilTagTools.is_april_tag_in_valid_position(detection):
                 continue
 
             id = detection.tag_id
             self._most_recent_april_tag = detection  # Update the most recent tag
+
             if AprilTagTools.is_stop_sign_id(id):
                 self.on_event(DuckieBotEvent.STOP_SIGN_DETECTED)
             elif AprilTagTools.is_left_intersection_sign_id(id):
