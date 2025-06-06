@@ -91,8 +91,8 @@ LANE_CONTROLLER_NODE_K_IPHI = "/vader/lane_controller_node/k_IphI" # integral te
 LANE_CONTROLLER_NODE_THETA_THRES_MIN = "/vader/lane_controller_node/theta_thres_min" # minimum value for heading error
 LANE_CONTROLLER_NODE_THETA_THRES_MAX = "/vader/lane_controller_node/theta_thres_max" # maximum value for heading error
 V_BAR = 0.25 # clamped from 0 to 5, default 0.19
-K_D = -30.0 # clamped from -100 to 100, default -6.0
-K_THETA = -9.0 # clamped from -100 to 100, default -5.0
+K_D = -25.0 # clamped from -100 to 100, default -6.0
+K_THETA = -7.0 # clamped from -100 to 100, default -5.0
 K_ID = -0.3 # clamped from -100 to 100, default -0.3
 K_IPHI = 0.0 # clamped from -100 to 100, default 0.0
 THETA_THRES_MIN = -0.5 # clamped from -100 to 100, default -0.5
@@ -259,14 +259,14 @@ class Duckiebot():
         self._state.on_enter()  # Call on_enter after context is set
 
     def on_event(self, event: DuckieBotEvent) -> None:
-        if event is not DuckieBotEvent.TURN_LEFT_SIGN_DETECTED and \
-            event is not DuckieBotEvent.TURN_RIGHT_SIGN_DETECTED and \
-            event is not DuckieBotEvent.T_INTERSECTON_SIGN_DETECTED and \
-            event is not DuckieBotEvent.STOP_SIGN_DETECTED and \
-            event is not DuckieBotEvent.BOT_BECOMES_STOPPED and \
-            event is not DuckieBotEvent.WHEEL_MOVEMENT_INFO_RECEIVED:
-            # Avoid logging too many events
-            rospy.loginfo(f"Event received: {event}")
+        # if event is not DuckieBotEvent.TURN_LEFT_SIGN_DETECTED and \
+        #     event is not DuckieBotEvent.TURN_RIGHT_SIGN_DETECTED and \
+        #     event is not DuckieBotEvent.T_INTERSECTON_SIGN_DETECTED and \
+        #     event is not DuckieBotEvent.STOP_SIGN_DETECTED and \
+        #     event is not DuckieBotEvent.BOT_BECOMES_STOPPED and \
+        #     event is not DuckieBotEvent.WHEEL_MOVEMENT_INFO_RECEIVED:
+        #     # Avoid logging too many events
+        #     rospy.loginfo(f"Event received: {event}")
         self._state.on_event(event)
 
     def update(self):
