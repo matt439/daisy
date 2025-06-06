@@ -37,15 +37,15 @@ CAR_WAITING_TIME = 3.0  # seconds
 TRAPEZOIDAL_RULE_N = 100  # Number of intervals for trapezoidal rule integration
 OVERTAKING_MAX_VELOCITY = 0.6  # m/s, maximum velocity during overtaking
 OVERTAKING_MIN_VELOCITY = 0.0  # m/s, minimum velocity during overtaking
-OVERTAKING_MANEUVER_DURATION = 9.0  # seconds, duration of the overtaking maneuver
-OVERTAKING_FORWARD_DISTANCE = 0.65  # meters
-OVERTAKING_MIDWAY_DISTANCE = 0.35 # meters, where the piecewise function is split into two parts 
+OVERTAKING_MANEUVER_DURATION = 10.0  # seconds, duration of the overtaking maneuver
+OVERTAKING_FORWARD_DISTANCE = 0.7  # meters
+OVERTAKING_MIDWAY_DISTANCE = 0.4 # meters, where the piecewise function is split into two parts 
 OVERTAKING_WHEEL_OFFSET = 0.08  # meters
 # Generalized logistic function parameters for overtaking
 A = 0.0 # Lower asymptote
-K = 0.28 # Upper asymptote
-B = 50.0 # Growth rate
-X0 = 0.11 # Inflection point
+K = 0.33 # Upper asymptote
+B = 35.0 # Growth rate
+X0 = 0.14 # Inflection point
 V = 1.0
 
 # Intersection constants
