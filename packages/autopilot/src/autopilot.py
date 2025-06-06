@@ -55,7 +55,7 @@ T_INTERSECTION_SIGNS_IDS = [11, 65, 66, 67, 68]
 
 # Turning constants
 TURN_MAX_VELOCITY_FACTOR = 2.0
-TURN_MIN_VELOCITY_FACTOR = 0.5
+TURN_MIN_VELOCITY_FACTOR = 0.0
 AXLE_LENGTH = 0.1  # meters, distance between the two wheels
 
 TURN_LEFT_RIGHT_WHEEL_RADIUS = 0.39  # meters, radius of the right wheel during left turn
@@ -66,7 +66,7 @@ TURN_LEFT_LEFT_WHEEL_DISTANCE = math.pi * TURN_LEFT_LEFT_WHEEL_RADIUS * \
     TURN_LEFT_LEFT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the left wheel during left turn
 TURN_LEFT_RIGHT_WHEEL_DISTANCE = math.pi * TURN_LEFT_RIGHT_WHEEL_RADIUS * \
     TURN_LEFT_RIGHT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the right wheel during left turn
-TURN_LEFT_MANEUVER_DURATION = 4.0  # seconds
+TURN_LEFT_MANEUVER_DURATION = 2.7  # seconds
 TURN_LEFT_LEFT_WHEEL_VELOCITY = TURN_LEFT_LEFT_WHEEL_DISTANCE / TURN_LEFT_MANEUVER_DURATION  # m/s, velocity of the left wheel during left turn
 TURN_LEFT_RIGHT_WHEEL_VELOCITY = TURN_LEFT_RIGHT_WHEEL_DISTANCE / TURN_LEFT_MANEUVER_DURATION  # m/s, velocity of the right wheel during left turn
 
@@ -78,7 +78,7 @@ TURN_RIGHT_LEFT_WHEEL_DISTANCE = math.pi * TURN_RIGHT_LEFT_WHEEL_RADIUS * \
     TURN_RIGHT_LEFT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the left wheel during right turn
 TURN_RIGHT_RIGHT_WHEEL_DISTANCE = math.pi * TURN_RIGHT_RIGHT_WHEEL_RADIUS * \
     TURN_RIGHT_RIGHT_WHEEL_VELOCITY_ADJUSTMENT_SCALAR / 2.0  # meters, distance traveled by the right wheel during right turn
-TURN_RIGHT_MANEUVER_DURATION = 1.7  # seconds
+TURN_RIGHT_MANEUVER_DURATION = 1.2  # seconds
 TURN_RIGHT_LEFT_WHEEL_VELOCITY = TURN_RIGHT_LEFT_WHEEL_DISTANCE / TURN_RIGHT_MANEUVER_DURATION  # m/s, velocity of the left wheel during right turn
 TURN_RIGHT_RIGHT_WHEEL_VELOCITY = TURN_RIGHT_RIGHT_WHEEL_DISTANCE / TURN_RIGHT_MANEUVER_DURATION  # m/s, velocity of the right wheel during right turn
 
