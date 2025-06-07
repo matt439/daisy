@@ -24,7 +24,6 @@ APPROACHING_SIGN_SLOWDOWN_DURATION = 1.0  # seconds, duration of the slowdown ph
 SIGN_DETECTION_DISTANCE_THRESHOLD = 0.4  # meters, distance at which the bot detects the sign
 APPROACHING_SIGN_TIMEOUT_DURATION = 7.0  # seconds
 SIGN_WAITING_DURATION = 2.0  # seconds
-# APRIL_TAG_DETCTION_ROTATION_THRESHOLD = 0.5  # Threshold for quaternion components to determine valid tag orientation
 
 # Stop sign constants
 LANE_FOLLOWING_STOP_SIGN_TIME = 4.0  # seconds
@@ -98,17 +97,6 @@ K_IPHI = 0.0 # clamped from -100 to 100, default 0.0
 THETA_THRES_MIN = -0.5 # clamped from -100 to 100, default -0.5
 THETA_THRES_MAX = 0.75 # clamped from -100 to 100, default 0.75
 
-# Lane controller node parameters which cannot be set dynamically:
-#
-# d_thres (:obj:`float`): Maximum value for lateral error
-# d_offset (:obj:`float`): Goal offset from center of the lane
-# integral_bounds (:obj:`dict`): Bounds for integral term
-# d_resolution (:obj:`float`): Resolution of lateral position estimate
-# phi_resolution (:obj:`float`): Resolution of heading estimate
-# omega_ff (:obj:`float`): Feedforward part of controller
-# verbose (:obj:`bool`): Verbosity level (0,1,2)
-# stop_line_slowdown (:obj:`dict`): Start and end distances for slowdown at stop lines
-
 class DuckieBotEvent(Enum):
     STOP_SIGN_DETECTED = 0
     BOT_BECOMES_STOPPED = 1
@@ -144,7 +132,6 @@ class WheelMovementInfo:
         self._right_distance = 0.0
         self._right_displacement = 0.0
         self._right_velocity = 0.0
-        # self._last_update_time = rospy.Time.now()
 
     def update(self, msg: Float64MultiArray):
         if len(msg.data) != 6:
@@ -156,32 +143,21 @@ class WheelMovementInfo:
         self._right_distance = msg.data[3]
         self._right_displacement = msg.data[4]
         self._right_velocity = msg.data[5]
-        # self._last_update_time = rospy.Time.now()
 
-    # def get_left_info(self) -> float:
-    #     return (self._left_distance, self._left_displacement, self._left_velocity)
     def get_left_distance(self) -> float:
         return self._left_distance
     def get_left_displacement(self) -> float:
         return self._left_displacement
     def get_left_velocity(self) -> float:
         return self._left_velocity
-    # def get_right_info(self) -> float:
-    #     return (self._right_distance, self._right_displacement, self._right_velocity)
     def get_right_distance(self) -> float:
         return self._right_distance
     def get_right_displacement(self) -> float:
         return self._right_displacement
     def get_right_velocity(self) -> float:
         return self._right_velocity
-    # def get_last_update_time(self):
-    #     return self._last_update_time
     def get_average_velocity(self) -> float:
         return (self._left_velocity + self._right_velocity) / 2.0
-    
-    # def print_info(self):
-    #     rospy.loginfo(f"Left - Dist: {self._left_distance}, Disp: {self._left_displacement}, Vel: {self._left_velocity}")
-    #     rospy.loginfo(f"Right - Dist: {self._right_distance}, Disp: {self._right_displacement}, Vel: {self._right_velocity}")
 
 class AprilTagTools:
     @staticmethod
@@ -209,35 +185,9 @@ class AprilTagTools:
         if detection.transform.translation.z > SIGN_DETECTION_DISTANCE_THRESHOLD:
             # The tag is too far away, ignore it
             return False
-
-        # # Check if the tag is not at an extreme angle using the x, y, z components of the quaternion
-        # # w is not used for angle checks, so we can ignore it
-        # if abs(detection.transform.rotation.x) > APRIL_TAG_DETCTION_ROTATION_THRESHOLD or \
-        #         abs(detection.transform.rotation.y) > APRIL_TAG_DETCTION_ROTATION_THRESHOLD or \
-        #             abs(detection.transform.rotation.z) > APRIL_TAG_DETCTION_ROTATION_THRESHOLD:
-        #     return False
         
         # If all checks passed, the tag is in a valid position
         return True
-    
-    @staticmethod
-    def print_april_tag_info(detection: AprilTagDetection):
-        rospy.loginfo(f"AprilTag ID: {detection.tag_id}")
-        rospy.loginfo(f"Position: x={detection.transform.translation.x}, "
-                      f"y={detection.transform.translation.y}, "
-                      f"z={detection.transform.translation.z}")
-        rospy.loginfo(f"Rotation: x={detection.transform.rotation.x}, "
-                      f"y={detection.transform.rotation.y}, "
-                      f"z={detection.transform.rotation.z}, "
-                      f"w={detection.transform.rotation.w}")
-    
-    # @staticmethod
-    # def is_sign_in_stoppable_position(detection: AprilTagDetection) -> bool:
-    #     z = detection.transform.translation.z
-    #     if z < FOLLOW_Z_DISTANCE_TARGET + APPROACHING_SIGN_SLOWDOWN_DISTANCE:
-    #         # There is not enough distance to stop before the sign
-    #         return False
-    #     return True
 
 class Duckiebot():
     def __init__(self, state: 'DuckiebotState', state_pub) -> None:
@@ -248,10 +198,6 @@ class Duckiebot():
         rospy.Subscriber('/vader/apriltag_detector_node/detections', AprilTagDetectionArray, self.april_tag_callback, queue_size=1)
         self._state_publisher = state_pub
         self._velocity_publisher = rospy.Publisher('/vader/wheels_driver_node/wheels_cmd', WheelsCmdStamped, queue_size=1)
-        # self._cmd_vel_publisher = rospy.Publisher('/vader/car_cmd_switch_node/cmd', Twist2DStamped, queue_size=1)
-
-        self._num_left_turns = 0
-        self._num_t_intersections = 0
 
         rospy.loginfo("Duckiebot class initialized!")
         self.transition_to(state)
@@ -263,14 +209,6 @@ class Duckiebot():
         self._state.on_enter()  # Call on_enter after context is set
 
     def on_event(self, event: DuckieBotEvent) -> None:
-        # if event is not DuckieBotEvent.TURN_LEFT_SIGN_DETECTED and \
-        #     event is not DuckieBotEvent.TURN_RIGHT_SIGN_DETECTED and \
-        #     event is not DuckieBotEvent.T_INTERSECTON_SIGN_DETECTED and \
-        #     event is not DuckieBotEvent.STOP_SIGN_DETECTED and \
-        #     event is not DuckieBotEvent.BOT_BECOMES_STOPPED and \
-        #     event is not DuckieBotEvent.WHEEL_MOVEMENT_INFO_RECEIVED:
-        #     # Avoid logging too many events
-        #     rospy.loginfo(f"Event received: {event}")
         self._state.on_event(event)
 
     def update(self):
@@ -281,13 +219,6 @@ class Duckiebot():
         fsm_state_msg.header.stamp = rospy.Time.now()
         fsm_state_msg.state = state
         self._state_publisher.publish(fsm_state_msg)
-
-    # def publish_cmd_vel(self, v: float, omega: float):
-    #     cmd_msg = Twist2DStamped()
-    #     cmd_msg.header.stamp = rospy.Time.now()
-    #     cmd_msg.v = v
-    #     cmd_msg.omega = omega
-    #     self._cmd_vel_publisher.publish(cmd_msg)
 
     def publish_velocity(self, left_velocity: float, right_velocity: float):
         wheels_cmd = WheelsCmdStamped()
@@ -306,7 +237,6 @@ class Duckiebot():
             return
         
         self._wheel_movement_info.update(msg)
-        # self._wheel_movement_info.print_info()
         if self.is_wheels_stopped():
             self.on_event(DuckieBotEvent.BOT_BECOMES_STOPPED)
         self.on_event(DuckieBotEvent.WHEEL_MOVEMENT_INFO_RECEIVED)
@@ -401,16 +331,12 @@ class LaneFollowingState(DuckiebotState):
             self.context.transition_to(ApproachingTurnRightSignState(self.context.get_most_recent_april_tag()))
         elif event == DuckieBotEvent.T_INTERSECTON_SIGN_DETECTED:
             tag = self.context.get_most_recent_april_tag()
-            num = self.context._num_t_intersections
-            if num == 0:
-                self.context._num_t_intersections += 1
-                self.context.transition_to(ApproachingTurnRightSignState(tag))
+            # Randomly choose between left and right turn for T-intersection
+            if random.choice([True, False]):
+                self.context.transition_to(ApproachingTurnLeftSignState(tag))
             else:
-                # Randomly choose between left and right turn for T-intersection
-                if random.choice([True, False]):
-                    self.context.transition_to(ApproachingTurnLeftSignState(tag))
-                else:
-                    self.context.transition_to(ApproachingTurnRightSignState(tag))
+                self.context.transition_to(ApproachingTurnRightSignState(tag))
+                
 
     def update(self) -> None:
         pass
@@ -433,8 +359,6 @@ class ApproachingSignTools:
         target_left_distance = detection_left_distance + detection_z_distance - APPROACHING_SIGN_SLOWDOWN_DISTANCE
         target_right_distance = detection_right_distance + detection_z_distance - APPROACHING_SIGN_SLOWDOWN_DISTANCE
 
-        # rospy.loginfo(f"Left distance: {left_distance}, Target left distance: {target_left_distance}")
-        # rospy.loginfo(f"Right distance: {right_distance}, Target right distance: {target_right_distance}")
         if left_distance >= target_left_distance and right_distance >= target_right_distance:
             return True
         return False
@@ -796,17 +720,6 @@ class TurningLeftState(DuckiebotState):
             target_right_distance, current_right_distance, elapsed_time,
             min_right_vel, max_right_vel)
 
-        # rospy.loginfo(f"Left velocity: {left_velocity}, Right velocity: {right_velocity}")
-        # rospy.loginfo(f"Left min velocity: {min_left_vel}, Left max velocity: {max_left_vel}")
-        # rospy.loginfo(f"Right min velocity: {min_right_vel}, Right max velocity: {max_right_vel}")
-        # rospy.loginfo(f"timer_elapsed: {timer_elapsed}")
-        # rospy.loginfo(f"target_left_distance: {target_left_distance}, target_right_distance: {target_right_distance}")
-        # rospy.loginfo(f"current_left_distance: {current_left_distance}, current_right_distance: {current_right_distance}")
-        # rospy.loginfo(f"elapsed_time: {elapsed_time}")
-        # rospy.loginfo(f"Wheel movement info: Left distance: {left_distance}, Right distance: {right_distance}")
-        # rospy.loginfo(f"Start left distance: {self._start_left_distance}, Start right distance: {self._start_right_distance}")
-        # rospy.loginfo("")
-
         # Publish the velocities to the wheels
         self.context.publish_velocity(left_velocity, right_velocity)
 
@@ -885,19 +798,12 @@ class WaitingAtTurnLeftSignState(DuckiebotState):
     
     def update(self) -> None:
         if self._timer.is_expired():
-            num = self.context._num_left_turns
-            if num == 0:
-                self.context._num_left_turns += 1
+            # 50/50 chance to turn left or continue lane following
+            if random.choice([True, False]):
                 self.context.transition_to(LaneFollowingState())
-            elif num == 1:
-                self.context._num_left_turns += 1
-                self.context.transition_to(TurningLeftState())
             else:
-                # 50/50 chance to turn left or continue lane following
-                if random.choice([True, False]):
-                    self.context.transition_to(LaneFollowingState())
-                else:
-                    self.context.transition_to(TurningLeftState())
+                self.context.transition_to(TurningLeftState())
+                
 
 class WaitingAtTurnRightSignState(DuckiebotState):
     def __init__(self):
